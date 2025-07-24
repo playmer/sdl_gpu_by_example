@@ -21,8 +21,12 @@ set(ShaderCrossExe ${CMAKE_CURRENT_LIST_DIR}/tools/windows/bin/shadercross.exe)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/bin/$<CONFIG>")
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/bin/$<CONFIG>")
 
+# add_subdirectory is a function that drops us down into and executes the CMakeLists.txt within 
+# the directory you specify. Once done executing it comes back up to here and continues.
 add_subdirectory(external)
 add_subdirectory(source)
 
+# When using the Visual Studio generator, if you were to open the project in VS, this would
+# set the startup project to our example, and if you were to press F5 it would Build and then
+# Run and Debug it
 set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT sdl_by_example)
-set_property(TARGET sdl_by_example PROPERTY VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}")
