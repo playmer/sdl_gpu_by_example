@@ -1,4 +1,3 @@
-
 # Please don't ask how to understand this yet...I'll get around to documenting it line by line.
 macro(find_and_compile_shaders aShaderCrossExecutable aTarget aShaderDirectory aOutputDirectory)
     file(GLOB ShadersSources 
@@ -35,7 +34,9 @@ macro(find_and_compile_shaders aShaderCrossExecutable aTarget aShaderDirectory a
         list(APPEND CompiledShaderFiles ${spirvShader} ${mslShader} ${dxilShader})
     endforeach(shader)
 
-    add_custom_target(Shaders DEPENDS ${CompiledShaderFiles})
+    add_custom_target(${aTarget}_Shaders DEPENDS ${CompiledShaderFiles})
+    
+    add_dependencies(${aTarget} ${aTarget}_Shaders)
 
     target_sources(${aTarget} 
     PRIVATE
