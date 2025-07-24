@@ -1,3 +1,5 @@
+
+# Please don't ask how to understand this yet...I'll get around to documenting it line by line.
 macro(find_and_compile_shaders aShaderCrossExecutable aTarget aShaderDirectory aOutputDirectory)
     file(GLOB ShadersSources 
         CONFIGURE_DEPENDS
@@ -44,6 +46,4 @@ macro(find_and_compile_shaders aShaderCrossExecutable aTarget aShaderDirectory a
         set_source_files_properties(${shader} PROPERTIES VS_TOOL_OVERRIDE "None")
         set_source_files_properties(SOURCE ${shader} PROPERTIES VS_SETTINGS "ExcludedFromBuild=true")
     endforeach(shader)
-
-
 endmacro()
