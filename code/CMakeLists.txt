@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.28.1)
 set_property(GLOBAL PROPERTY USE_FOLDERS ON) 
 
-project(asteroid-heist CXX C)
+project(SDL_GPU_By_Example CXX C)
 
 # Don't move this too far away from the call to project. We want this to apply to all targets
 if(NOT CMAKE_VS_GLOBALS MATCHES "(^|;)UseMultiToolTask=")
@@ -29,4 +29,4 @@ add_subdirectory(source)
 # When using the Visual Studio generator, if you were to open the project in VS, this would
 # set the startup project to our example, and if you were to press F5 it would Build and then
 # Run and Debug it
-set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT 001_Template)
+set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT 001_Introduction_and_the_Template)

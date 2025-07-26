@@ -48,3 +48,21 @@ macro(find_and_compile_shaders aShaderCrossExecutable aTarget aShaderDirectory a
         set_source_files_properties(SOURCE ${shader} PROPERTIES VS_SETTINGS "ExcludedFromBuild=true")
     endforeach(shader)
 endmacro()
+
+macro(list_directories result)
+    message(STATUS "List Dir: ${CMAKE_CURRENT_LIST_DIR}")
+    #file(GLOB children LIST_DIRECTORIES true RELATIVE CONFIGURE_DEPENDS ${CMAKE_CURRENT_LIST_DIR})
+    file(GLOB children RELATIVE ${CMAKE_CURRENT_LIST_DIR} ${CMAKE_CURRENT_LIST_DIR}/*)
+    
+    message(STATUS "\tchildren: ${children}")
+    set(directory_list "")
+    
+    foreach(child_item ${children})
+        message(STATUS "\tChild Item: ${child_item}")
+        if(IS_DIRECTORY ${CMAKE_CURRENT_LIST_DIR}/${child_item})
+            list(APPEND directory_list ${child_item})
+        endif()
+    endforeach()
+    
+    set(${result} ${directory_list})
+endmacro()
