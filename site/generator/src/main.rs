@@ -91,9 +91,9 @@ fn parse_post(file_name: &str, markdown_data: &String, post_template: &str) -> P
 
 const INDEX_ENTRY : &str = "
 
-<h2 class=\"<<<<<<<<POST_TITLE>>>>>>>>\">
+<h4 class=\"<<<<<<<<POST_TITLE>>>>>>>>\">
 <a href=\"<<<<<<<<POST_URL>>>>>>>>\"><<<<<<<<POST_TITLE>>>>>>>></a>
-</h2>
+</h4>
 <p><<<<<<<<POST_DESCRIPTION>>>>>>>></p>
 
 <hr>
