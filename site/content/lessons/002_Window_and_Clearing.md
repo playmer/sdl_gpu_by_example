@@ -5,10 +5,13 @@ description: Before you render a triangle, you must first create a window, and t
 
 # Window and Clearing
 
+Now that we've gotten the "make sure we can compile, link, and run an SDL program" step out of the way, we can start actually doing some work. We'll start by going over Window creation and setting up your event loop so we can receive events, like the one that tells you the program should end.
+
 ## A Window and an Event Loop
 
 ### A Window
-In place of our SDL_Log telling the user things are okay, lets call SDL_CreateWindow.
+
+The first thing we'll need to clear the window is the window. So let's look into how to get an `SDL_Window`. Thankfully SDL makes it pretty easy, we just need the title we'd like, the width and height, and some flags. We'll go with the name of this chapter, and 720p. We can ignore the flags for now, for the most part they're not relevant to SDL_GPU.
 
 
 ```c
@@ -74,7 +77,7 @@ while (running) {
 }
 ```
 
-So as mentioned, we have a bool that we can modify to exit the frame loop, and within that we have an Event loop. We loop over `SDL_PollEvent`, which returns true whenever it finds a new event. Right now all we need to deal with are `SDL_EVENT_QUIT` events, which we'll use to set running to false to end the application.
+So as mentioned, we have a bool that we can modify to exit the frame loop, and within that we have an Event loop. We loop over `SDL_PollEvent`, which returns true whenever it finds a new event. Right now all we need to deal with are `SDL_EVENT_QUIT` events, which we'll use to set running to false to end the application. It generally comes when the last Window open is closed.
 
 Now, finally, we can discuss the GPU API.
 
@@ -254,15 +257,21 @@ We did it! You should be seeing a window with a blue background!
 
 ![A window on Windows, with the contents just being a solid shade of blue.](assets/images/002_Window_and_Clearing__Running.jpg "Our window, being cleared blue.")
 
-Really all we're doing here is configuring a RenderPass
+[`SDL_BeginGPURenderPass`](https://wiki.libsdl.org/SDL3/SDL_BeginGPURenderPass) is the first time an SDL GPU call requires a fair bit of configuration, but it won't be the last by a long shot. [`SDL_GPUColorTargetInfo`](https://wiki.libsdl.org/SDL3/SDL_GPUColorTargetInfo) is one of many create/info structs we'll be going over. As will become tradition, we zero it out to "default" the fields, but right now, we can concern ourselves with just the 4 fields we're setting here:
+  - texture: The is the texture we're rendering to, the "target".
+  - load_op: How the Render Pass should be treating the contents of the texture before you start executing it. By your choice, it can either keep the previous contents, clear to a color (what we're doing to get that blue color), or tell it that we don't care. If we don't care the API doesn't either, you can't rely on the image looking like anything in particular.
+  - store_op: The converse, how the Render Pass treats that same texture as it ends. Typically you'll just want to store here. You can also tell it not to care, or do some "Resolve" variations. Being honest, I don't know what that's for. When I do, I'll update this, and also write an example about it.
+  - clear_color: As you might expect, this is just a small struct with rgba floats in it to clear the Render Target to when we pass [`SDL_GPU_LOADOP_CLEAR`](https://wiki.libsdl.org/SDL3/SDL_GPU_LOADOP_CLEAR).
+
+As you may notice from the parameters of [`SDL_BeginGPURenderPass`](https://wiki.libsdl.org/SDL3/SDL_BeginGPURenderPass) you can actually pass an array of Color Targets. We'll be going some very simple fullscreen effects in the next chapter, but when we get further along and learn more about textures, we can play around with this functionality with more interesting fullscreen effects. Similarly we'll get to the [`SDL_GPUDepthStencilTargetInfo`](https://wiki.libsdl.org/SDL3/SDL_GPUDepthStencilTargetInfo) parameter later on when we start playing with 3D.
+
+After that, it's really just about ending the render pass with [`SDL_EndGPURenderPass`](https://wiki.libsdl.org/SDL3/SDL_EndGPURenderPass) and submitting the command buffer with [`SDL_SubmitGPUCommandBuffer`](https://wiki.libsdl.org/SDL3/SDL_SubmitGPUCommandBuffer) to the GPU so that our commands are run.
 
 
 > ### Covered in this Section
 > - [`SDL_AcquireGPUCommandBuffer`](https://wiki.libsdl.org/SDL3/SDL_AcquireGPUCommandBuffer)
 >   - blah blah talk about threads
 > - [`SDL_SubmitGPUCommandBuffer`](https://wiki.libsdl.org/SDL3/SDL_SubmitGPUCommandBuffer)
->   - blah
-> - [`SDL_zero`](https://wiki.libsdl.org/SDL3/SDL_zero)
 >   - blah
 > - [`SDL_WaitAndAcquireGPUSwapchainTexture`](https://wiki.libsdl.org/SDL3/SDL_WaitAndAcquireGPUSwapchainTexture)
 >   - There's not too much to say here, this is how we ask for a Swapchain to manipulate in our passes.
@@ -274,7 +283,7 @@ Really all we're doing here is configuring a RenderPass
 >     - ['SDL_SetGPUSwapchainParameters'](https://wiki.libsdl.org/SDL3/SDL_SetGPUSwapchainParameters)
 >       -  Change the format of the Texture, as well as the presentation mode. Changing the format is useful when you want to render an HDR image, changing the present mode would allow you to turn off VSYNC and switch to allowing screen tearing or mailbox where you can keep submitting and the GPU will use the latest image given when it's time to display. Both of these need to be queried for support before changing.
 > - [`SDL_GPUColorTargetInfo`](https://wiki.libsdl.org/SDL3/SDL_GPUColorTargetInfo)
->   - blah
+>   - I covered the immediately relevant properties above, but there's a fair bit of stuff you can adjust here, including more about the "Resolve" store_op properties that now make a bit more sense to me reading this again now. Still not going to cover it yet. We'll obviously touch on some of these as we proceed, but it never hurts to take a look early.
 > - [`SDL_BeginGPURenderPass`](https://wiki.libsdl.org/SDL3/SDL_BeginGPURenderPass)
 >   - blah
 > - [`SDL_EndGPURenderPass`](https://wiki.libsdl.org/SDL3/SDL_EndGPURenderPass)
