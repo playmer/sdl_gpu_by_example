@@ -254,15 +254,7 @@ We did it! You should be seeing a window with a blue background!
 
 ![A window on Windows, with the contents just being a solid shade of blue.](assets/images/002_Window_and_Clearing__Running.jpg "Our window, being cleared blue.")
 
-<p>
-  <a href="assets/images/002_Window_and_Clearing__Running.jpg" target="_blank">
-    <img src="assets/images/002_Window_and_Clearing__Running.jpg" style='width:100%;' border="0" alt="Null">
-  </a>
-</p>
-
-<p>
-  <img src="assets/images/002_Window_and_Clearing__Running.jpg" alt="A window on Windows, with the contents just being a solid shade of blue." title="Our window, being cleared blue." />
-</p>
+Really all we're doing here is configuring a RenderPass
 
 
 > ### Covered in this Section
