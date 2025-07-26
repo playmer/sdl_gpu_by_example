@@ -1,7 +1,7 @@
 use core::panic;
-use std::fs::File;
+use std::fs::{DirEntry, File};
 use std::io::{Read, Seek, Write};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::{env, fs, io};
 use anyhow::Context;
@@ -89,6 +89,16 @@ fn parse_post(file_name: &str, markdown_data: &String, post_template: &str) -> P
     };
 }
 
+
+// Need to figure out a way to dump images into the html like this
+const IMAGE_TEMPLATE: &str = "
+<p>
+  <a href=\"assets/images/002_Window_and_Clearing__Running.jpg\" target=\"_blank\">
+    <img src=\"assets/images/002_Window_and_Clearing__Running.jpg\" style='width:100%;' border=\"0\" alt=\"Null\">
+  </a>
+</p>
+";
+
 const INDEX_ENTRY : &str = "
 
 <h4 class=\"<<<<<<<<POST_TITLE>>>>>>>>\">
@@ -162,8 +172,46 @@ where
     Ok(())
 }
 
+
+fn get_lesson_paths() -> Vec<(Option<PathBuf>, PathBuf, Option<PathBuf>)> {
+    let mut final_paths: Vec<(Option<PathBuf>, PathBuf, Option<PathBuf>)> = Vec::new();
+
+    let paths = {
+        let mut paths: Vec<PathBuf> = Vec::new();
+
+        for entry in fs::read_dir("../content/lessons").unwrap() {
+            paths.push(entry.unwrap().path().to_path_buf());
+        }
+        paths
+    };
+
+    for i in 0..paths.len() 
+    {
+        let last = if i == 0 {
+            None
+        } else {
+            Some(paths[i - 1].clone())
+        };
+
+        let next = if (i + 1) < paths.len() {
+            Some(paths[i + 1].clone())
+        } else {
+            None
+        };
+
+        final_paths.push((last, paths[i].clone(), next));
+    }
+
+    for entry in &final_paths {
+        println!("{}, {}, {}", entry.0.is_some(), entry.1.display(), entry.2.is_some());
+    }
+
+    return final_paths;
+}
+
 fn main() {
     let args: Vec<String> = env::args().collect();
+    let site_dir = Path::new("../");
     let template_dir = Path::new("../template/");
     let output_dir = Path::new("output");
     let asset_dir = output_dir.join("assets");
@@ -176,30 +224,26 @@ fn main() {
         fs::remove_dir_all(&output_dir).unwrap();
     }
     fs::create_dir(&output_dir).unwrap();
-    fs::create_dir(&asset_dir).unwrap();
+    copy_dir_all(site_dir.join("assets"), output_dir.join("assets")).unwrap();
     fs::create_dir(&asset_code_dir).unwrap();
-    fs::create_dir(&asset_image_dir).unwrap();
     copy_dir_all(template_dir.join("css"), output_dir.join("css")).unwrap();
     copy_dir_all(template_dir.join("fonts"), output_dir.join("fonts")).unwrap();
     copy_dir_all(template_dir.join("js"), output_dir.join("js")).unwrap();
 
     let post_template = std::fs::read_to_string("../template/post_template.html").unwrap();
-    let paths = fs::read_dir("../content/lessons").unwrap();
+    let paths = get_lesson_paths();
 
     let mut posts = Vec::new();
 
-    for path in paths {
-        let path = path.unwrap();
-        let file_name_no_extension = path.path().file_stem().unwrap().to_owned();
-
-
+    for (last, path, next) in paths {
+        let file_name_no_extension = path.file_stem().unwrap().to_owned();
 
         let mut output_file=  file_name_no_extension.clone();
         output_file.push(".html");
         let output_file = output_dir.join(output_file);
-        let file_name = path.file_name().into_string().unwrap();
+        let file_name = path.file_name().unwrap().to_str().unwrap();
 
-        let mut data: String = std::fs::read_to_string(path.path()).unwrap();
+        let mut data: String = std::fs::read_to_string(path.as_path()).unwrap();
 
         {
             let mut destination_zip_file_path = file_name_no_extension.to_owned().to_str().unwrap().to_owned();

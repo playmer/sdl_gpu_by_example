@@ -5,51 +5,6 @@ description: Before you render a triangle, you must first create a window, and t
 
 # Window and Clearing
 
-## The Template and SDL Basics
-So lets pull up the code we used in the template and take a look at it:
-
-```c
-#include "SDL3/SDL.h"
-#include "SDL3/SDL_main.h"
-
-int main(int argc, char** argv)
-{
-  if (!SDL_Init(SDL_INIT_VIDEO)) {
-    SDL_Log("Couldn't initialize SDL: %s", SDL_GetError());
-    return 1;
-  }
-  
-  SDL_Log("Everything is working.");
-
-  SDL_Quit();
-  return 0;
-}
-```
-
-Now, this isn't a tutorial on SDL itself, but I'll try to briefly cover things as we add them. 
-
-`SDL3/SDL.h` is the canonical way to include SDL in version 3, and we do indeed generally recommend that, because it includes almost everything SDL provides. We can see that all we're really doing is trying to initialize SDL via [`SDL_Init`](https://wiki.libsdl.org/SDL3/SDL_Init) with the Video system in particular active. If it fails, we print out an error and return out, otherwise we print a message to let the user know things are okay. And then finally we call `SDL_Quit` to tear down anything we or SDL has left over.
-
- > ### A note on SDL_main and the callbacks
- > One of the few headers `SDL3/SDL.h` doesn't include is `SDL3/SDL_main.h`, which is a header only library that implements `int main(int argc, char** argv)` for you. Now you may notice that _we've_ defined that function. Well `SDL_main.h` also provides a macro that turns `main` into [`SDL_main`](https://wiki.libsdl.org/SDL3/SDL_main), so that's what we're actually implementing, and what the `main` that SDL implements calls. You can read more about it in SDLs [main functions README](https://wiki.libsdl.org/SDL3/README-main-functions). For simplicities sake, we're not currently using the [callbacks system](https://wiki.libsdl.org/SDL3/README-main-functions#main-callbacks-in-sdl3) provided by SDL_main so as not to confuse folks from non C and C++ languages reading this tutorial, but know that it's highly encouraged for good reason.
-
-
-Now that we've covered what we already had, lets get us a Window and an Event loop.
-
-
-> ### Covered in this Section
-> - [`SDL_Init`](https://wiki.libsdl.org/SDL3/SDL_Init)
->   - Generally the first think you call in an SDL using application. This initializes the subsystems you require of SDL. Not technically required, as SDL will lazily initialize subsystems when you call functions that require them, but it's recommended you call it, as things like events won't come in from some subsystems if they're not initialized.
-> - [`SDL_Quit`](https://wiki.libsdl.org/SDL3/SDL_Quit)
->   - Conversely, generally the last thing you call. It lets SDL close out every resource it's internally created and that you've created with it, even if you haven't yet. It's not safe to use SDL resources you've previously created after this call.
-> - [`SDL_GetError`](https://wiki.libsdl.org/SDL3/SDL_GetError)
->   - Built in functionality for SDL to retrieve the last error encounter by SDL. Keep in mind that it's _only_ valid to check directly after a call into an SDL function that reported an error. SDL itself sets errors and calls this function internally, so you cannot simply call this and expect the error string it returns to be relevant to you unless SDL told you there was an error.
-> - [`SDL_Log`](https://wiki.libsdl.org/SDL3/SDL_Log)
->   - Really just using this as a drop in replacement of printf because `SDL.h` hands it to us, but it's technically more portable for some situations and platforms. Were we in C++, I'd probably consider [`std::format`](https://en.cppreference.com/w/cpp/utility/format/format.html) or the [`fmt`](https://github.com/fmtlib/fmt) library of which it's based due to it's supirior formatting options.
-> - [`SDL_main`](https://wiki.libsdl.org/SDL3/SDL_main) and the [main functions](https://wiki.libsdl.org/SDL3/README-main-functions)
->   - Already fairly covered above, but I encourage you again to read the documentation on SDL_main itself and on the main functions.
->   - Regarding the [callbacks system](https://wiki.libsdl.org/SDL3/README-main-functions#main-callbacks-in-sdl3) I'll formulate these tutorials such that it won't be difficult to use them instead. When we're a little further along I'll make a short demonstration of how that would look instead.
-
 ## A Window and an Event Loop
 
 ### A Window
@@ -297,6 +252,17 @@ SDL_SubmitGPUCommandBuffer(commandBuffer);
 
 We did it! You should be seeing a window with a blue background! 
 
+![A window on Windows, with the contents just being a solid shade of blue.](assets/images/002_Window_and_Clearing__Running.jpg "Our window, being cleared blue.")
+
+<p>
+  <a href="assets/images/002_Window_and_Clearing__Running.jpg" target="_blank">
+    <img src="assets/images/002_Window_and_Clearing__Running.jpg" style='width:100%;' border="0" alt="Null">
+  </a>
+</p>
+
+<p>
+  <img src="assets/images/002_Window_and_Clearing__Running.jpg" alt="A window on Windows, with the contents just being a solid shade of blue." title="Our window, being cleared blue." />
+</p>
 
 
 > ### Covered in this Section

@@ -68,7 +68,7 @@ cmake -B build
 cmake --build build
 ```
 
-You should now have an exceedingly basic SDL program within the bin directory. Ideally you should execute it from the root of the repository. This will become more important when we start using assets. The CMake build command should have told you toward the end of execution where it built the executable. For example, with the Visual Studio generator I would execute it like so:
+You should now have an exceedingly basic SDL program within the bin directory, as well as compiled versions of all our examples. Ideally you should execute it from the root of the repository. This will become more important when we start using assets. The CMake build command should have told you toward the end of execution where it built the executable. For example, with the Visual Studio generator I would execute it like so:
 ```bash
 bin\Debug\sdl_by_example.exe
 ```
@@ -94,4 +94,48 @@ To briefly explain the anatomy of the repo you've cloned and built:
     - `bin`, a folder for ease of use, this is where we've placed built executables and libraries via some CMake variables.
     - `tools`, a folder where we'll place some binaries of our tools, at time of writing, I only really expect to store SDL_shadercross in here, but you never know.
 
-Now, onto the code!
+
+Finally, lets take a look at one of the most basic SDL programs we can make, which if you chose to follow along with the examples and use the template, was one of the things you compiled up above.
+
+## The Template and SDL Basics
+So lets pull up the code we just compiled in the template and take a look at it:
+
+```c
+#include "SDL3/SDL.h"
+#include "SDL3/SDL_main.h"
+
+int main(int argc, char** argv)
+{
+  if (!SDL_Init(SDL_INIT_VIDEO)) {
+    SDL_Log("Couldn't initialize SDL: %s", SDL_GetError());
+    return 1;
+  }
+  
+  SDL_Log("Everything is working.");
+
+  SDL_Quit();
+  return 0;
+}
+```
+
+Now, this isn't a tutorial on SDL itself, but I'll try to briefly cover things as we add them. 
+
+`SDL3/SDL.h` is the canonical way to include SDL in version 3, and we do indeed generally recommend that, because it includes almost everything SDL provides. We can see that all we're really doing is trying to initialize SDL via [`SDL_Init`](https://wiki.libsdl.org/SDL3/SDL_Init) with the Video system in particular active. If it fails, we print out an error and return out, otherwise we print a message to let the user know things are okay. And then finally we call `SDL_Quit` to tear down anything we or SDL has left over.
+
+ > ### A note on SDL_main and the callbacks
+ > One of the few headers `SDL3/SDL.h` doesn't include is `SDL3/SDL_main.h`, which is a header only library that implements `int main(int argc, char** argv)` for you. Now you may notice that _we've_ defined that function. Well `SDL_main.h` also provides a macro that turns `main` into [`SDL_main`](https://wiki.libsdl.org/SDL3/SDL_main), so that's what we're actually implementing, and what the `main` that SDL implements calls. You can read more about it in SDLs [main functions README](https://wiki.libsdl.org/SDL3/README-main-functions). For simplicities sake, we're not currently using the [callbacks system](https://wiki.libsdl.org/SDL3/README-main-functions#main-callbacks-in-sdl3) provided by SDL_main so as not to confuse folks from non C and C++ languages reading this tutorial, but know that it's highly encouraged for good reason.
+
+Now that we've covered the basics, lets get us a Window and an Event loop.
+
+> ### Covered in this Section
+> - [`SDL_Init`](https://wiki.libsdl.org/SDL3/SDL_Init)
+>   - Generally the first think you call in an SDL using application. This initializes the subsystems you require of SDL. Not technically required, as SDL will lazily initialize subsystems when you call functions that require them, but it's recommended you call it, as things like events won't come in from some subsystems if they're not initialized.
+> - [`SDL_Quit`](https://wiki.libsdl.org/SDL3/SDL_Quit)
+>   - Conversely, generally the last thing you call. It lets SDL close out every resource it's internally created and that you've created with it, even if you haven't yet. It's not safe to use SDL resources you've previously created after this call.
+> - [`SDL_GetError`](https://wiki.libsdl.org/SDL3/SDL_GetError)
+>   - Built in functionality for SDL to retrieve the last error encounter by SDL. Keep in mind that it's _only_ valid to check directly after a call into an SDL function that reported an error. SDL itself sets errors and calls this function internally, so you cannot simply call this and expect the error string it returns to be relevant to you unless SDL told you there was an error.
+> - [`SDL_Log`](https://wiki.libsdl.org/SDL3/SDL_Log)
+>   - Really just using this as a drop in replacement of printf because `SDL.h` hands it to us, but it's technically more portable for some situations and platforms. Were we in C++, I'd probably consider [`std::format`](https://en.cppreference.com/w/cpp/utility/format/format.html) or the [`fmt`](https://github.com/fmtlib/fmt) library of which it's based due to it's supirior formatting options.
+> - [`SDL_main`](https://wiki.libsdl.org/SDL3/SDL_main) and the [main functions](https://wiki.libsdl.org/SDL3/README-main-functions)
+>   - Already fairly covered above, but I encourage you again to read the documentation on SDL_main itself and on the main functions.
+>   - Regarding the [callbacks system](https://wiki.libsdl.org/SDL3/README-main-functions#main-callbacks-in-sdl3) I'll formulate these tutorials such that it won't be difficult to use them instead. When we're a little further along I'll make a short demonstration of how that would look instead.
