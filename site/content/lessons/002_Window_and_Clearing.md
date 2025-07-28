@@ -285,6 +285,8 @@ After that, it's really just about ending the render pass with [`SDL_EndGPURende
 > - [`SDL_GPUColorTargetInfo`](https://wiki.libsdl.org/SDL3/SDL_GPUColorTargetInfo)
 >   - I covered the immediately relevant properties above, but there's a fair bit of stuff you can adjust here, including more about the "Resolve" store_op properties that now make a bit more sense to me reading this again now. Still not going to cover it yet. We'll obviously touch on some of these as we proceed, but it never hurts to take a look early.
 > - [`SDL_BeginGPURenderPass`](https://wiki.libsdl.org/SDL3/SDL_BeginGPURenderPass)
->   - blah
+>   - 
 > - [`SDL_EndGPURenderPass`](https://wiki.libsdl.org/SDL3/SDL_EndGPURenderPass)
->   - blah
+>   - As simple as it gets, this ends the Render Pass you were adding commands to. It should be noted that it's not unlikely you'll have several of these in a frame, though obviously you don't want to go overboard. As you may suspect, you'll need to End a Render Pass and Begin a new one if you have to change the Textures you're rendering to. One example may be a blur shader, where you need to read from a target you did your initial geometry rendering to, render to an intermediate Texture for a horizontal blur, and finally render to a final Texture using a vertical blur pass.
+
+And now to move on to rendering some actual geometry, and using some very simple shaders!
