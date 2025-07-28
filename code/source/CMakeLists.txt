@@ -1,3 +1,5 @@
+set(CMAKE_COMPILE_WARNING_AS_ERROR TRUE)
+
 list_directories(example_directories)
 
 foreach(example_directory ${example_directories})
