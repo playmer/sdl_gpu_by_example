@@ -21,7 +21,7 @@ If you decide to use the template, there will be some short setup involving CMak
 
 When we get there, I'll briefly explain how to use SDL_shadercross to compile shaders, but from then on will assume that you're comfortable with that. The template has this entirely automated on Windows, further work is needed for Mac, and some manual setup will be required from Linux. 
 
-## How to read this Tutorial and some Resources
+## How to read this Tutorial
 
 First off, if you're already comfortable with the basics from another API, and just want to get a handle on SDL_GPU with some additional context beyond the [documentation](https://wiki.libsdl.org/SDL3/CategoryGPU) and [samples repo](https://github.com/TheSpydog/SDL_gpu_examples/), feel free to jump around. If you already know SDL, please skip the sections that cover new-to-beginners SDL calls.
 
@@ -29,21 +29,22 @@ Every major section of a chapter will have some notes at the bottom on API calls
 
 I cannot cover every aspect of every function hence this documentation reading encouragement. SDL is a living API, and while we likely won't cover them _much_, many of the APIs have alternate functions that take an SDL_PropertiesID for additional tweaking. These properties will evolve with time, so there may be new ones added after time of writing that I can't know about. We'll be using this functionality mostly for creating our own functions for making Graphics resources to ensure they're all named for the sake of debugging in tools like RenderDoc.
 
-### Resources
 
- - [SDL_GPU Documentation](https://wiki.libsdl.org/SDL3/CategoryGPU) 
- - [SDL_gpu_examples repo](https://github.com/TheSpydog/SDL_gpu_examples/)
- - [SDL Discord](https://discord.gg/BwpFGBWsv8)
-    - We can help with both SDL and SDL_GPU questions here. Though don't expect to get incredibly high end 3D graphics advice here. We're still building out that section of the community now that we have SDL_GPU.
- - [SDL Forum](https://discourse.libsdl.org/)
- - [The Graphics Programming Discord](https://discord.graphics-programming.org/)
-    - There's even an SDL_GPU channel! These folks are probably where you want to go to with the more serious Graphics questions. 
- - [The Graphics Programming Discord Website](https://graphics-programming.org/)
-    - They've got links to both their own content and interesting Graphics Blogs!
- - [SDL GPU API Concepts: Data Transfer and Cycling](https://moonside.games/posts/sdl-gpu-concepts-cycling/)
-    - Written by Evan Hemsley, this article explains the GPU API concept called cycling. We'll get there eventually, but this is written from the source, highly recommended! 
- - [SDL GPU API Concepts: Sprite Batcher](https://moonside.games/posts/sdl-gpu-sprite-batcher/)
-    - Written by Evan Hemsley as his answer to folks who want shaders but are coming from the [SDL_Renderer](https://wiki.libsdl.org/SDL3/CategoryRender). Fantastic article on the design of a simple sprite batcher to solve the main things people use the built-in renderer for. We'll try to build up to examples like this, but we likely won't speak about the design of a pipeline at this length.
+## A Discussion on Code Organization
+
+Something I don't like about some Graphics material I've read is writing literally everything in `main`. On the other hand examples being strewn around multiple files have their own problems. To a certain extent we can't get around that, given that shaders exist, and in the modern APIs, including SDL_GPU, you can't just provide text to the API, not to mention the portability problem. We _could_ use something like SDL_shadercross as a library to compile our shaders at runtime, but suffice it to say, it's not a trivial integration.
+
+So with that said, here's my strategy, based on one I've been using in a side project. We'll wrap our device, one time query information, and initialization in a Context struct that we use a few functions to bring up and bring down. This will be global, both because I don't think it's likely most applications will be doing multi-GPU work, with that context it's more efficent to have it be accessible by all our GPU code, and because it's just easier to not need to pass it around all the time.
+
+With regards to techniques we implement during chapters, we'll make a per-technique "PipelineContext" struct and set of functions for creating/destroying/utilizing them. This is, quite frankly, intentionally vague. The point of these are not to be a perfect abstraction over Pipelines, Shaders, any of the Copy/Render/Compute passes, or whatever. They will sometimes be composable, and sometimes they won't. Some of them will need their own Render passes, and some of them can reuse an existing one that was already open. Some will be compute, render, or copy only. Some will be some combination of the three.
+
+The goal of these is two fold. 
+
+ - One is that I know a lot of beginners to graphics have literally no idea how to group things together. I certainly didn't! I remember staring at some of the diagrams of the Vulkan "lifecycle", all the structs and functions and data flows and render passes to get things on the screen. Certainly I could follow it, but actually organizing them into something reasonable was impossible.
+  
+	I won't pretend that these PipelineContexts are going to blow your mind or are ready for prime time in AA or AAA games. They should hopefully be instructive on how you can process your data, as reasonably efficient as we can make it without getting into the weeds.
+
+ - Selfishly the other reason is it helps me to organize these chapters and samples. If we want to go back and extend a previous example, we can go grab it and be off to the races. And at least personally I dislike when my scopes have access to a bunch of data that really isn't relevant for the task at hand. These contexts will begin seemingly pretty granular, but they'll evolve to processing a lot of objects at once down the line, managing their upload, manipulation of the data in compute, and executing on rendering that data.
 
 # The Setup
 
