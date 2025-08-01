@@ -264,12 +264,13 @@ void DestroyFullscreenPipeline(FullscreenPipeline* aPipeline)
   SDL_zero(*aPipeline);
 }
 
-
+//002_Window_and_Clearing__Running.jpg
 
 
 int main(int argc, char** argv)
 {
-  SDL_UNUSED(argc), SDL_UNUSED(argv);
+  (void)argc;
+  (void)argv;
   sdl_check(SDL_Init(SDL_INIT_VIDEO), "Couldn't initialize SDL: ");
 
   SDL_Window* window = SDL_CreateWindow("003-Triangle_and_Fullscreen_Triangle", 1280, 720, 0);

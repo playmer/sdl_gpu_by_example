@@ -5,7 +5,9 @@ edition = "2024"
 
 [dependencies]
 anyhow = "1.0.98"
+extract-frontmatter = "4.1.1"
 markdown = "1.0.0"
 natural-sort-rs = "0.2.1"
 walkdir = "2.5.0"
+yaml-rust = "0.4.5"
 zip = { version = "4.3.0", default-features = false, features = ["zstd"] }

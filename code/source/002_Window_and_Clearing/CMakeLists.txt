@@ -1,3 +1,10 @@
+cmake_minimum_required(VERSION 3.28.1)
+project(002_Window_and_Clearing C)
+
+if (PROJECT_IS_TOP_LEVEL)
+    include(CMake/TopLevel.cmake)
+endif()
+
 add_executable(002_Window_and_Clearing)
 
 target_sources(002_Window_and_Clearing

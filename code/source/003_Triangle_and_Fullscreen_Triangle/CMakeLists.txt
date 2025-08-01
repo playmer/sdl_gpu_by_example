@@ -1,3 +1,10 @@
+cmake_minimum_required(VERSION 3.28.1)
+project(003_Triangle_and_Fullscreen_Triangle C)
+
+if (PROJECT_IS_TOP_LEVEL)
+    include(CMake/TopLevel.cmake)
+endif()
+
 add_executable(003_Triangle_and_Fullscreen_Triangle)
 
 target_sources(003_Triangle_and_Fullscreen_Triangle

@@ -66,3 +66,43 @@ macro(list_directories result)
     
     set(${result} ${directory_list})
 endmacro()
+
+macro(set_up_example_top_level)
+    if (PROJECT_IS_TOP_LEVEL)
+        if (${PROJECT_NAME} STREQUAL SDL_GPU_By_Example)
+
+        endif()
+
+        # Don't move this too far away from the call to project. We want this to apply to all targets
+        if(NOT CMAKE_VS_GLOBALS MATCHES "(^|;)UseMultiToolTask=")
+            list(APPEND CMAKE_VS_GLOBALS UseMultiToolTask=true)
+        endif()
+        if(NOT CMAKE_VS_GLOBALS MATCHES "(^|;)EnforceProcessCountAcrossBuilds=")
+            list(APPEND CMAKE_VS_GLOBALS EnforceProcessCountAcrossBuilds=true)
+        endif()
+
+        include(CMake/Helpers.cmake)
+
+        set(ShadersOutputDir ${PROJECT_SOURCE_DIR}/Assets/Shaders)
+        set(ShaderCrossExe ${PROJECT_SOURCE_DIR}/tools/windows/bin/shadercross.exe)
+
+        # Set the output directory for built objects.
+        # This makes sure that the dynamic library goes into the build directory automatically.
+        set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/bin/$<CONFIG>")
+        set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/bin/$<CONFIG>")
+        
+        # add_subdirectory is a function that drops us down into and executes the CMakeLists.txt within 
+        # the directory you specify. Once done executing it comes back up to here and continues.
+        add_subdirectory(external)
+        add_subdirectory(source)
+    endif()
+endmacro()
+
+# When using the Visual Studio generator, if you were to open the project in VS, this would
+# set the startup project to our example, and if you were to press F5 it would Build and then
+# Run and Debug it
+macro(set_vs_startup_project_if_toplevel aTarget)
+    if (PROJECT_IS_TOP_LEVEL)
+        set_property(DIRECTORY ${CMAKE_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT ${aTarget})
+    endif()
+endmacro()

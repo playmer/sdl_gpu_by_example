@@ -1,3 +1,10 @@
+cmake_minimum_required(VERSION 3.28.1)
+project(001_Introduction_and_the_Template C)
+
+if (PROJECT_IS_TOP_LEVEL)
+    include(CMake/TopLevel.cmake)
+endif()
+
 # This is how we declare an executable "target" to be built. There are _many_ optional parameters
 # but for now we'll just declare this. (There are also library targets, which is what SDL is.)
 add_executable(001_Introduction_and_the_Template)
@@ -53,3 +60,5 @@ source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${targetSources})
 # This is helpful as we'll always assume we're executing our code from the root of the repo,
 # and path our assets accordingly.
 set_property(TARGET 001_Introduction_and_the_Template PROPERTY VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}")
+
+set_vs_startup_project_if_toplevel(001_Introduction_and_the_Template)

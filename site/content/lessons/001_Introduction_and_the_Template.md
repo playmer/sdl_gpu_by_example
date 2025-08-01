@@ -1,6 +1,7 @@
 ---
 title: Introduction and the Template
 description: An introduction to this series, what you should expect, choices that have been made, additional resources, and a demonstration of setting up the template project if you'd prefer that over rolling your own.
+template: post_template
 ---
 
 # Introduction
