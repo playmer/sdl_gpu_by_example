@@ -12,10 +12,10 @@
     <title>Home - SDL GPU by Example</title>
 
     <!-- Bootstrap Core CSS -->
-    <link href="css/bootstrap.min.css" rel="stylesheet">
+    <link href="{{root_url}}css/bootstrap.min.css" rel="stylesheet">
 
     <!-- Custom CSS -->
-    <link href="css/simple-blog-template.css" rel="stylesheet">
+    <link href="{{root_url}}css/simple-blog-template.css" rel="stylesheet">
 
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
@@ -39,13 +39,13 @@
             <span class="icon-bar"></span>
             <span class="icon-bar"></span>
           </button>
-          <a class="navbar-brand" href="index.html">SDL GPU by Example</a>
+          <a class="navbar-brand" href="{{root_url}}index.html">SDL GPU by Example</a>
         </div>
         <!-- Collect the nav links, forms, and other content for toggling -->
         <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
           <ul class="nav navbar-nav navbar-right">
             <li>
-              <a href="about.html">About</a>
+              <a href="{{root_url}}about.html">About</a>
             </li>
           </ul>
         </div>
@@ -62,9 +62,17 @@
         <!-- Blog Entries Column -->
         <div class="col-md-12">
           
-          ${content}
+          {{current_content.rendered_html}}
 
-          ${index_content}
+          
+          {{#each collections.lessons}}
+            <h4 class="{{this.title}}">
+            <a href="{{this.url}}">{{this.title}}</a>
+            </h4>
+            <p>{{this.description}}</p>
+          {{/each}}
+
+          <hr>
 
         </div>
 
@@ -89,10 +97,10 @@
 
 
     <!-- jQuery -->
-    <script src="js/jquery.js"></script>
+    <script src="{{root_url}}js/jquery.js"></script>
 
     <!-- Bootstrap Core JavaScript -->
-    <script src="js/bootstrap.min.js"></script>
+    <script src="{{root_url}}js/bootstrap.min.js"></script>
 
   </body>
 

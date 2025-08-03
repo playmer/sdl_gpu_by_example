@@ -1,11 +1,9 @@
 ---
 title: Triangle and a "Fullscreen Triangle"
 description: Finally you can see a triangle, and then a demonstration on why you might actually use a single triangle later on in your Graphics journey. Will cover the creation of Vertex and Pixel shaders, a simple demonstration of "Vertex Pulling", and then an extension of the triangle to cover the whole screen with a shader effect.
-template: post_template
+template: post_template.html
+collections: ["lessons"]
 ---
-
-
-# Triangle and a "Fullscreen Triangle"
 
 ## Intro 
 The big one, it's time to draw a Triangle. And after that, we're going to learn a trick on how to extend this triangle to display over the entire screen. This technique is a small optimization that gets used when you start learning fullscreen effects. We'll be using it in the next chapter to play around with pixel shaders to get a little more comfortable with writing code on the GPU.

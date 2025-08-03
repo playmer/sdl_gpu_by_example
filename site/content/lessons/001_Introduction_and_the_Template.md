@@ -1,10 +1,9 @@
 ---
 title: Introduction and the Template
 description: An introduction to this series, what you should expect, choices that have been made, additional resources, and a demonstration of setting up the template project if you'd prefer that over rolling your own.
-template: post_template
+template: post_template.html
+collections: ["lessons"]
 ---
-
-# Introduction
 
 So if you've come here, you're interested in learning SDL_GPU. As background, I should first say that I myself am not an expert in the topic of Graphics, or in SDL_GPU itself. I've written a few relatively simple renderers for games, imgui projects, and similar dabbling. I've mostly focused on the CPU side of things, and only recently have I been learning about some of the more "modern" approaches to rendering. When [Evan Hemsley](https://moonside.games/pages/about/) (also known as cosmonaut), pricipal designer of SDL_GPU, finishes his graphics book, please go buy it and read it!
 

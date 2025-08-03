@@ -1,7 +1,10 @@
 
 #[allow(unused_imports)] use core::panic;
+use std::collections::{self, HashMap};
+use std::fs::create_dir_all;
 #[allow(unused_imports)] use std::fs::{DirEntry, File};
 #[allow(unused_imports)] use std::io::{Read, Seek, Write};
+use std::iter::Map;
 #[allow(unused_imports)] use std::path::{Path, PathBuf};
 #[allow(unused_imports)] use std::process::Command;
 //use std::str::pattern::Pattern;
@@ -9,35 +12,32 @@
 #[allow(unused_imports)] use anyhow::Context;
 #[allow(unused_imports)] use extract_frontmatter::config::{Modifier, Splitter};
 #[allow(unused_imports)] use extract_frontmatter::Extractor;
+use handlebars::{to_json, Handlebars};
 #[allow(unused_imports)] use markdown::{to_mdast, Constructs, Options, ParseOptions};
 #[allow(unused_imports)] use markdown;
 #[allow(unused_imports)] use natural_sort_rs::NaturalSort;
+use serde::Serialize;
+use serde_json::{json, Value};
 #[allow(unused_imports)] use walkdir::WalkDir;
 #[allow(unused_imports)] use yaml_rust::{Yaml, YamlLoader};
 #[allow(unused_imports)] use zip::write::SimpleFileOptions;
 
-static LANGUAGE: &str = "Rust";
-
+static CODE_DIR: &str =  "../../code";
 static CODE_SOURCE_DIR: &str =  "../../code/source";
 static CODE_ASSET_DIR: &str =  "../../code/Assets";
 static CODE_CMAKE_DIR: &str =  "../../code/CMake";
 
+static CONTENT_DIR: &str =  "../content";
+static STATIC_DATA_DIR: &str =  "../static_data";
+static TEMPLATE_DIR: &str =  "../template";
+
 static OUTPUT_DIR: &str =  "output";
+static NO_ESCAPE: &str =  "<!-- NO_ESCAPE -->\n";
 
 
-fn copy_dir_all(src: impl AsRef<Path>, dst: impl AsRef<Path>) -> io::Result<()> {
-    fs::create_dir_all(&dst)?;
-    for entry in fs::read_dir(src)? {
-        let entry = entry?;
-        let ty = entry.file_type()?;
-        if ty.is_dir() {
-            copy_dir_all(entry.path(), dst.as_ref().join(entry.file_name()))?;
-        } else {
-            fs::copy(entry.path(), dst.as_ref().join(entry.file_name()))?;
-        }
-    }
-    Ok(())
-}
+
+
+//     let post_content = markdown::to_html_with_options(&markdown_data, &front_matter).unwrap();
 
 // struct Post {
 //     title: String,
@@ -175,41 +175,41 @@ fn copy_dir_all(src: impl AsRef<Path>, dst: impl AsRef<Path>) -> io::Result<()> 
 // }
 
 
-fn get_paths(directory: &str) -> Vec<PathBuf> {
-    let mut final_paths: Vec<PathBuf> = Vec::new();
+// fn get_paths(directory: &str) -> Vec<PathBuf> {
+//     let mut final_paths: Vec<PathBuf> = Vec::new();
 
-    let paths = {
-        let mut paths: Vec<PathBuf> = Vec::new();
+//     let paths = {
+//         let mut paths: Vec<PathBuf> = Vec::new();
 
-        for entry in fs::read_dir(directory).unwrap() {
-            paths.push(entry.unwrap().path().to_path_buf());
-        }
-        paths
-    };
+//         for entry in fs::read_dir(directory).unwrap() {
+//             paths.push(entry.unwrap().path().to_path_buf());
+//         }
+//         paths
+//     };
 
-    for i in 0..paths.len() 
-    {
-        let last = if i == 0 {
-            None
-        } else {
-            Some(paths[i - 1].clone())
-        };
+//     for i in 0..paths.len() 
+//     {
+//         let last = if i == 0 {
+//             None
+//         } else {
+//             Some(paths[i - 1].clone())
+//         };
 
-        let next = if (i + 1) < paths.len() {
-            Some(paths[i + 1].clone())
-        } else {
-            None
-        };
+//         let next = if (i + 1) < paths.len() {
+//             Some(paths[i + 1].clone())
+//         } else {
+//             None
+//         };
 
-        final_paths.push(paths[i].clone());
-    }
+//         final_paths.push(paths[i].clone());
+//     }
 
-    // for entry in &final_paths {
-    //     println!("{}, {}, {}", entry.0.is_some(), entry.1.display(), entry.2.is_some());
-    // }
+//     // for entry in &final_paths {
+//     //     println!("{}, {}, {}", entry.0.is_some(), entry.1.display(), entry.2.is_some());
+//     // }
 
-    return final_paths;
-}
+//     return final_paths;
+// }
 
 // fn get_directories(directory: &str) {
 //     for entry in std::fs::read_dir(directory).unwrap().into_iter().filter_map(|e| e.into()) {
@@ -218,17 +218,17 @@ fn get_paths(directory: &str) -> Vec<PathBuf> {
 // }
 
 
-fn get_lesson_paths() -> Vec<PathBuf> {
-    return get_paths("../content/lessons");
-}
+// fn get_lesson_paths() -> Vec<PathBuf> {
+//     return get_paths("../content/lessons");
+// }
 
-fn get_lesson_code_paths() -> Vec<PathBuf> {
-    let paths = get_paths("../..code/source").into_iter().filter(|p | {
-        p.ends_with("CMakeLists.txt")
-    });
+// fn get_lesson_code_paths() -> Vec<PathBuf> {
+//     let paths = get_paths("../..code/source").into_iter().filter(|p | {
+//         p.ends_with("CMakeLists.txt")
+//     });
 
-    return paths.collect();
-}
+//     return paths.collect();
+// }
 
 // #[derive(Clone)]
 // enum FileOrEnum
@@ -596,11 +596,67 @@ fn get_agnostic_lesson_code() -> Vec<PathBuf> {
 // }
 
 
+fn write_lesson_zips(output_dir: &Path) {
+    let code_dir = Path::new(CODE_DIR);
+    let output_code_dir = output_dir.join("assets").join("code");
+    let agnostic_code_for_lessons = get_agnostic_lesson_code();
 
+    fs::create_dir_all(&output_code_dir).unwrap();
+
+    for lesson_code in get_specific_lesson_code() {
+        let zip_file_path = output_code_dir.join(lesson_code.lesson_name).with_extension("zip");
+        let zip_file = File::create(&zip_file_path).unwrap();
+        let mut zip = zip::ZipWriter::new(zip_file);
+        let mut buffer = Vec::new();
+        
+        let options = SimpleFileOptions::default()
+            .compression_method(zip::CompressionMethod::Zstd)
+            .unix_permissions(0o755);
+
+        let files = {
+            let mut files = Vec::new();
+            files.extend_from_slice(&lesson_code.code_assets);
+            files.extend_from_slice(&agnostic_code_for_lessons);
+            files
+        };
+
+        for file in &files {
+            zip.start_file_from_path(&file, options).unwrap();
+            
+            let mut f = File::open(code_dir.join(file)).unwrap();
+            f.read_to_end(&mut buffer).unwrap();
+            zip.write_all(&buffer).unwrap();
+            buffer.clear();
+        }
+        
+        for file in &lesson_code.code_files {
+            println!("{}", file.display());
+            zip.start_file_from_path(&file, options).unwrap();
+            
+            let mut f = File::open(lesson_code.lesson_code_directory.join(file)).unwrap();
+            f.read_to_end(&mut buffer).unwrap();
+            zip.write_all(&buffer).unwrap();
+            buffer.clear();
+        }
+
+        zip.finish().unwrap();
+    }
+}
+
+fn write_static_data(output_dir: &Path) {
+    let static_data_dir = Path::new(STATIC_DATA_DIR);
+
+    for file_source in get_files(static_data_dir) {
+        let file_destination = output_dir.join(&file_source);
+
+        println!("static_stuff: {}", file_destination.display());
+        fs::create_dir_all(file_destination.parent().unwrap()).unwrap();
+        fs::copy(static_data_dir.join(&file_source), &file_destination).unwrap();
+    }
+}
 
 fn write_site_to_folder() {
     let output_dir = Path::new(OUTPUT_DIR);
-    let output_code_dir = output_dir.join("assets").join("code");
 
     // Delete existing output    
     if fs::exists(&output_dir).unwrap()
@@ -608,43 +664,205 @@ fn write_site_to_folder() {
         fs::remove_dir_all(&output_dir).unwrap();
     }
 
-    fs::create_dir_all(&output_code_dir);
-    let agnostic_code_for_lessons = get_agnostic_lesson_code();
-    for lesson_code in get_specific_lesson_code() {
-        let zip_file_path = output_code_dir.join(lesson_code.lesson_name).with_extension("zip");
-        let zip_file = File::create(&zip_file_path).unwrap();
-        let mut zip = zip::ZipWriter::new(zip_file);
-        
-        let options = SimpleFileOptions::default()
-            .compression_method(zip::CompressionMethod::Zstd)
-            .unix_permissions(0o755);
+    write_static_data(&output_dir);
+    write_lesson_zips(&output_dir);
+}
 
-        let code_files = {
-            let mut files = Vec::new();
-            files.extend_from_slice(&lesson_code.code_files);
-            files.extend_from_slice(&lesson_code.code_assets);
-            files.extend_from_slice(&agnostic_code_for_lessons);
-            files
-        };
+struct Content {
+    file_name: String,
+    file_path: PathBuf,
+    front_matter: Yaml,
+    markdown: String,
+}
 
-        for file in code_files {
-            zip.start_file_from_path(&file, options).unwrap();
+
+struct ContentInfo {
+    file_name: String,
+    file_path: PathBuf,
+    //properties: String
+}
+
+impl ContentInfo {
+    fn new(content: &Content) -> ContentInfo {
+        return ContentInfo { 
+            file_name: content.file_name.clone(),
+            file_path: content.file_path.clone(),
+            //properties: content.front_matter.clone().into_string().unwrap()
         }
+    }
+}
+
+fn get_content() -> Vec<Content> {
+    let content_dir = Path::new(CONTENT_DIR);
+
+    let mut content: Vec<Content> = Vec::new();
+
+    for file_path in get_files(&content_dir) {
+        let file_name = file_path.file_name().unwrap().to_str().unwrap().to_string();
+
+        let front_matter_and_markdown: String = std::fs::read_to_string(&content_dir.join(&file_path)).unwrap();
         
-        zip.finish().unwrap();
+        let (front_matter, markdown) = Extractor::new(Splitter::EnclosingLines("---"))
+            .extract(&front_matter_and_markdown);
+
+        let docs = YamlLoader::load_from_str(&front_matter).unwrap();
+
+        content.push(Content { 
+            file_name: file_name,
+            file_path: file_path, 
+            front_matter: docs[0].clone(), 
+            markdown: markdown.to_string() 
+        });
     }
 
+    return content;
+}
+
+
+fn get_collections(content: &Vec<Content>) -> Value {
+    let mut collections_to_return: HashMap<String, Vec<&Content>> = HashMap::new();
+
+    for content_file in content {
+        let collections = content_file.front_matter["collections"].as_vec();
+
+        let collections = if collections.is_none() {
+            continue;
+        } else {
+            collections.unwrap()
+        };
+
+        for collection in collections {
+            let collection_name = collection.as_str().unwrap();
+            
+            println!("\tcollection_name: {}", collection_name);
+
+            if let Some(inner_collection) = collections_to_return.get_mut(collection_name) {
+                inner_collection.push(&content_file);
+            } else {
+                collections_to_return.insert(collection_name.to_string(), Vec::new());
+                let inner_collection = collections_to_return.get_mut(collection_name).unwrap();
+                inner_collection.push(&content_file);
+            }
+        }
+    }
+
+    let mut map: serde_json::Map<String, Value> = serde_json::Map::new();
+
+    let mut collection_map: serde_json::Map<String, Value> = serde_json::Map::new();
+    for (name, collection) in collections_to_return {
+        collection_map.insert(name.clone(), Value::Array(collection.iter().map(|i| get_content_info(i).into()).collect()));
+    }
+
+    return collection_map.into();
+}
+
+fn get_content_info(content: &Content) -> serde_json::Map<String, Value> {
+    let mut map: serde_json::Map<String, Value> = serde_json::Map::new();
+
+    map.insert("file_name".to_string(), Value::String(content.file_name.clone()));
+    map.insert("file_path".to_string(), Value::String(content.file_path.to_str().unwrap().to_string()));
+    map.insert("title".to_string(), Value::String(content.front_matter["title"].as_str().unwrap().to_string()));
+    map.insert("description".to_string(), Value::String(content.front_matter["description"].as_str().unwrap().to_string()));
+    map.insert("url".to_string(), Value::String(content.file_path.with_extension("html").to_str().unwrap().to_string()));
+
+    return map;
+}
+
+fn get_content_infos(content: &Vec<Content>) -> Value {
+    let mut map: serde_json::Map<String, Value> = serde_json::Map::new();
+
+    for content_file in content {
+        map.insert(content_file.file_name.clone(), get_content_info(content_file).into());
+    }
+
+    return Value::Object(map);
+}
+
+fn get_template_context(content: &Vec<Content>) -> serde_json::Map<String, Value> {
+    let mut map: serde_json::Map<String, Value> = serde_json::Map::new();
+
+    map.insert("contents".to_string(), get_content_infos(&content));
+    map.insert("collections".to_string(), get_collections(&content));
+    return map;
+}
+
+//fn to_json_value(yaml: &Yaml) -> Value {
+//    let mut map = Map::new();
+//
+//    for item in yaml. {
+//
+//    }
+//
+//    let obj = Value::Object(map);
+//}
+
+fn get_specific_content_context(template_context: &serde_json::Map<String, Value>, content: &Content, rendered_html: &String) -> Value {
+    let mut map: serde_json::Map<String, Value> = template_context.clone();
+    let mut current_content = get_content_info(&content);
+    current_content.insert("rendered_html".to_string(), Value::String(rendered_html.clone()));
+    map.insert("current_content".to_string(), current_content.into());
+
+    if content.file_path.components().count() > 1 {
+        map.insert("root_url".to_string(), Value::String("../".repeat(content.file_path.components().count() - 1)));
+    }
+    
+    return map.into();
+}
+
+
+pub fn handlebars_escape(data: &str) -> String {
+    if (data.contains(NO_ESCAPE)) {
+        return data.to_owned();
+    }
+    
+    return handlebars::html_escape(data);
+}
+
+
+fn process_content() -> Vec<(PathBuf, String)> {
+    let output_dir = Path::new(OUTPUT_DIR);
+
+    let template_dir = Path::new(TEMPLATE_DIR);
+    let rendered_html: Vec<(PathBuf, String)> = Vec::new();
+
+    let contents = get_content();
+    let template_context = get_template_context(&contents);
+
+    let mut handlebars = Handlebars::new();
+    handlebars.register_escape_fn(handlebars_escape);
+
+    for content in contents {
+        let template_path = template_dir.join(content.front_matter["template"].as_str().unwrap());
+        let template_html = std::fs::read_to_string(&template_path).unwrap();
+        let content_html = format!("{}{}", NO_ESCAPE, markdown::to_html(&content.markdown));
+        let current_content_context = get_specific_content_context(&template_context, &content, &content_html);
+        let final_html = handlebars.render_template(&template_html, &current_content_context).unwrap();
+
+        let final_file_path = output_dir.join(&content.file_path).with_extension("html");
+        create_dir_all(final_file_path.parent().unwrap()).unwrap();
+
+        std::fs::write(final_file_path, final_html).unwrap();
+    }
+
+    return rendered_html;
 }
 
 fn main() {
-    write_site_to_folder()
-    // for code_for_lesson in &code_for_lessons {
-    //     println!("{}", code_for_lesson);
-    // }
+    let output_dir = Path::new(OUTPUT_DIR);
 
-    // for dir in get_folders_or_paths(Path::new("../../code/source"), true) {
-    //     println!("{}", dir.display());
-    // }
+    write_site_to_folder();
+    process_content();
+    
+   let args: Vec<String> = env::args().collect();
+
+   if !args.contains(&"--no-serve".to_owned())
+   {
+       // Should run the bottom command to host the site.
+       let _ = Command::new("http-serve-folder")
+           .args([output_dir])
+           .status()
+           .expect("failed to execute process");
+   }
 }
 
 

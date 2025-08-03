@@ -1,10 +1,9 @@
 ---
 title: Window and Clearing
 description: Before you render a triangle, you must first create a window, and then ideally clear it to a friendly blue color. Covers the basics of initialization of SDL, the Window, and the GPU Device, as well as the most basic usage of Command Buffers, Swapchain Textures, and a RenderPass.
-template: post_template
+template: post_template.html
+collections: ["lessons"]
 ---
-
-# Window and Clearing
 
 Now that we've gotten the "make sure we can compile, link, and run an SDL program" step out of the way, we can start actually doing some work. We'll start by going over Window creation and setting up your event loop so we can receive events, like the one that tells you the program should end.
 
