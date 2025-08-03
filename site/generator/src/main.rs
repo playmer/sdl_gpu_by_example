@@ -802,10 +802,6 @@ fn get_specific_content_context(template_context: &serde_json::Map<String, Value
     current_content.insert("rendered_html".to_string(), Value::String(rendered_html.clone()));
     map.insert("current_content".to_string(), current_content.into());
 
-    if content.file_path.components().count() > 1 {
-        map.insert("root_url".to_string(), Value::String("../".repeat(content.file_path.components().count() - 1)));
-    }
-    
     return map.into();
 }
 
