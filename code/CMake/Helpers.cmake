@@ -67,10 +67,78 @@ macro(list_directories result)
     set(${result} ${directory_list})
 endmacro()
 
+macro(get_shadercross)
+    message(STATUS hmmmmmmmmmmmmmm1)
+    set(ShaderCrossExe ${PROJECT_SOURCE_DIR}/tools/bin/shadercross.exe)
+
+    set(HAVE_SHADER_CROSS_PRECOMPILED_BINARIES FALSE)
+    if (${CMAKE_HOST_SYSTEM_NAME} STREQUAL Darwin)
+        set(SHADER_CROSS_HOST_PLATFORM "macos")
+
+        set(HAVE_SHADER_CROSS_PRECOMPILED_BINARIES TRUE)
+        set(SHADER_CROSS_HOST_ARCHITECTURE "arm64-x64")
+        set(SHADER_CROSS_ARCHIVE_EXT "tar.gz")
+    elseif (${CMAKE_HOST_SYSTEM_NAME} STREQUAL Windows)
+        set(SHADER_CROSS_HOST_PLATFORM "VC")
+        
+        if (${CMAKE_HOST_SYSTEM_PROCESSOR} STREQUAL "AMD64")
+            set(HAVE_SHADER_CROSS_PRECOMPILED_BINARIES TRUE)
+            set(SHADER_CROSS_HOST_ARCHITECTURE "x64")
+            set(SHADER_CROSS_ARCHIVE_EXT "zip")
+        endif()
+    elseif (${CMAKE_HOST_SYSTEM_NAME} STREQUAL Linux)
+        set(SHADER_CROSS_HOST_PLATFORM "linux")
+
+        if (${CMAKE_HOST_SYSTEM_PROCESSOR} STREQUAL "x86_64")
+            set(HAVE_SHADER_CROSS_PRECOMPILED_BINARIES TRUE)
+            set(SHADER_CROSS_HOST_ARCHITECTURE "x64")
+            set(SHADER_CROSS_ARCHIVE_EXT "tar.gz")
+        endif()
+    endif()
+
+
+    if (NOT EXISTS ${ShaderCrossExe})
+        message(STATUS hmmmmmmmmmmmmmm2)
+        find_program(ShaderCrossExe_Search shadercross)
+        
+        if(NOT ShaderCrossExe_Search)
+            message(STATUS hmmmmmmmmmmmmmm3)
+            if (NOT ${HAVE_SHADER_CROSS_PRECOMPILED_BINARIES})
+                message(FATAL_ERROR 
+                    "We couldn't find SDL_shadercross in your path, so we're trying to acquire a precompiled binary "
+                    "for your system. However there are none for ${CMAKE_HOST_SYSTEM_NAME}-${CMAKE_HOST_SYSTEM_PROCESSOR}. "
+                    "Please visit https://github.com/libsdl-org/SDL_shadercross and build/download a copy and add it to your "
+                    "path."
+                )
+            endif()
+
+            set(SHADER_CROSS_NAME "SDL3_shadercross-${SHADER_CROSS_HOST_PLATFORM}-${SHADER_CROSS_HOST_ARCHITECTURE}")
+            set(SHADER_CROSS_ZIP "${SHADER_CROSS_NAME}.${SHADER_CROSS_ARCHIVE_EXT}")
+
+            if (${INSIDE_FULL_REPO})
+                message(STATUS hmmmmmmmmmmmmmm4)
+                set(PATH_TO_ZIP "${PROJECT_SOURCE_DIR}/../site/static_data/assets/${SHADER_CROSS_ZIP}")
+            else()
+                message(STATUS hmmmmmmmmmmmmmm5)
+                set(PATH_TO_ZIP "${PROJECT_SOURCE_DIR}/${SHADER_CROSS_ZIP}")
+                set(URL_TO_ZIP "https://www.nullterminatedstrings.com/sdl_gpu_by_example/assets/${SHADER_CROSS_ZIP}")
+                file(DOWNLOAD )
+            endif()
+            
+            file(ARCHIVE_EXTRACT INPUT "${PATH_TO_ZIP}" DESTINATION "${PROJECT_SOURCE_DIR}/tools/")
+            
+            set(ShaderCrossExe ${PROJECT_SOURCE_DIR}/tools/${SHADER_CROSS_NAME}/bin/shadercross)
+            message(STATUS "exe: ${ShaderCrossExe}")
+        endif()
+    endif()
+endmacro()
+
 macro(set_up_example_top_level)
     if (PROJECT_IS_TOP_LEVEL)
         if (${PROJECT_NAME} STREQUAL SDL_GPU_By_Example)
-
+            set(INSIDE_FULL_REPO TRUE)
+        else()
+            set(INSIDE_FULL_REPO FALSE)
         endif()
 
         # Don't move this too far away from the call to project. We want this to apply to all targets
@@ -82,7 +150,8 @@ macro(set_up_example_top_level)
         endif()
 
         set(ShadersOutputDir ${PROJECT_SOURCE_DIR}/Assets/Shaders)
-        set(ShaderCrossExe ${PROJECT_SOURCE_DIR}/tools/windows/bin/shadercross.exe)
+
+        get_shadercross()
 
         # Set the output directory for built objects.
         # This makes sure that the dynamic library goes into the build directory automatically.

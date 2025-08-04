@@ -1,6 +1,7 @@
 #define _CRT_SECURE_NO_WARNINGS
 
 #include <stdio.h>
+#include <stdlib.h>
 
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_main.h>
@@ -8,7 +9,7 @@
 #define sdl_check(aCondition, aMessage, ...) \
     do { \
         if (!aCondition) { \
-          SDL_Log("%s(%d):  " aMessage, __FILE__, __LINE__, __VA_ARGS__ ); \
+          SDL_Log("%s(%d):  " aMessage, __FILE__, __LINE__,##__VA_ARGS__ ); \
           SDL_Log("\tSDL_Error: %s", SDL_GetError()); \
           SDL_Quit(); \
           exit(1); \
