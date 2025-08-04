@@ -68,7 +68,6 @@ macro(list_directories result)
 endmacro()
 
 macro(get_shadercross)
-    message(STATUS hmmmmmmmmmmmmmm1)
     set(ShaderCrossExe ${PROJECT_SOURCE_DIR}/tools/bin/shadercross.exe)
 
     set(HAVE_SHADER_CROSS_PRECOMPILED_BINARIES FALSE)
@@ -98,39 +97,49 @@ macro(get_shadercross)
 
 
     if (NOT EXISTS ${ShaderCrossExe})
-        message(STATUS hmmmmmmmmmmmmmm2)
-        find_program(ShaderCrossExe_Search shadercross)
+        set(SHADER_CROSS_NAME "SDL3_shadercross-${SHADER_CROSS_HOST_PLATFORM}-${SHADER_CROSS_HOST_ARCHITECTURE}")
+        set(SHADER_CROSS_ZIP "${SHADER_CROSS_NAME}.${SHADER_CROSS_ARCHIVE_EXT}")
+
+        # Figure out where it'll be after downloading, and check to see if we previously downloaded it.
+        set(ShaderCrossExe ${PROJECT_SOURCE_DIR}/tools/${SHADER_CROSS_NAME}/bin/shadercross)
         
-        if(NOT ShaderCrossExe_Search)
-            message(STATUS hmmmmmmmmmmmmmm3)
-            if (NOT ${HAVE_SHADER_CROSS_PRECOMPILED_BINARIES})
-                message(FATAL_ERROR 
-                    "We couldn't find SDL_shadercross in your path, so we're trying to acquire a precompiled binary "
-                    "for your system. However there are none for ${CMAKE_HOST_SYSTEM_NAME}-${CMAKE_HOST_SYSTEM_PROCESSOR}. "
-                    "Please visit https://github.com/libsdl-org/SDL_shadercross and build/download a copy and add it to your "
-                    "path."
-                )
-            endif()
+        if (NOT EXISTS ${ShaderCrossExe})
 
-            set(SHADER_CROSS_NAME "SDL3_shadercross-${SHADER_CROSS_HOST_PLATFORM}-${SHADER_CROSS_HOST_ARCHITECTURE}")
-            set(SHADER_CROSS_ZIP "${SHADER_CROSS_NAME}.${SHADER_CROSS_ARCHIVE_EXT}")
+            find_program(ShaderCrossExe_Search shadercross)
+            
+            if(NOT ShaderCrossExe_Search)
+                if (NOT ${HAVE_SHADER_CROSS_PRECOMPILED_BINARIES})
+                    message(FATAL_ERROR 
+                        "We couldn't find SDL_shadercross in your path, so we're trying to acquire a precompiled binary "
+                        "for your system. However there are none for ${CMAKE_HOST_SYSTEM_NAME}-${CMAKE_HOST_SYSTEM_PROCESSOR}. "
+                        "Please visit https://github.com/libsdl-org/SDL_shadercross and build/download a copy and add it to your "
+                        "path."
+                    )
+                endif()
 
-            if (${INSIDE_FULL_REPO})
-                message(STATUS hmmmmmmmmmmmmmm4)
-                set(PATH_TO_ZIP "${PROJECT_SOURCE_DIR}/../site/static_data/assets/${SHADER_CROSS_ZIP}")
+                if (${INSIDE_FULL_REPO})
+                    set(PATH_TO_ZIP "${PROJECT_SOURCE_DIR}/../site/static_data/assets/${SHADER_CROSS_ZIP}")
+                else()
+                    set(PATH_TO_ZIP "${CMAKE_CURRENT_BINARY_DIR}/${SHADER_CROSS_ZIP}")
+                    file(DOWNLOAD "https://www.nullterminatedstrings.com/sdl_gpu_by_example/assets/${SHADER_CROSS_ZIP}" "${PATH_TO_ZIP}")
+                endif()
+                
+                file(ARCHIVE_EXTRACT INPUT "${PATH_TO_ZIP}" DESTINATION "${PROJECT_SOURCE_DIR}/tools/")
+                message(STATUS "exe: ${ShaderCrossExe}")
             else()
-                message(STATUS hmmmmmmmmmmmmmm5)
-                set(PATH_TO_ZIP "${PROJECT_SOURCE_DIR}/${SHADER_CROSS_ZIP}")
-                set(URL_TO_ZIP "https://www.nullterminatedstrings.com/sdl_gpu_by_example/assets/${SHADER_CROSS_ZIP}")
-                file(DOWNLOAD )
+                set(ShaderCrossExe "${ShaderCrossExe_Search}")
             endif()
-            
-            file(ARCHIVE_EXTRACT INPUT "${PATH_TO_ZIP}" DESTINATION "${PROJECT_SOURCE_DIR}/tools/")
-            
-            set(ShaderCrossExe ${PROJECT_SOURCE_DIR}/tools/${SHADER_CROSS_NAME}/bin/shadercross)
-            message(STATUS "exe: ${ShaderCrossExe}")
         endif()
     endif()
+
+    unset(HAVE_SHADER_CROSS_PRECOMPILED_BINARIES)
+    unset(PATH_TO_ZIP)
+    unset(SHADER_CROSS_ARCHIVE_EXT)
+    unset(SHADER_CROSS_HOST_ARCHITECTURE)
+    unset(SHADER_CROSS_HOST_PLATFORM)
+    unset(SHADER_CROSS_NAME)
+    unset(SHADER_CROSS_ZIP)
+    unset(ShaderCrossExe_Search)
 endmacro()
 
 macro(set_up_example_top_level)
@@ -160,8 +169,20 @@ macro(set_up_example_top_level)
         
         # add_subdirectory is a function that drops us down into and executes the CMakeLists.txt within 
         # the directory you specify. Once done executing it comes back up to here and continues.
-        add_subdirectory(external)
-        add_subdirectory(source)
+        if (${INSIDE_FULL_REPO})
+            add_subdirectory(external)
+            add_subdirectory(source)
+        else()
+            # FetchContent downloads and configures dependencies
+            include(FetchContent)
+            FetchContent_Declare(
+                SDL3
+                GIT_REPOSITORY "https://github.com/libsdl-org/SDL.git"
+                GIT_TAG "main"
+                EXCLUDE_FROM_ALL
+            )
+            FetchContent_MakeAvailable(SDL3)
+        endif()
     endif()
 endmacro()
 
