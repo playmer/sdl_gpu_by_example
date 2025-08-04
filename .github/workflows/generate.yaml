@@ -57,7 +57,7 @@ jobs:
   #     - name: build
   #       working-directory: site/generator
   #       run: |
-  #         cmake --preset=ninja -B build
+  #         cmake -B build
   #         cmake --build build --config Release
           
   # ##########################################
@@ -80,7 +80,7 @@ jobs:
   #     - name: build
   #       working-directory: site/generator
   #       run: |
-  #         cmake --preset=ninja -B build
+  #         cmake -B build
   #         cmake --build build --config Release
 
   ##########################################
@@ -157,7 +157,7 @@ jobs:
         working-directory: site/generator
         shell: cmd
         run: |
-          cmake --preset=ninja -B build
+          cmake -B build
           cmake --build build --config Release
 
   # Build job
