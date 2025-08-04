@@ -568,14 +568,35 @@ fn main() {
     write_site_to_folder();
     process_content();
 
-   let args: Vec<String> = env::args().collect();
+    let args: Vec<String> = env::args().collect();
 
-   if !args.contains(&"--no-serve".to_owned())
-   {
-       // Should run the bottom command to host the site.
-       let _ = Command::new("http-serve-folder")
-           .args([output_dir])
-           .status()
-           .expect("failed to execute process");
-   }
+    if !args.contains(&"--no-serve".to_owned())
+    {
+        let gh_output_dir = Path::new("output_github");
+        let destination = gh_output_dir.join("sdl_gpu_by_example");
+
+        // Delete existing output    
+        if fs::exists(&gh_output_dir).unwrap()
+        {
+            fs::remove_dir_all(&gh_output_dir).unwrap();
+        }
+        
+        fs::create_dir_all(&destination).unwrap();
+
+        for file_source in get_files(&output_dir) {
+            let file_destination = destination.join(&file_source);
+
+            println!("static_stuff: {}", file_destination.display());
+            fs::create_dir_all(file_destination.parent().unwrap()).unwrap();
+            fs::copy(output_dir.join(&file_source), &file_destination).unwrap();
+        }
+        
+        println!("Link to site: http://127.0.0.1:4040/sdl_gpu_by_example/");
+
+        // Should run the bottom command to host the site.
+        let _ = Command::new("http-serve-folder")
+            .args([gh_output_dir])
+            .status()
+            .expect("failed to execute process");
+    }
 }
