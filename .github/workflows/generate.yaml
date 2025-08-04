@@ -107,6 +107,7 @@ jobs:
     
     name: ${{ matrix.os_name }}${{ matrix.style }}-${{ matrix.cc }}-${{ matrix.arch }}
     runs-on: ${{ matrix.os }}
+    needs: build-site
     steps:
       - uses: actions/checkout@v4
         with:

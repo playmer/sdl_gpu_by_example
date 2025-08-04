@@ -6,7 +6,8 @@ import zipfile
 
 
 examples_dir = pathlib.Path("examples")
-shutil.rmtree(examples_dir)
+shutil.rmtree(examples_dir, True)
+
 with zipfile.ZipFile("examples.zip", 'r') as zip_ref:
     zip_ref.extractall(examples_dir)
 
