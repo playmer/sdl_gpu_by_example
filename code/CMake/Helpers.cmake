@@ -81,8 +81,6 @@ macro(set_up_example_top_level)
             list(APPEND CMAKE_VS_GLOBALS EnforceProcessCountAcrossBuilds=true)
         endif()
 
-        include(CMake/Helpers.cmake)
-
         set(ShadersOutputDir ${PROJECT_SOURCE_DIR}/Assets/Shaders)
         set(ShaderCrossExe ${PROJECT_SOURCE_DIR}/tools/windows/bin/shadercross.exe)
 
