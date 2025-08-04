@@ -7,23 +7,34 @@ import zipfile
 
 examples_dir = pathlib.Path("examples")
 shutil.rmtree(examples_dir, True)
+examples_dir.mkdir(parents=True, exist_ok=True)
 
-with zipfile.ZipFile("examples.zip", 'r') as zip_ref:
-    zip_ref.extractall(examples_dir)
-
-directory = os.fsencode("examples")
-files = os.listdir(examples_dir)
+files = os.listdir('.')
 
 for file in files:
-    zip_path = examples_dir.joinpath(file)
-    print(zip_path)
-    example_dir = examples_dir.joinpath(zip_path.stem)
+    filename, file_extension = os.path.splitext(file)
+
+    if file_extension != ".zip":
+        continue
+
+    print(file)
+    example_dir = examples_dir.joinpath(filename)
     
-    with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+    print(file)
+    with zipfile.ZipFile(file, 'r') as zip_ref:
         zip_ref.extractall(example_dir)
 
-    subprocess.run(["cmake", "-B", "build"], cwd=example_dir)
-    subprocess.run(["cmake", "--build", "build", "--config", "Release"], cwd=example_dir)
+    ret = subprocess.run(["cmake", "-B", "build"], cwd=example_dir).returncode
+    if ret != 0:
+        print(f"Running cmake for {filename} failed!")
+        exit(1)
 
+    ret = subprocess.run(["cmake", "--build", "build", "--config", "Release"], cwd=example_dir).returncode
+    if ret != 0:
+        print(f"Running build for {filename} failed!")
+        exit(1)
+
+
+print("Success building all examples.")
     
     

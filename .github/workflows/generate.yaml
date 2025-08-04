@@ -148,13 +148,10 @@ jobs:
         with:
           name: examples
 
-      # - name: Build Examples
-      #   working-directory: ${{ github.workspace }}/code
-      #   run: |
-      #     python scripts/run_examples_on_ci.py
-        
-      - name: Display structure of downloaded files
-        run: ls -R ${{ github.workspace }}
+      - name: Build Examples
+        working-directory: ${{ github.workspace }}/code
+        run: |
+          python scripts/run_examples_on_ci.py
 
   ##########################################
   # Deployment site
