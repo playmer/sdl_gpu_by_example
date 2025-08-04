@@ -1,5 +1,6 @@
 # Please don't ask how to understand this yet...I'll get around to documenting it line by line.
 macro(find_and_compile_shaders aShaderCrossExecutable aTarget aShaderDirectory aOutputDirectory)
+    file(MAKE_DIRECTORY ${aOutputDirectory})
     file(GLOB ShadersSources 
         CONFIGURE_DEPENDS
         "${aShaderDirectory}/*.comp.hlsl"

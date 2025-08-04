@@ -24,7 +24,7 @@ for file in files:
     with zipfile.ZipFile(file, 'r') as zip_ref:
         zip_ref.extractall(example_dir)
 
-    ret = subprocess.run(["cmake", "-B", "build"], cwd=example_dir).returncode
+    ret = subprocess.run(["cmake", "-GNinja", "-B", "build"], cwd=example_dir).returncode
     if ret != 0:
         print(f"Running cmake for {filename} failed!")
         exit(1)
@@ -33,7 +33,6 @@ for file in files:
     if ret != 0:
         print(f"Running build for {filename} failed!")
         exit(1)
-
 
 print("Success building all examples.")
     
