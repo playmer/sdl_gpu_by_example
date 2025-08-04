@@ -149,7 +149,7 @@ jobs:
           name: examples
 
       - name: Build Examples
-        working-directory: ${{ github.workspace }}/code
+        working-directory: ${{ github.workspace }}
         run: |
           python scripts/run_examples_on_ci.py
 
