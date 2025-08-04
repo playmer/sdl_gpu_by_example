@@ -626,6 +626,7 @@ fn process_content() -> Vec<(PathBuf, String)> {
 
     let mut handlebars: Handlebars<'_> = Handlebars::new();
     handlebars.register_escape_fn(handlebars_escape);
+    handlebars.set_prevent_indent(true);
 
     let options = Options {
             compile: CompileOptions {

@@ -30,7 +30,7 @@ PRIVATE
 # represent how to build and build against libraries. You see here that we're linking SDL3
 # and that it's marked as PRIVATE, as opposed to PUBLIC. This is because all of these target_*
 # functions are specifying properties that may be transitive (if PUBLIC), and thus percolate
-# upwards when a target is depended on. This is how we can simply `#include "SDL3/SDL.h"` 
+# upwards when a target is depended on. This is how we can simply `#include <SDL3/SDL.h>` 
 # without ever specifying an include directory here.
 target_link_libraries(001_Introduction_and_the_Template PRIVATE SDL3::SDL3)
 

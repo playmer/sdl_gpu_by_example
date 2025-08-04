@@ -103,8 +103,8 @@ Finally, lets take a look at one of the most basic SDL programs we can make, whi
 So lets pull up the code we just compiled in the template and take a look at it:
 
 ```c
-#include "SDL3/SDL.h"
-#include "SDL3/SDL_main.h"
+#include <SDL3/SDL.h>
+#include <SDL3/SDL_main.h>
 
 int main(int argc, char** argv)
 {

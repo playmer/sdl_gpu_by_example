@@ -29,25 +29,141 @@ defaults:
       shell: bash
 
 jobs:
+  # linux-cmake:
+  #   strategy:
+  #     fail-fast: false
+  #     matrix:
+  #       include:
+  #         - os: ubuntu-latest
+  #           cc: gcc
+  #         - os: ubuntu-latest
+  #           cc: clang
+    
+  #   name: linux-${{ matrix.cc }}
+  #   runs-on: ${{ matrix.os }}
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #       with:
+  #         submodules: recursive
+        
+  #     - uses: lukka/get-cmake@latest
+
+  #     - name: install dependencies (Linux)
+  #       run: |
+  #         sudo add-apt-repository -y "deb http://archive.ubuntu.com/ubuntu `lsb_release -sc` main universe"
+  #         sudo apt-get update -y -qq
+  #         sudo apt-get install libasound2-dev libpulse-dev libwebp-dev libxrandr-dev tar
+
+  #     - name: build
+  #       working-directory: site/generator
+  #       run: |
+  #         cmake --preset=ninja -B build
+  #         cmake --build build --config Release
+          
+  # ##########################################
+  # mac:
+  #   name: macos-build
+  #   strategy:
+  #     fail-fast: false
+  #     matrix:
+  #       os: [macos-latest]
+
+  #   runs-on: macos-latest
+    
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #       with:
+  #         submodules: recursive
+        
+  #     - uses: lukka/get-cmake@latest
+
+  #     - name: build
+  #       working-directory: site/generator
+  #       run: |
+  #         cmake --preset=ninja -B build
+  #         cmake --build build --config Release
+
+  ##########################################
+  windows-mingw:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            sys: mingw64
+            env: x86_64
+            arch: x86-64
+            cc: gcc
+          - os: windows-latest
+            sys: mingw32
+            env: i686
+            arch: i686
+            cc: gcc
+    name: windows-${{matrix.env}}
+    runs-on: ${{ matrix.os }}
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        submodules: recursive
+    
+    - uses: msys2/setup-msys2@v2
+      with:
+        msystem: ${{matrix.sys}}
+        update: true
+        install: 
+          mingw-w64-${{matrix.env}}-toolchain
+          mingw-w64-${{matrix.env}}-cmake
+          ninja
+
+    - shell: msys2 {0}
+      name: Build and Test
+      working-directory: site/generator
+      run: |
+        cmake -B build .
+        cmake --build build --config Release
+
+    - uses: actions/upload-artifact@v4
+      with:
+        name: Windows ${{matrix.arch}} CMake ${{matrix.sys}} Build
+        path: ${{ github.workspace }}/onscripter-en.Windows.cmake.${{matrix.env}}.zip
+
+  ##########################################
+  windows-msvc:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            arch: x64
+            target_arch: x86_64
+          - os: windows-latest
+            arch: amd64_arm64
+            target_arch: arm64
+    
+    name: windows-msvc-${{ matrix.target_arch }}
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      
+      - uses: lukka/get-cmake@latest
+
+      - uses: TheMrMilchmann/setup-msvc-dev@v3
+        with:
+          arch: ${{ matrix.arch }}
+
+      - name: Build
+        working-directory: site/generator
+        shell: cmd
+        run: |
+          cmake --preset=ninja -B build
+          cmake --build build --config Release
+
   # Build job
   site-build:
     runs-on: ubuntu-latest
-    env:
-      DART_SASS_VERSION: 1.89.2
-      HUGO_VERSION: 0.148.0
-      HUGO_ENVIRONMENT: production
-      TZ: America/Los_Angeles
     steps:
-      - name: Install Hugo CLI
-        run: |
-          wget -O ${{ runner.temp }}/hugo.deb https://github.com/gohugoio/hugo/releases/download/v${HUGO_VERSION}/hugo_extended_${HUGO_VERSION}_linux-amd64.deb
-          sudo dpkg -i ${{ runner.temp }}/hugo.deb
-      - name: Install Dart Sass
-        run: |
-          wget -O ${{ runner.temp }}/dart-sass.tar.gz https://github.com/sass/dart-sass/releases/download/${DART_SASS_VERSION}/dart-sass-${DART_SASS_VERSION}-linux-x64.tar.gz
-          tar -xf ${{ runner.temp }}/dart-sass.tar.gz --directory ${{ runner.temp }}
-          mv ${{ runner.temp }}/dart-sass/ /usr/local/bin
-          echo "/usr/local/bin/dart-sass" >> $GITHUB_PATH
       - name: Checkout
         uses: actions/checkout@v4
         with:
