@@ -5,30 +5,25 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{{current_content.title}}</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-LN+7fdVzj6u52u30Kp6M/trliBMCMKTyK833zpbD+pXdCLuTusPj697FH4R/5mcr" crossorigin="anonymous">
+    <link href="/sdl_gpu_by_example/css/lesson.css" rel="stylesheet">
   </head>
   <body>
-    
-    {{inserts.navbar}}
+    <div class="container-fluid h-100 d-flex flex-column">
+      {{inserts.navbar}}
 
+      <div class="row flex-fill" style="min-height:0">      
 
-    <div class="bd-example">
-      <div class="row">
-        
         {{inserts.sidebar}}
-
-
-        <div class="col-8">
+          
+        <div class="col-md border mh-100" style="overflow-y: scroll;">
           <div data-bs-spy="scroll" data-bs-target="#navbar-example3" data-bs-offset="0" class="scrollspy-example-2" tabindex="0">
-            <h1 class="post-title">{{current_content.title}} <a name="title" id="title"></a></h1>
+            <h1 class="post-title">{{current_content.title}}<a name="title" id="title"></a></h1>
             
-            <!-- <h1>{{current_content.title}} <a name="title" id="title"></a></h1> -->
             <hr>
-            <div class="col-lg-8 px-0">
-              {{current_content.rendered_html}}
-              
-              <a href="/sdl_gpu_by_example/assets/code/{{current_content.file_name_no_ext}}.zip"><p>Download the source for this example here.</p>
-              
-            </div>
+            {{current_content.rendered_html}}
+            
+            <a href="/sdl_gpu_by_example/assets/code/{{current_content.file_name_no_ext}}.zip"><p>Download the source for this example here.</p>
+            
           </div>
         </div>
       </div>
