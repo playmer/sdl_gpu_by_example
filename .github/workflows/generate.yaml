@@ -29,6 +29,40 @@ defaults:
       shell: bash
 
 jobs:
+
+
+  ##########################################
+  # Build Site
+  build-site:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 0
+      - name: Setup Pages
+        id: pages
+        uses: actions/configure-pages@v5
+      - name: Configure Git
+        run: git config core.quotepath false
+      - name: Build with our site generator
+        working-directory: site/generator
+        run: |
+          cargo run -- --no-serve
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ${{ github.workspace }}/site/generator/output
+
+      - name: Upload Examples
+        uses: actions/upload-artifact@v4
+        with:
+          name: examples
+          path: ${{ github.workspace }}/site/generator/output/assets/code
+
+  ##########################################
+  # Build Code
   build-code-project:
     strategy:
       fail-fast: false
@@ -108,29 +142,10 @@ jobs:
           cmake -B build
           cmake --build build --config Release
 
-  ##########################################
-  # Build Site
-  build-site:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - name: Download Examples
+        uses: actions/download-artifact@v4
         with:
-          submodules: recursive
-          fetch-depth: 0
-      - name: Setup Pages
-        id: pages
-        uses: actions/configure-pages@v5
-      - name: Configure Git
-        run: git config core.quotepath false
-      - name: Build with our site generator
-        working-directory: site/generator
-        run: |
-          cargo run -- --no-serve
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: ./site/generator/output
+          name: examples
 
   ##########################################
   # Deployment site
