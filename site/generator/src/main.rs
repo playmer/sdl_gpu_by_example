@@ -49,9 +49,10 @@ static COVERED_IN_SECTION_BLOCKQUOTE_START_TEMPLATE: &str =
 "<div class=\"card card-body\">
 ";
 
-static COVERED_IN_SECTION_BLOCKQUOTE_END: &str =  "</blockquote>";
+static COVERED_IN_SECTION_BLOCKQUOTE_END: &str = "</blockquote>";
 static COVERED_IN_SECTION_BLOCKQUOTE_END_TEMPLATE: &str = 
-"</div>";
+"</div>
+<br />";
 
 fn get_folders_or_paths(asset_dir: &Path, want_dirs: bool) -> Vec<PathBuf>
 {
