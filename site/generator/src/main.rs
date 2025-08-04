@@ -1,10 +1,14 @@
 
+use std::cell::Cell;
+use std::cell::RefCell;
 use std::collections::HashMap;
 use std::fs::create_dir_all;
 use std::fs::File;
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 use std::process::Command;
+use std::sync::Arc;
+use std::sync::RwLock;
 use std::thread::panicking;
 //use std::str::pattern::Pattern;
 use std::{env, fmt, fs};
@@ -36,23 +40,105 @@ static OUTPUT_DIR: &str =  "output";
 static NO_ESCAPE: &str =  "<!-- NO_ESCAPE -->";
 
 
-static COVERED_IN_SECTION_BLOCKQUOTE_START: &str = "<blockquote>";
-// static COVERED_IN_SECTION_BLOCKQUOTE_START_TEMPLATE: &str = 
-// "<p class=\"d-inline-flex gap-1\">
-//   <button class=\"btn btn-primary\" type=\"button\" data-bs-toggle=\"collapse\" data-bs-target=\"#collapseExample\" aria-expanded=\"false\" aria-controls=\"collapseExample\">
-//     Expand: Covered in this Section
-//   </button>
-// </p>
-// <div class=\"collapse\" id=\"collapseExample\">
-// <div class=\"card card-body\">";
-static COVERED_IN_SECTION_BLOCKQUOTE_START_TEMPLATE: &str = 
+static COLLAPSIBLE_CARD_START_TEMPLATE: &str = 
+"<p class=\"d-inline-flex gap-1\">
+  <button class=\"btn btn-primary\" type=\"button\" data-bs-toggle=\"collapse\" data-bs-target=\"#var\" aria-expanded=\"false\" aria-controls=\"var\">
+    Expand: Covered in this Section
+  </button>
+</p>
+<div class=\"collapse\" id=\"var\">
+<div class=\"card card-body\">";
+
+static COLLAPSIBLE_CARD_END_TEMPLATE: &str = 
+"</div>
+</div>
+<br />";
+
+static CARD_START_TEMPLATE: &str = 
 "<div class=\"card card-body\">
 ";
 
-static COVERED_IN_SECTION_BLOCKQUOTE_END: &str = "</blockquote>";
-static COVERED_IN_SECTION_BLOCKQUOTE_END_TEMPLATE: &str = 
+static CARD_END_TEMPLATE: &str = 
 "</div>
 <br />";
+
+
+// implement by a structure impls HelperDef
+#[derive(Clone)]
+struct CollapsibleCardStartHelper
+{
+    i: Arc<RwLock<u64>>
+}
+
+impl handlebars::HelperDef for CollapsibleCardStartHelper {
+  fn call<'reg: 'rc, 'rc>(
+    &self,
+    _h: &handlebars::Helper,
+    _: &Handlebars,
+    _: &handlebars::Context,
+    _rc: &mut handlebars::RenderContext,
+    out: &mut dyn handlebars::Output) -> handlebars::HelperResult
+{
+    let mut i = self.i.write().unwrap();
+    *i += 1;
+
+    let i = i.to_string();
+
+    out.write(&COLLAPSIBLE_CARD_START_TEMPLATE.replace("var", &i.to_string())).unwrap();
+    Ok(())
+  }
+}
+fn collapsible_card_end_helper(
+    _h: &handlebars::Helper,
+    _: &Handlebars,
+    _: &handlebars::Context,
+    _rc: &mut handlebars::RenderContext,
+    out: &mut dyn handlebars::Output) -> handlebars::HelperResult 
+{
+    out.write(COLLAPSIBLE_CARD_END_TEMPLATE).unwrap();
+    Ok(())
+}
+
+fn card_start_helper(
+    _h: &handlebars::Helper,
+    _: &Handlebars,
+    _: &handlebars::Context,
+    _rc: &mut handlebars::RenderContext,
+    out: &mut dyn handlebars::Output) -> handlebars::HelperResult 
+{
+    out.write(CARD_START_TEMPLATE).unwrap();
+    Ok(())
+}
+
+fn card_end_helper(
+    _h: &handlebars::Helper,
+    _: &Handlebars,
+    _: &handlebars::Context,
+    _rc: &mut handlebars::RenderContext,
+    out: &mut dyn handlebars::Output) -> handlebars::HelperResult 
+{
+    out.write(CARD_END_TEMPLATE).unwrap();
+    Ok(())
+}
+
+fn image_helper(
+    h: &handlebars::Helper,
+    _: &Handlebars,
+    _: &handlebars::Context,
+    _rc: &mut handlebars::RenderContext,
+    out: &mut dyn handlebars::Output) -> handlebars::HelperResult 
+{
+    let description = h.param(0).unwrap();
+    let url = h.param(1).unwrap();
+
+    let img_html = format!("<img src={} class=\"img-fluid\" alt={}>",
+        description.value().as_str().unwrap(),
+        url.value().as_str().unwrap()
+    );
+
+    out.write(&img_html).unwrap();
+    Ok(())
+}
 
 fn get_folders_or_paths(asset_dir: &Path, want_dirs: bool) -> Vec<PathBuf>
 {
@@ -364,27 +450,70 @@ fn get_template_context(content: &Vec<Content>) -> serde_json::Map<String, Value
     return map;
 }
 
-fn get_specific_content_context(handlebars: &Handlebars<'_>, template_context: &serde_json::Map<String, Value>, inserts: &Vec<(String, String)>, content: &Content, rendered_html: &String) -> Value {
+fn get_specific_content_context(handlebars: &Handlebars<'_>, template_context: &serde_json::Map<String, Value>, inserts: &Vec<(String, String)>, content: &Content) -> Value {
     let mut map: serde_json::Map<String, Value> = template_context.clone();
     let mut current_content = get_content_info(&content);
-    current_content.insert("rendered_html".to_string(), Value::String(rendered_html.clone()));
-    map.insert("current_content".to_string(), current_content.into());
+    
+    let markdown_options = Options {
+            compile: CompileOptions {
+            allow_dangerous_html: true,
+            ..CompileOptions::default()
+        },
+        ..Options::gfm()
+    };
+
+    let temp_rendered_html = {
+        format!(
+            "{}\n{}", 
+            NO_ESCAPE, 
+            markdown::to_html_with_options(&content.markdown, &markdown_options).unwrap()
+        )
+    };
 
     let content_title = content.front_matter["title"].as_str().unwrap().to_string();
 
-    if let Some(item) = get_toc_from_content_html(&content_title, &rendered_html) {
+    if let Some(item) = get_toc_from_content_html(&content_title, &temp_rendered_html) {
         map.insert("table_of_contents".to_string(), item.into());
     }
 
-    let context_for_inserts: Value = map.clone().into();
+    map.insert("inserts".to_string(), {
+        let mut temp_map = map.clone();
+        let mut temp_current_context = current_content.clone();
+        temp_map.insert("current_content".to_string(), temp_current_context.into());
+        
+        let context_for_inserts: Value = map.clone().into();
     
-    let mut insert_objects: serde_json::Map<String, Value> = serde_json::Map::new();
+        let mut insert_objects: serde_json::Map<String, Value> = serde_json::Map::new();
 
-    for (name, html) in inserts {
-        insert_objects.insert(name.clone(), handlebars.render_template(&html, &context_for_inserts).unwrap().into());
-    }
+        for (name, html) in inserts {
+            insert_objects.insert(name.clone(), handlebars.render_template(&html, &context_for_inserts).unwrap().into());
+        }
+        insert_objects.into()
+    });
 
-    map.insert("inserts".to_string(), insert_objects.into());
+    map.insert("current_content".to_string(), {
+        let mut temp_map = map.clone();
+        let mut temp_current_context = current_content.clone();
+        temp_map.insert("current_content".to_string(), temp_current_context.into());
+
+        // We now have everything we might need to re-render the markdown into HTML
+        let context_for_content_render: Value = map.clone().into();
+
+        let html = {
+            let rendered_html = format!(
+                "{}\n{}", 
+                NO_ESCAPE, 
+                markdown::to_html_with_options(&content.markdown, &markdown_options).unwrap()
+            );
+
+            handlebars.render_template(
+                &rendered_html, 
+                &context_for_content_render).unwrap()
+        };
+        
+        current_content.insert("rendered_html".to_string(), html.into());
+        current_content.into()
+    });
 
     return map.into();
 }
@@ -571,48 +700,57 @@ fn get_inserts() -> Vec<(String, String)> {
 // "</div>
 // </div>";
 
-fn process_content_html(html: String) -> String
-{
-    let mut current_html = html;
+// fn process_content_html(html: String) -> String
+// {
+//     let mut current_html = html;
 
 
-    // Do blockquote cleanup
-    {
-        let mut last_html = current_html.clone();
+//     // Do blockquote cleanup
+//     {
+//         let mut last_html = current_html.clone();
 
-        let mut i = 0;
+//         let mut i = 0;
         
-        let current_tag = format!("collapseExample_{i}");
+//         let current_tag = format!("collapseExample_{i}");
 
-        current_html = last_html.clone()
-            .replacen(
-                &COVERED_IN_SECTION_BLOCKQUOTE_START, 
-                &COVERED_IN_SECTION_BLOCKQUOTE_START_TEMPLATE.replace("collapseExample", &current_tag), 
-                1)
-            .replacen(
-                &COVERED_IN_SECTION_BLOCKQUOTE_END, 
-                &COVERED_IN_SECTION_BLOCKQUOTE_END_TEMPLATE, 
-                1);
+//         current_html = last_html.clone()
+//             .replacen(
+//                 &COVERED_IN_SECTION_BLOCKQUOTE_START, 
+//                 &COVERED_IN_SECTION_BLOCKQUOTE_START_TEMPLATE.replace("collapseExample", &current_tag), 
+//                 1)
+//             .replacen(
+//                 &COVERED_IN_SECTION_BLOCKQUOTE_END, 
+//                 &COVERED_IN_SECTION_BLOCKQUOTE_END_TEMPLATE, 
+//                 1);
 
-        while current_html.len() > last_html.len() {
-            last_html = current_html.clone();
-            i += 1;
-            let current_tag = format!("collapseExample_{i}");
+//         while current_html.len() > last_html.len() {
+//             last_html = current_html.clone();
+//             i += 1;
+//             let current_tag = format!("collapseExample_{i}");
 
-            current_html = last_html.clone()
-                .replacen(
-                    &COVERED_IN_SECTION_BLOCKQUOTE_START, 
-                    &COVERED_IN_SECTION_BLOCKQUOTE_START_TEMPLATE.replace("collapseExample", &current_tag), 
-                    1)
-                .replacen(
-                    &COVERED_IN_SECTION_BLOCKQUOTE_END, 
-                    &COVERED_IN_SECTION_BLOCKQUOTE_END_TEMPLATE, 
-                    1);
-        }
-    }
+//             current_html = last_html.clone()
+//                 .replacen(
+//                     &COVERED_IN_SECTION_BLOCKQUOTE_START, 
+//                     &COVERED_IN_SECTION_BLOCKQUOTE_START_TEMPLATE.replace("collapseExample", &current_tag), 
+//                     1)
+//                 .replacen(
+//                     &COVERED_IN_SECTION_BLOCKQUOTE_END, 
+//                     &COVERED_IN_SECTION_BLOCKQUOTE_END_TEMPLATE, 
+//                     1);
+//         }
+//     }
 
-    return current_html;
-}
+//     return current_html;
+// }
+
+
+//struct CollapsibleCardStartHelper
+
+//fn card_start_helper(
+//fn card_end_helper(
+//fn image_helper(
+
+
 
 
 fn process_content() -> Vec<(PathBuf, String)> {
@@ -627,27 +765,19 @@ fn process_content() -> Vec<(PathBuf, String)> {
     let mut handlebars: Handlebars<'_> = Handlebars::new();
     handlebars.register_escape_fn(handlebars_escape);
     handlebars.set_prevent_indent(true);
-
-    let options = Options {
-            compile: CompileOptions {
-            allow_dangerous_html: true,
-            ..CompileOptions::default()
-        },
-        ..Options::gfm()
-    };
+    
+    handlebars.register_helper("img", Box::new(image_helper));
+    handlebars.register_helper("collapsible-card", Box::new(CollapsibleCardStartHelper{i: Arc::new(RwLock::new(0))}));
+    handlebars.register_helper("collapsible-card-end", Box::new(collapsible_card_end_helper));
+    handlebars.register_helper("card", Box::new(card_start_helper));
+    handlebars.register_helper("card-end", Box::new(card_end_helper));
 
     let inserts = get_inserts();
 
     for content in contents {
         let template_path = template_dir.join(content.front_matter["template"].as_str().unwrap());
         let template_html = std::fs::read_to_string(&template_path).unwrap();
-        let content_html = format!(
-            "{}\n{}", 
-            NO_ESCAPE, 
-            process_content_html(markdown::to_html_with_options(&content.markdown, &options).unwrap())
-        );
-
-        let current_content_context = get_specific_content_context(&handlebars, &template_context, &inserts, &content, &content_html);
+        let current_content_context = get_specific_content_context(&handlebars, &template_context, &inserts, &content);
         let final_html = handlebars.render_template(&template_html, &current_content_context).unwrap();
 
         let final_file_path = output_dir.join(&content.file_path).with_extension("html");

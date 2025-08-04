@@ -81,21 +81,23 @@ So as mentioned, we have a bool that we can modify to exit the frame loop, and w
 
 Now, finally, we can discuss the GPU API.
 
-> ### Covered in this Section
-> - [`SDL_CreateWindow`](https://wiki.libsdl.org/SDL3/SDL_CreateWindow)
->   - One of the most common functions when you use SDL, along with SDL_Init, it's probably closest to the function that "every" SDL application calls. There's a fair bit of flexibility in Window creation, and we won't cover most of it as it's not particularly relevant to rendering.
-> - [`SDL_CreateWindowWithProperties`](https://wiki.libsdl.org/SDL3/SDL_CreateWindowWithProperties)
->   - Technically we only alluded to this, we'll almost certainly discuss this or functions like it later. Essentially these substitue the arguments of the function with an SDL_Properties object, to allow functions to be extended in the future without needing to create entirely new symbols.
-> - [`SDL_DestroyWindow`](https://wiki.libsdl.org/SDL3/SDL_DestroyWindow)
->   - Simply the converse of [`SDL_CreateWindow`](https://wiki.libsdl.org/SDL3/SDL_CreateWindow), it just brings the Window and related resources down.
-> - [`The Events Subsystem`](https://wiki.libsdl.org/SDL3/CategoryEvents)
->   - We'll go over this in more detail as needed, but it wouldn't hurt to look over the docs here to get an idea on the general concepts here and how it works beyond my blurbs.
-> - [`SDL_PollEvent`](https://wiki.libsdl.org/SDL3/SDL_PollEvent)
->   - One of several methods of retrieving events from the operating system. Typically today we'd be using the [callbacks system](https://wiki.libsdl.org/SDL3/README-main-functions#main-callbacks-in-sdl3) and never need to use [`SDL_PollEvent`](https://wiki.libsdl.org/SDL3/SDL_PollEvent) or one of the related functions.
->   - This function and related functions have some deficiencies due to how some Operating Systems deal with some user facing operations. The [callbacks system](https://wiki.libsdl.org/SDL3/README-main-functions#main-callbacks-in-sdl3) resolves this, but there are ways to handle them here as well. It'll be covered in a later chapter, but for now if you notice odd behavior with resizing the window (which we haven't even enabled yet), or moving the window, just know that  this is expected.
-> - [`SDL_Event`](https://wiki.libsdl.org/SDL3/SDL_Event), [`SDL_CommonEvent`](https://wiki.libsdl.org/SDL3/SDL_CommonEvent), [`SDL_EVENT_QUIT` of `SDL_EventType`](https://wiki.libsdl.org/SDL3/SDL_EventType), and it's struct [`SDL_QuitEvent`](https://wiki.libsdl.org/SDL3/SDL_QuitEvent)
->   - [`SDL_Event`](https://wiki.libsdl.org/SDL3/SDL_Event) is a union of structs SDL uses to pass us every event that it wants to inform us about. It contains within it every event struct, and we can differentiate between them by examining the `type` field within the [`SDL_CommonEvent`](https://wiki.libsdl.org/SDL3/SDL_CommonEvent) and checking it against the enums from [`SDL_EventType`](https://wiki.libsdl.org/SDL3/SDL_EventType). In this case, we just wanted to know when the user was requesting us to quit, which is fired when the user asks to close the last window as one example.
->   - __(Boring Technical Detail)__ For completeness sake, [`SDL_Event`](https://wiki.libsdl.org/SDL3/SDL_Event) also directly contains a `type` field you can inspect to know the type. That said, for incredibly boring and technical details, in C++ specifically using this field to know which union member to use is [undefined behavior](https://en.cppreference.com/w/cpp/language/ub.html). So I avoid doing so, even though in practice, every compiler I'm aware of treats this case as-if it were C and thus works as expected.
+{{collapsible-card}}
+### Covered in this Section
+- [`SDL_CreateWindow`](https://wiki.libsdl.org/SDL3/SDL_CreateWindow)
+  - One of the most common functions when you use SDL, along with SDL_Init, it's probably closest to the function that "every" SDL application calls. There's a fair bit of flexibility in Window creation, and we won't cover most of it as it's not particularly relevant to rendering.
+- [`SDL_CreateWindowWithProperties`](https://wiki.libsdl.org/SDL3/SDL_CreateWindowWithProperties)
+  - Technically we only alluded to this, we'll almost certainly discuss this or functions like it later. Essentially these substitue the arguments of the function with an SDL_Properties object, to allow functions to be extended in the future without needing to create entirely new symbols.
+- [`SDL_DestroyWindow`](https://wiki.libsdl.org/SDL3/SDL_DestroyWindow)
+  - Simply the converse of [`SDL_CreateWindow`](https://wiki.libsdl.org/SDL3/SDL_CreateWindow), it just brings the Window and related resources down.
+- [`The Events Subsystem`](https://wiki.libsdl.org/SDL3/CategoryEvents)
+  - We'll go over this in more detail as needed, but it wouldn't hurt to look over the docs here to get an idea on the general concepts here and how it works beyond my blurbs.
+- [`SDL_PollEvent`](https://wiki.libsdl.org/SDL3/SDL_PollEvent)
+  - One of several methods of retrieving events from the operating system. Typically today we'd be using the [callbacks system](https://wiki.libsdl.org/SDL3/README-main-functions#main-callbacks-in-sdl3) and never need to use [`SDL_PollEvent`](https://wiki.libsdl.org/SDL3/SDL_PollEvent) or one of the related functions.
+  - This function and related functions have some deficiencies due to how some Operating Systems deal with some user facing operations. The [callbacks system](https://wiki.libsdl.org/SDL3/README-main-functions#main-callbacks-in-sdl3) resolves this, but there are ways to handle them here as well. It'll be covered in a later chapter, but for now if you notice odd behavior with resizing the window (which we haven't even enabled yet), or moving the window, just know that  this is expected.
+- [`SDL_Event`](https://wiki.libsdl.org/SDL3/SDL_Event), [`SDL_CommonEvent`](https://wiki.libsdl.org/SDL3/SDL_CommonEvent), [`SDL_EVENT_QUIT` of `SDL_EventType`](https://wiki.libsdl.org/SDL3/SDL_EventType), and it's struct [`SDL_QuitEvent`](https://wiki.libsdl.org/SDL3/SDL_QuitEvent)
+  - [`SDL_Event`](https://wiki.libsdl.org/SDL3/SDL_Event) is a union of structs SDL uses to pass us every event that it wants to inform us about. It contains within it every event struct, and we can differentiate between them by examining the `type` field within the [`SDL_CommonEvent`](https://wiki.libsdl.org/SDL3/SDL_CommonEvent) and checking it against the enums from [`SDL_EventType`](https://wiki.libsdl.org/SDL3/SDL_EventType). In this case, we just wanted to know when the user was requesting us to quit, which is fired when the user asks to close the last window as one example.
+  - __(Boring Technical Detail)__ For completeness sake, [`SDL_Event`](https://wiki.libsdl.org/SDL3/SDL_Event) also directly contains a `type` field you can inspect to know the type. That said, for incredibly boring and technical details, in C++ specifically using this field to know which union member to use is [undefined behavior](https://en.cppreference.com/w/cpp/language/ub.html). So I avoid doing so, even though in practice, every compiler I'm aware of treats this case as-if it were C and thus works as expected.
+{{collapsible-card-end}}
 
 ## Devices, RenderPasses, and Clearing <a name="devices_renderpasses_clearing" id="devices_renderpasses_clearing"></a>
 
@@ -112,9 +114,11 @@ Pretty easy right? If you've dabbled in some of the APIs SDL_GPU is built on top
 
 For now, we'll tell [`SDL_CreateGPUDevice`](https://wiki.libsdl.org/SDL3/SDL_CreateGPUDevice) that we can give SDL any of the backend shader formats. We'd like to create the Device in debug mode, so that things like the Vulkan Validation Layers, as well as SDL itself can do extra checking on your GPU operations, so we pass true to the debug parameter. Typically in a published build, you wouldn't ask for a Device to be created in Debug mode, but we're learning here, and more information is always better! Finally we'll pass in that we'd like to use the Vulkan backend.
 
-> __NOTE__
->
-> If you're not getting a device created, it's likely that there's an issue with your drivers, your Vulkan SDK installation (on MacOS), or your GPU not supporting it. You can try to pass `NULL` as the final parameter to see if any of the backends are supported on your device, but note that this may cause issues or discrepencies when we cover debugging topics.
+{{card}}
+__NOTE__
+
+If you're not getting a device created, it's likely that there's an issue with your drivers, your Vulkan SDK installation (on MacOS), or your GPU not supporting it. You can try to pass `NULL` as the final parameter to see if any of the backends are supported on your device, but note that this may cause issues or discrepencies when we cover debugging topics.
+{{card-end}}
 
 Now that we have a device, we can call [`SDL_ClaimWindowForGPUDevice`](https://wiki.libsdl.org/SDL3/SDL_ClaimWindowForGPUDevice) to do what it says in the name: associate the GPUDevice and the Window. Just know that to render to our Window, we need to claim it for our Device. This is how, later on, we'll be able to retreive swapchains textures (essentially the texture that the Window displays) and render to them.
 
@@ -255,7 +259,7 @@ SDL_SubmitGPUCommandBuffer(commandBuffer);
 
 We did it! You should be seeing a window with a blue background! 
 
-<img src="/sdl_gpu_by_example/assets/images/002_Window_and_Clearing__Running.jpg" class="img-fluid" alt="A window on Windows, with the contents just being a solid shade of blue.">
+<p>{{img "/sdl_gpu_by_example/assets/images/002_Window_and_Clearing__Running.jpg" "A window on Windows, with the contents just being a solid shade of blue."}}</p>
 
 [`SDL_BeginGPURenderPass`](https://wiki.libsdl.org/SDL3/SDL_BeginGPURenderPass) is the first time an SDL GPU call requires a fair bit of configuration, but it won't be the last by a long shot. [`SDL_GPUColorTargetInfo`](https://wiki.libsdl.org/SDL3/SDL_GPUColorTargetInfo) is one of many create/info structs we'll be going over. As will become tradition, we zero it out to "default" the fields, but right now, we can concern ourselves with just the 4 fields we're setting here:
   - texture: The is the texture we're rendering to, the "target".
@@ -268,25 +272,27 @@ As you may notice from the parameters of [`SDL_BeginGPURenderPass`](https://wiki
 After that, it's really just about ending the render pass with [`SDL_EndGPURenderPass`](https://wiki.libsdl.org/SDL3/SDL_EndGPURenderPass) and submitting the command buffer with [`SDL_SubmitGPUCommandBuffer`](https://wiki.libsdl.org/SDL3/SDL_SubmitGPUCommandBuffer) to the GPU so that our commands are run.
 
 
-> ### Covered in this Section
-> - [`SDL_AcquireGPUCommandBuffer`](https://wiki.libsdl.org/SDL3/SDL_AcquireGPUCommandBuffer)
->   - blah blah talk about threads
-> - [`SDL_SubmitGPUCommandBuffer`](https://wiki.libsdl.org/SDL3/SDL_SubmitGPUCommandBuffer)
->   - blah
-> - [`SDL_WaitAndAcquireGPUSwapchainTexture`](https://wiki.libsdl.org/SDL3/SDL_WaitAndAcquireGPUSwapchainTexture)
->   - There's not too much to say here, this is how we ask for a Swapchain to manipulate in our passes.
->   - Some other APIs related to Swapchains that I alluded to above for further reading if you want to look ahead or the tutorial hasn't covered them yet:
->     - ['SDL_AcquireGPUSwapchainTexture'](https://wiki.libsdl.org/SDL3/SDL_AcquireGPUSwapchainTexture)
->       -  No waiting for the swapchain, but also, you might not have one available.
->     - ['SDL_SetGPUAllowedFramesInFlight'](https://wiki.libsdl.org/SDL3/SDL_SetGPUAllowedFramesInFlight)
->       -  Reduce or increase the number of frames in flight. This generally affects latency, with lower being lower, but increasing the likely hood of idling.
->     - ['SDL_SetGPUSwapchainParameters'](https://wiki.libsdl.org/SDL3/SDL_SetGPUSwapchainParameters)
->       -  Change the format of the Texture, as well as the presentation mode. Changing the format is useful when you want to render an HDR image, changing the present mode would allow you to turn off VSYNC and switch to allowing screen tearing or mailbox where you can keep submitting and the GPU will use the latest image given when it's time to display. Both of these need to be queried for support before changing.
-> - [`SDL_GPUColorTargetInfo`](https://wiki.libsdl.org/SDL3/SDL_GPUColorTargetInfo)
->   - I covered the immediately relevant properties above, but there's a fair bit of stuff you can adjust here, including more about the "Resolve" store_op properties that now make a bit more sense to me reading this again now. Still not going to cover it yet. We'll obviously touch on some of these as we proceed, but it never hurts to take a look early.
-> - [`SDL_BeginGPURenderPass`](https://wiki.libsdl.org/SDL3/SDL_BeginGPURenderPass)
->   - blah
-> - [`SDL_EndGPURenderPass`](https://wiki.libsdl.org/SDL3/SDL_EndGPURenderPass)
->   - As simple as it gets, this ends the Render Pass you were adding commands to. It should be noted that it's not unlikely you'll have several of these in a frame, though obviously you don't want to go overboard. As you may suspect, you'll need to End a Render Pass and Begin a new one if you have to change the Textures you're rendering to. One example may be a blur shader, where you need to read from a target you did your initial geometry rendering to, render to an intermediate Texture for a horizontal blur, and finally render to a final Texture using a vertical blur pass.
+{{collapsible-card}}
+### Covered in this Section
+- [`SDL_AcquireGPUCommandBuffer`](https://wiki.libsdl.org/SDL3/SDL_AcquireGPUCommandBuffer)
+  - blah blah talk about threads
+- [`SDL_SubmitGPUCommandBuffer`](https://wiki.libsdl.org/SDL3/SDL_SubmitGPUCommandBuffer)
+  - blah
+- [`SDL_WaitAndAcquireGPUSwapchainTexture`](https://wiki.libsdl.org/SDL3/SDL_WaitAndAcquireGPUSwapchainTexture)
+  - There's not too much to say here, this is how we ask for a Swapchain to manipulate in our passes.
+  - Some other APIs related to Swapchains that I alluded to above for further reading if you want to look ahead or the tutorial hasn't covered them yet:
+    - ['SDL_AcquireGPUSwapchainTexture'](https://wiki.libsdl.org/SDL3/SDL_AcquireGPUSwapchainTexture)
+      -  No waiting for the swapchain, but also, you might not have one available.
+    - ['SDL_SetGPUAllowedFramesInFlight'](https://wiki.libsdl.org/SDL3/SDL_SetGPUAllowedFramesInFlight)
+      -  Reduce or increase the number of frames in flight. This generally affects latency, with lower being lower, but increasing the likely hood of idling.
+    - ['SDL_SetGPUSwapchainParameters'](https://wiki.libsdl.org/SDL3/SDL_SetGPUSwapchainParameters)
+      -  Change the format of the Texture, as well as the presentation mode. Changing the format is useful when you want to render an HDR image, changing the present mode would allow you to turn off VSYNC and switch to allowing screen tearing or mailbox where you can keep submitting and the GPU will use the latest image given when it's time to display. Both of these need to be queried for support before changing.
+- [`SDL_GPUColorTargetInfo`](https://wiki.libsdl.org/SDL3/SDL_GPUColorTargetInfo)
+  - I covered the immediately relevant properties above, but there's a fair bit of stuff you can adjust here, including more about the "Resolve" store_op properties that now make a bit more sense to me reading this again now. Still not going to cover it yet. We'll obviously touch on some of these as we proceed, but it never hurts to take a look early.
+- [`SDL_BeginGPURenderPass`](https://wiki.libsdl.org/SDL3/SDL_BeginGPURenderPass)
+  - blah
+- [`SDL_EndGPURenderPass`](https://wiki.libsdl.org/SDL3/SDL_EndGPURenderPass)
+  - As simple as it gets, this ends the Render Pass you were adding commands to. It should be noted that it's not unlikely you'll have several of these in a frame, though obviously you don't want to go overboard. As you may suspect, you'll need to End a Render Pass and Begin a new one if you have to change the Textures you're rendering to. One example may be a blur shader, where you need to read from a target you did your initial geometry rendering to, render to an intermediate Texture for a horizontal blur, and finally render to a final Texture using a vertical blur pass.
+{{collapsible-card-end}}
 
 And now to move on to rendering some actual geometry, and using some very simple shaders!

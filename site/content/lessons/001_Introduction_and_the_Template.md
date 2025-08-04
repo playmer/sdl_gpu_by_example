@@ -129,15 +129,17 @@ Now, this isn't a tutorial on SDL itself, but I'll try to briefly cover things a
 
 Now that we've covered the basics, lets get us a Window and an Event loop.
 
-> ### Covered in this Section
-> - [`SDL_Init`](https://wiki.libsdl.org/SDL3/SDL_Init)
->   - Generally the first think you call in an SDL using application. This initializes the subsystems you require of SDL. Not technically required, as SDL will lazily initialize subsystems when you call functions that require them, but it's recommended you call it, as things like events won't come in from some subsystems if they're not initialized.
-> - [`SDL_Quit`](https://wiki.libsdl.org/SDL3/SDL_Quit)
->   - Conversely, generally the last thing you call. It lets SDL close out every resource it's internally created and that you've created with it, even if you haven't yet. It's not safe to use SDL resources you've previously created after this call.
-> - [`SDL_GetError`](https://wiki.libsdl.org/SDL3/SDL_GetError)
->   - Built in functionality for SDL to retrieve the last error encounter by SDL. Keep in mind that it's _only_ valid to check directly after a call into an SDL function that reported an error. SDL itself sets errors and calls this function internally, so you cannot simply call this and expect the error string it returns to be relevant to you unless SDL told you there was an error.
-> - [`SDL_Log`](https://wiki.libsdl.org/SDL3/SDL_Log)
->   - Really just using this as a drop in replacement of printf because `SDL.h` hands it to us, but it's technically more portable for some situations and platforms. Were we in C++, I'd probably consider [`std::format`](https://en.cppreference.com/w/cpp/utility/format/format.html) or the [`fmt`](https://github.com/fmtlib/fmt) library of which it's based due to it's supirior formatting options.
-> - [`SDL_main`](https://wiki.libsdl.org/SDL3/SDL_main) and the [main functions](https://wiki.libsdl.org/SDL3/README-main-functions)
->   - Already fairly covered above, but I encourage you again to read the documentation on SDL_main itself and on the main functions.
->   - Regarding the [callbacks system](https://wiki.libsdl.org/SDL3/README-main-functions#main-callbacks-in-sdl3) I'll formulate these tutorials such that it won't be difficult to use them instead. When we're a little further along I'll make a short demonstration of how that would look instead.
+{{collapsible-card}}
+### Covered in this Section
+- [`SDL_Init`](https://wiki.libsdl.org/SDL3/SDL_Init)
+  - Generally the first think you call in an SDL using application. This initializes the subsystems you require of SDL. Not technically required, as SDL will lazily initialize subsystems when you call functions that require them, but it's recommended you call it, as things like events won't come in from some subsystems if they're not initialized.
+- [`SDL_Quit`](https://wiki.libsdl.org/SDL3/SDL_Quit)
+  - Conversely, generally the last thing you call. It lets SDL close out every resource it's internally created and that you've created with it, even if you haven't yet. It's not safe to use SDL resources you've previously created after this call.
+- [`SDL_GetError`](https://wiki.libsdl.org/SDL3/SDL_GetError)
+  - Built in functionality for SDL to retrieve the last error encounter by SDL. Keep in mind that it's _only_ valid to check directly after a call into an SDL function that reported an error. SDL itself sets errors and calls this function internally, so you cannot simply call this and expect the error string it returns to be relevant to you unless SDL told you there was an error.
+- [`SDL_Log`](https://wiki.libsdl.org/SDL3/SDL_Log)
+  - Really just using this as a drop in replacement of printf because `SDL.h` hands it to us, but it's technically more portable for some situations and platforms. Were we in C++, I'd probably consider [`std::format`](https://en.cppreference.com/w/cpp/utility/format/format.html) or the [`fmt`](https://github.com/fmtlib/fmt) library of which it's based due to it's supirior formatting options.
+- [`SDL_main`](https://wiki.libsdl.org/SDL3/SDL_main) and the [main functions](https://wiki.libsdl.org/SDL3/README-main-functions)
+  - Already fairly covered above, but I encourage you again to read the documentation on SDL_main itself and on the main functions.
+  - Regarding the [callbacks system](https://wiki.libsdl.org/SDL3/README-main-functions#main-callbacks-in-sdl3) I'll formulate these tutorials such that it won't be difficult to use them instead. When we're a little further along I'll make a short demonstration of how that would look instead.
+{{collapsible-card-end}}
