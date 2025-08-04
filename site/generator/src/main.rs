@@ -1,26 +1,27 @@
 
-#[allow(unused_imports)] use core::panic;
-use std::collections::{self, HashMap};
+use std::collections::HashMap;
 use std::fs::create_dir_all;
-#[allow(unused_imports)] use std::fs::{DirEntry, File};
-#[allow(unused_imports)] use std::io::{Read, Seek, Write};
-use std::iter::Map;
-#[allow(unused_imports)] use std::path::{Path, PathBuf};
-#[allow(unused_imports)] use std::process::Command;
+use std::fs::File;
+use std::io::{Read, Write};
+use std::path::{Path, PathBuf};
+use std::process::Command;
+use std::thread::panicking;
 //use std::str::pattern::Pattern;
-#[allow(unused_imports)] use std::{env, fmt, fs, io};
-#[allow(unused_imports)] use anyhow::Context;
-#[allow(unused_imports)] use extract_frontmatter::config::{Modifier, Splitter};
-#[allow(unused_imports)] use extract_frontmatter::Extractor;
-use handlebars::{to_json, Handlebars};
-#[allow(unused_imports)] use markdown::{to_mdast, Constructs, Options, ParseOptions};
-#[allow(unused_imports)] use markdown;
-#[allow(unused_imports)] use natural_sort_rs::NaturalSort;
-use serde::Serialize;
-use serde_json::{json, Value};
-#[allow(unused_imports)] use walkdir::WalkDir;
-#[allow(unused_imports)] use yaml_rust::{Yaml, YamlLoader};
-#[allow(unused_imports)] use zip::write::SimpleFileOptions;
+use std::{env, fmt, fs};
+use extract_frontmatter::config::Splitter;
+use extract_frontmatter::Extractor;
+use handlebars::Handlebars;
+
+use markdown::CompileOptions;
+use markdown::Options;
+use markdown;
+use natural_sort_rs::NaturalSort;
+use scraper::ElementRef;
+use scraper::{Html, Selector};
+use serde_json::Value;
+use walkdir::WalkDir;
+use yaml_rust::{Yaml, YamlLoader};
+use zip::write::SimpleFileOptions;
 
 static CODE_DIR: &str =  "../../code";
 static CODE_SOURCE_DIR: &str =  "../../code/source";
@@ -676,22 +677,6 @@ struct Content {
 }
 
 
-struct ContentInfo {
-    file_name: String,
-    file_path: PathBuf,
-    //properties: String
-}
-
-impl ContentInfo {
-    fn new(content: &Content) -> ContentInfo {
-        return ContentInfo { 
-            file_name: content.file_name.clone(),
-            file_path: content.file_path.clone(),
-            //properties: content.front_matter.clone().into_string().unwrap()
-        }
-    }
-}
-
 fn get_content() -> Vec<Content> {
     let content_dir = Path::new(CONTENT_DIR);
 
@@ -745,8 +730,6 @@ fn get_collections(content: &Vec<Content>) -> Value {
             }
         }
     }
-
-    let mut map: serde_json::Map<String, Value> = serde_json::Map::new();
 
     let mut collection_map: serde_json::Map<String, Value> = serde_json::Map::new();
     for (name, collection) in collections_to_return {
@@ -802,16 +785,141 @@ fn get_specific_content_context(template_context: &serde_json::Map<String, Value
     current_content.insert("rendered_html".to_string(), Value::String(rendered_html.clone()));
     map.insert("current_content".to_string(), current_content.into());
 
+    let content_title = content.front_matter["title"].as_str().unwrap().to_string();
+
+    if let Some(item) = get_toc_from_content_html(&content_title, &rendered_html) {
+        map.insert("table_of_contents".to_string(), item.into());
+    }
+
     return map.into();
 }
 
 
 pub fn handlebars_escape(data: &str) -> String {
-    if (data.contains(NO_ESCAPE)) {
+    if data.contains(NO_ESCAPE) {
         return data.to_owned();
     }
     
     return handlebars::html_escape(data);
+}
+struct TocItem {
+    level: i8,
+    text: String,
+    url: String,
+    children: Vec<TocItem>
+}
+
+
+
+fn get_header_info_from_element(header: &ElementRef<'_>) -> Option<TocItem> {
+    let current_level = header
+        .value()
+        .name.local
+        .to_string()
+        .split_off(1)
+        .parse::<i8>()
+        .unwrap();
+    
+    let header_text = header.text().into_iter().next().unwrap().to_string();
+
+    if header.child_elements().count() != 0 {
+        let child = header.child_elements().into_iter().next().unwrap();
+
+        let url = format!("#{}", child.attr("name").unwrap());
+
+        return Some(TocItem{
+            level: current_level,
+            text: header_text,
+            url, 
+            children: Vec::new()
+        });
+    }
+
+    println!("Warning, missing tags: {}", header.html());
+    return None;
+}
+
+
+// fn print_root_toc(item: &TocItem) {
+//     let base_indentation = "\t".repeat((item.level - 1) as usize);
+//     println!("{}{}: {}", base_indentation, item.text, item.url);
+
+//     for child in &item.children {
+//         process_root_toc(child);
+//     }
+// }
+
+
+fn process_root_toc(item: &TocItem) -> Value {
+    let mut children: Vec<Value> = Vec::new();
+
+    for child in &item.children {
+        children.push(process_root_toc(child));
+    }
+
+    let mut map: serde_json::Map<String, Value> = serde_json::Map::new();
+    map.insert("name".to_string(), item.text.clone().into());
+    map.insert("url".to_string(),  item.url.clone().into());
+    map.insert("children".to_string(),  children.into());
+
+    return map.into();
+}
+
+fn get_toc_from_content_html(title: &String, html: &String) -> Option<Value> {
+    let mut children_stack: Vec<TocItem> = Vec::new();
+    children_stack.push(TocItem { 
+        level: 1, 
+        text: title.clone(),
+        url: "#title".to_string(), 
+        children: Vec::new()
+    });
+
+
+    let document: Html = Html::parse_document(&html);
+    let h1_selector = Selector::parse("h1, h2, h3, h4, h5, h6").unwrap();
+    let mut last_level = 1;
+
+    for header in document.select(&h1_selector) {
+        let info = get_header_info_from_element(&header);
+        if info.is_none() {
+            continue;
+        }
+
+        let item = info.unwrap();
+
+        if item.level == 1 {
+            panic!("Processing a header with name {} and id {}, this header has a heading of 1, which is disallowed in content. Anything above 1 is allowed. Headers must start at 2, and only increase one at a time.",
+                item.text, 
+                item.url);
+        }
+
+        if (last_level < item.level) && ((last_level + 2) == item.level) { // Starting a new stack.
+            last_level += 1;
+            children_stack.push(item);
+        } else if (last_level < item.level) && ((last_level + 1) == item.level) { // We're one level ahead, just push into the children of the last item of the previous level
+            children_stack.iter_mut().nth_back(0).unwrap().children.push(item);
+        } else if last_level >= item.level {
+            while last_level >= item.level {
+                let last_item  = children_stack.pop().unwrap();
+                children_stack.iter_mut().nth_back(0).unwrap().children.push(last_item);
+                last_level -= 1;
+            }
+
+            children_stack.iter_mut().nth_back(0).unwrap().children.push(item);
+        }
+    }
+
+    while last_level < children_stack.iter_mut().nth_back(0).unwrap().level {
+        let last_item  = children_stack.pop().unwrap();
+        children_stack.iter_mut().nth_back(0).unwrap().children.push(last_item);
+        last_level -= 1;
+    }
+
+    if children_stack.len() != 0 {
+        return Some(process_root_toc(children_stack.first().unwrap()));
+    }
+
+    return None
 }
 
 
@@ -827,10 +935,21 @@ fn process_content() -> Vec<(PathBuf, String)> {
     let mut handlebars = Handlebars::new();
     handlebars.register_escape_fn(handlebars_escape);
 
+    let options = Options {
+            compile: CompileOptions {
+            allow_dangerous_html: true,
+            ..CompileOptions::default()
+        },
+        ..Options::gfm()
+    };
+
     for content in contents {
         let template_path = template_dir.join(content.front_matter["template"].as_str().unwrap());
         let template_html = std::fs::read_to_string(&template_path).unwrap();
-        let content_html = format!("{}{}", NO_ESCAPE, markdown::to_html(&content.markdown));
+        let content_html = format!("{}{}", NO_ESCAPE, markdown::to_html_with_options(&content.markdown, &options).unwrap());
+
+
+//Option<Value>
         let current_content_context = get_specific_content_context(&template_context, &content, &content_html);
         let final_html = handlebars.render_template(&template_html, &current_content_context).unwrap();
 
@@ -845,10 +964,9 @@ fn process_content() -> Vec<(PathBuf, String)> {
 
 fn main() {
     let output_dir = Path::new(OUTPUT_DIR);
-
     write_site_to_folder();
     process_content();
-    
+
    let args: Vec<String> = env::args().collect();
 
    if !args.contains(&"--no-serve".to_owned())

@@ -1,15 +1,15 @@
 ---
 title: Window and Clearing
 description: Before you render a triangle, you must first create a window, and then ideally clear it to a friendly blue color. Covers the basics of initialization of SDL, the Window, and the GPU Device, as well as the most basic usage of Command Buffers, Swapchain Textures, and a RenderPass.
-template: post_template.html
+template: lesson_template.html
 collections: ["lessons"]
 ---
 
 Now that we've gotten the "make sure we can compile, link, and run an SDL program" step out of the way, we can start actually doing some work. We'll start by going over Window creation and setting up your event loop so we can receive events, like the one that tells you the program should end.
 
-## A Window and an Event Loop
+## A Window and an Event Loop <a name="window_and_events" id="window_and_events"></a>
 
-### A Window
+### A Window <a name="window" id="window"></a>
 
 The first thing we'll need to clear the window is the window. So let's look into how to get an `SDL_Window`. Thankfully SDL makes it pretty easy, we just need the title we'd like, the width and height, and some flags. We'll go with the name of this chapter, and 720p. We can ignore the flags for now, for the most part they're not relevant to SDL_GPU.
 
@@ -48,7 +48,7 @@ SDL_Window* window = SDL_CreateWindow("002-Window_and_Clearing", 1280, 720, 0);
 sdl_check(window, "Couldn't create a window: ", 1);
 ```
 
-### An Event Loop
+### An Event Loop <a name="event_loop" id="event_loop"></a>
 
 To briefly explain, for most Game-like applications, you're going to use a couple top-level loops:
  - Frame loop: In here, you do everything needed within the frame. Typically when you're quitting, you break out of this loop somehow. Typically by setting a bool to false/true.
@@ -97,9 +97,9 @@ Now, finally, we can discuss the GPU API.
 >   - [`SDL_Event`](https://wiki.libsdl.org/SDL3/SDL_Event) is a union of structs SDL uses to pass us every event that it wants to inform us about. It contains within it every event struct, and we can differentiate between them by examining the `type` field within the [`SDL_CommonEvent`](https://wiki.libsdl.org/SDL3/SDL_CommonEvent) and checking it against the enums from [`SDL_EventType`](https://wiki.libsdl.org/SDL3/SDL_EventType). In this case, we just wanted to know when the user was requesting us to quit, which is fired when the user asks to close the last window as one example.
 >   - __(Boring Technical Detail)__ For completeness sake, [`SDL_Event`](https://wiki.libsdl.org/SDL3/SDL_Event) also directly contains a `type` field you can inspect to know the type. That said, for incredibly boring and technical details, in C++ specifically using this field to know which union member to use is [undefined behavior](https://en.cppreference.com/w/cpp/language/ub.html). So I avoid doing so, even though in practice, every compiler I'm aware of treats this case as-if it were C and thus works as expected.
 
-## Devices, RenderPasses, and Clearing
+## Devices, RenderPasses, and Clearing <a name="devices_renderpasses_clearing" id="devices_renderpasses_clearing"></a>
 
-### Creating a Device
+### Creating a Device <a name="device" id="device"></a>
 Finally, we can do one of the first things you'll ever do in a Graphics API, create a Device and claim the Window.
 
 ```c
@@ -196,9 +196,9 @@ In terms of the functionality that we just added, as mentioned above, we've crea
 > - [`SDL_DestroyProperties`](https://wiki.libsdl.org/SDL3/SDL_DestroyProperties)
 >   - This frees up all the resources SDL created internally to handle this Properties object. Don't try to use it again after calling this!
 
-### Clearing the Screen
+### Clearing the Screen <a name="clearing_the_screen" id="clearing_the_screen"></a>
 
-#### A Command Buffer and the Swapchain Texture
+#### A Command Buffer and the Swapchain Texture <a name="command_buffers_and_swapchains" id="command_buffers_and_swapchains"></a>
 We're near the finish line here. It's time to learn a bit about Command Buffers and the Swapchain Textures:
 
 ```c
@@ -224,7 +224,7 @@ A command buffer is, fundamentally, how we record commands to instruct the GPU w
 Once you have a command buffer, we can request a Swapchain texture. As mentioned ealier, this is the texture that is tied to, and gets displayed on the Window, by default, SDL_GPU allocates 3 of them. That said, this can be changed, as well as how precisely we wait for them, and if we wait at all. We'll try to cover some of these at a later time, for now this is a fairly simple way to handle acquisitions and submissions.
 
 
-#### The Render Pass
+#### The Render Pass <a name="render_pass" id="render_pass"></a>
 
 Now we can finally finish out the chapter by doing what we've set out to do: clear the screen.
 
@@ -255,7 +255,7 @@ SDL_SubmitGPUCommandBuffer(commandBuffer);
 
 We did it! You should be seeing a window with a blue background! 
 
-![A window on Windows, with the contents just being a solid shade of blue.](assets/images/002_Window_and_Clearing__Running.jpg "Our window, being cleared blue.")
+![A window on Windows, with the contents just being a solid shade of blue.](/assets/images/002_Window_and_Clearing__Running.jpg "Our window, being cleared blue.")
 
 [`SDL_BeginGPURenderPass`](https://wiki.libsdl.org/SDL3/SDL_BeginGPURenderPass) is the first time an SDL GPU call requires a fair bit of configuration, but it won't be the last by a long shot. [`SDL_GPUColorTargetInfo`](https://wiki.libsdl.org/SDL3/SDL_GPUColorTargetInfo) is one of many create/info structs we'll be going over. As will become tradition, we zero it out to "default" the fields, but right now, we can concern ourselves with just the 4 fields we're setting here:
   - texture: The is the texture we're rendering to, the "target".
@@ -285,7 +285,7 @@ After that, it's really just about ending the render pass with [`SDL_EndGPURende
 > - [`SDL_GPUColorTargetInfo`](https://wiki.libsdl.org/SDL3/SDL_GPUColorTargetInfo)
 >   - I covered the immediately relevant properties above, but there's a fair bit of stuff you can adjust here, including more about the "Resolve" store_op properties that now make a bit more sense to me reading this again now. Still not going to cover it yet. We'll obviously touch on some of these as we proceed, but it never hurts to take a look early.
 > - [`SDL_BeginGPURenderPass`](https://wiki.libsdl.org/SDL3/SDL_BeginGPURenderPass)
->   - 
+>   - blah
 > - [`SDL_EndGPURenderPass`](https://wiki.libsdl.org/SDL3/SDL_EndGPURenderPass)
 >   - As simple as it gets, this ends the Render Pass you were adding commands to. It should be noted that it's not unlikely you'll have several of these in a frame, though obviously you don't want to go overboard. As you may suspect, you'll need to End a Render Pass and Begin a new one if you have to change the Textures you're rendering to. One example may be a blur shader, where you need to read from a target you did your initial geometry rendering to, render to an intermediate Texture for a horizontal blur, and finally render to a final Texture using a vertical blur pass.
 

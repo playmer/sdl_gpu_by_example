@@ -4,7 +4,6 @@ description: A place to go with links to books, sites, blogs, and communities bu
 template: post_template.html
 ---
 
-
 ## Additional Resources
 
  - [SDL_GPU Documentation](https://wiki.libsdl.org/SDL3/CategoryGPU) 

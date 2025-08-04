@@ -1,7 +1,7 @@
 ---
 title: Triangle and a "Fullscreen Triangle"
 description: Finally you can see a triangle, and then a demonstration on why you might actually use a single triangle later on in your Graphics journey. Will cover the creation of Vertex and Pixel shaders, a simple demonstration of "Vertex Pulling", and then an extension of the triangle to cover the whole screen with a shader effect.
-template: post_template.html
+template: lesson_template.html
 collections: ["lessons"]
 ---
 
@@ -9,12 +9,16 @@ The big one, it's time to draw a Triangle. And after that, we're going to learn 
 
 I figured it'd be nice to go over these together, because realistically, it's not common that you need to draw a single triangle on the screen. Maybe a Quad, two triangles making the shape of a Rectangle or Square, but that requires textures, transfer buffers, and bindings. That said, if you adjust the positions of that triangle? Suddenly it has a very practical purpose! And it's something we can learn about with only a few additional function calls without needing to get into everything needed to display a texture. Of course, don't worry, we'll get there. But let's build up step by step and try to learn something with each step!
 
-## Vertices
+## Vertices <a name="vertices" id="vertices"></a>
 
-## Pixels (and Fragments)
+blah
 
 
-## Shaders, Pipelines, and Render Passes
+## Pixels (and Fragments) <a name="pixels" id="pixels"></a>
+
+blah
+
+## Shaders, Pipelines, and Render Passes <a name="shaders_pipelines_renderpasses" id="shaders_pipelines_renderpasses"></a>
 
 When we look at how we do real-time rendering today, it's fundamentally a combination of generally tweakable fixed stages and programmable stages. We got a taste of this fixed functionality when we set-up and executed a RenderPass in the previous chapter. We were able to clear the screen just by tweaking the initialization and target of the RenderPass, with no need to submit geometry to proceed through the rest of the stages.
 
