@@ -226,7 +226,6 @@ fn write_static_data(output_dir: &Path) {
     for file_source in get_files(static_data_dir) {
         let file_destination = output_dir.join(&file_source);
 
-        println!("static_stuff: {}", file_destination.display());
         fs::create_dir_all(file_destination.parent().unwrap()).unwrap();
         fs::copy(static_data_dir.join(&file_source), &file_destination).unwrap();
     }
@@ -346,16 +345,6 @@ fn get_template_context(content: &Vec<Content>) -> serde_json::Map<String, Value
     return map;
 }
 
-//fn to_json_value(yaml: &Yaml) -> Value {
-//    let mut map = Map::new();
-//
-//    for item in yaml. {
-//
-//    }
-//
-//    let obj = Value::Object(map);
-//}
-
 fn get_specific_content_context(handlebars: &Handlebars<'_>, template_context: &serde_json::Map<String, Value>, inserts: &Vec<(String, String)>, content: &Content, rendered_html: &String) -> Value {
     let mut map: serde_json::Map<String, Value> = template_context.clone();
     let mut current_content = get_content_info(&content);
@@ -427,14 +416,14 @@ fn get_header_info_from_element(header: &ElementRef<'_>) -> Option<TocItem> {
 }
 
 
-// fn print_root_toc(item: &TocItem) {
-//     let base_indentation = "\t".repeat((item.level - 1) as usize);
-//     println!("{}{}: {}", base_indentation, item.text, item.url);
-
-//     for child in &item.children {
-//         process_root_toc(child);
-//     }
-// }
+//fn print_root_toc(item: &TocItem) {
+//    let base_indentation = "\t".repeat((item.level - 1) as usize);
+//    println!("{}{}: {}", base_indentation, item.text, item.url);
+//
+//    for child in &item.children {
+//        print_root_toc(child);
+//    }
+//}
 
 
 fn process_root_toc(item: &TocItem) -> Value {
@@ -480,30 +469,54 @@ fn get_toc_from_content_html(title: &String, html: &String) -> Option<Value> {
                 item.url);
         }
 
-        if (last_level < item.level) && ((last_level + 2) == item.level) { // Starting a new stack.
+        println!("{}, {}", last_level, item.level);
+
+        if last_level < item.level {
             last_level += 1;
             children_stack.push(item);
-        } else if (last_level < item.level) && ((last_level + 1) == item.level) { // We're one level ahead, just push into the children of the last item of the previous level
-            children_stack.iter_mut().nth_back(0).unwrap().children.push(item);
-        } else if last_level >= item.level {
-            while last_level >= item.level {
+        } else if last_level == item.level {
+            let last_item  = children_stack.pop().unwrap();
+            children_stack.iter_mut().nth_back(0).unwrap().children.push(last_item);
+            children_stack.push(item);
+        }  else if last_level >= item.level {
+            for _ in 0..(last_level - item.level) + 1 {
                 let last_item  = children_stack.pop().unwrap();
                 children_stack.iter_mut().nth_back(0).unwrap().children.push(last_item);
                 last_level -= 1;
             }
 
-            children_stack.iter_mut().nth_back(0).unwrap().children.push(item);
+            children_stack.push(item);
+            last_level += 1;
         }
+
+        // if (last_level < item.level) && ((last_level + 2) == item.level) { // Starting a new stack.
+        //     last_level += 1;
+        //     children_stack.push(item);
+        // } else if (last_level < item.level) && ((last_level + 1) == item.level) { // We're one level ahead, just push into the children of the last item of the previous level
+        //     children_stack.iter_mut().nth_back(0).unwrap().children.push(item);
+        // } else if last_level >= item.level {
+        //     while last_level >= item.level {
+        //         let last_item  = children_stack.pop().unwrap();
+        //         children_stack.iter_mut().nth_back(0).unwrap().children.push(last_item);
+        //         last_level -= 1;
+        //     }
+
+        //     children_stack.iter_mut().nth_back(0).unwrap().children.push(item);
+        // }
     }
 
-    while last_level < children_stack.iter_mut().nth_back(0).unwrap().level {
+    
+    for _ in 0..(children_stack.len() - 1) {
         let last_item  = children_stack.pop().unwrap();
         children_stack.iter_mut().nth_back(0).unwrap().children.push(last_item);
-        last_level -= 1;
     }
 
     if children_stack.len() != 0 {
-        return Some(process_root_toc(children_stack.first().unwrap()));
+        let toc = children_stack.first().unwrap();
+        //println!("StartToc");
+        //print_root_toc(&toc);
+        //println!("EndToc");
+        return Some(process_root_toc(&toc));
     }
 
     return None
@@ -585,12 +598,10 @@ fn main() {
 
         for file_source in get_files(&output_dir) {
             let file_destination = destination.join(&file_source);
-
-            println!("static_stuff: {}", file_destination.display());
             fs::create_dir_all(file_destination.parent().unwrap()).unwrap();
             fs::copy(output_dir.join(&file_source), &file_destination).unwrap();
         }
-        
+
         println!("Link to site: http://127.0.0.1:4040/sdl_gpu_by_example/");
 
         // Should run the bottom command to host the site.
