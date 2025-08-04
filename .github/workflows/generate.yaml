@@ -36,9 +36,15 @@ jobs:
         include:
           - os: ubuntu-latest
             os_name: linux
-            cc: [gcc, clang]
+            cc: gcc
+            arch: x86-64
+          - os: ubuntu-latest
+            os_name: linux
+            cc: clang
+            arch: x86-64
           - os: macos-latest
             os_name: macos
+            arch: arm64
             cc: clang
           - os: windows-latest
             os_name: windows
@@ -65,7 +71,7 @@ jobs:
             arch: amd64_arm64
             target_arch: arm64
     
-    name: ${{ matrix.os_name }}${{ matrix.style }}-${{ matrix.cc }}
+    name: ${{ matrix.os_name }}${{ matrix.style }}-${{ matrix.cc }}-${{ matrix.arch }}
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
