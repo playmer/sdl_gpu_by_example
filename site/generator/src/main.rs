@@ -35,6 +35,24 @@ static TEMPLATE_DIR: &str =  "../template";
 static OUTPUT_DIR: &str =  "output";
 static NO_ESCAPE: &str =  "<!-- NO_ESCAPE -->";
 
+
+static COVERED_IN_SECTION_BLOCKQUOTE_START: &str = "<blockquote>";
+// static COVERED_IN_SECTION_BLOCKQUOTE_START_TEMPLATE: &str = 
+// "<p class=\"d-inline-flex gap-1\">
+//   <button class=\"btn btn-primary\" type=\"button\" data-bs-toggle=\"collapse\" data-bs-target=\"#collapseExample\" aria-expanded=\"false\" aria-controls=\"collapseExample\">
+//     Expand: Covered in this Section
+//   </button>
+// </p>
+// <div class=\"collapse\" id=\"collapseExample\">
+// <div class=\"card card-body\">";
+static COVERED_IN_SECTION_BLOCKQUOTE_START_TEMPLATE: &str = 
+"<div class=\"card card-body\">
+";
+
+static COVERED_IN_SECTION_BLOCKQUOTE_END: &str =  "</blockquote>";
+static COVERED_IN_SECTION_BLOCKQUOTE_END_TEMPLATE: &str = 
+"</div>";
+
 fn get_folders_or_paths(asset_dir: &Path, want_dirs: bool) -> Vec<PathBuf>
 {
     let mut paths : Vec<PathBuf> = Vec::new();
@@ -537,6 +555,65 @@ fn get_inserts() -> Vec<(String, String)> {
 }
 
 
+// static COVERED_IN_SECTION_BLOCKQUOTE_START: &str =  "<blockquote>";
+// static COVERED_IN_SECTION_BLOCKQUOTE_START_TEMPLATE: &str = 
+// "<p class=\"d-inline-flex gap-1\">
+//   <button class=\"btn btn-primary\" type=\"button\" data-bs-toggle=\"collapse\" data-bs-target=\"#collapseExample\" aria-expanded=\"false\" aria-controls=\"collapseExample\">
+//     Expand: Covered in this Section
+//   </button>
+// </p>
+// <div class=\"collapse\" id=\"collapseExample\">
+// <div class=\"card card-body\">";
+
+// static COVERED_IN_SECTION_BLOCKQUOTE_END: &str =  "<blockquote>";
+// static COVERED_IN_SECTION_BLOCKQUOTE_END_TEMPLATE: &str = 
+// "</div>
+// </div>";
+
+fn process_content_html(html: String) -> String
+{
+    let mut current_html = html;
+
+
+    // Do blockquote cleanup
+    {
+        let mut last_html = current_html.clone();
+
+        let mut i = 0;
+        
+        let current_tag = format!("collapseExample_{i}");
+
+        current_html = last_html.clone()
+            .replacen(
+                &COVERED_IN_SECTION_BLOCKQUOTE_START, 
+                &COVERED_IN_SECTION_BLOCKQUOTE_START_TEMPLATE.replace("collapseExample", &current_tag), 
+                1)
+            .replacen(
+                &COVERED_IN_SECTION_BLOCKQUOTE_END, 
+                &COVERED_IN_SECTION_BLOCKQUOTE_END_TEMPLATE, 
+                1);
+
+        while current_html.len() > last_html.len() {
+            last_html = current_html.clone();
+            i += 1;
+            let current_tag = format!("collapseExample_{i}");
+
+            current_html = last_html.clone()
+                .replacen(
+                    &COVERED_IN_SECTION_BLOCKQUOTE_START, 
+                    &COVERED_IN_SECTION_BLOCKQUOTE_START_TEMPLATE.replace("collapseExample", &current_tag), 
+                    1)
+                .replacen(
+                    &COVERED_IN_SECTION_BLOCKQUOTE_END, 
+                    &COVERED_IN_SECTION_BLOCKQUOTE_END_TEMPLATE, 
+                    1);
+        }
+    }
+
+    return current_html;
+}
+
+
 fn process_content() -> Vec<(PathBuf, String)> {
     let output_dir = Path::new(OUTPUT_DIR);
 
@@ -562,7 +639,11 @@ fn process_content() -> Vec<(PathBuf, String)> {
     for content in contents {
         let template_path = template_dir.join(content.front_matter["template"].as_str().unwrap());
         let template_html = std::fs::read_to_string(&template_path).unwrap();
-        let content_html = format!("{}\n{}", NO_ESCAPE, markdown::to_html_with_options(&content.markdown, &options).unwrap());
+        let content_html = format!(
+            "{}\n{}", 
+            NO_ESCAPE, 
+            process_content_html(markdown::to_html_with_options(&content.markdown, &options).unwrap())
+        );
 
         let current_content_context = get_specific_content_context(&handlebars, &template_context, &inserts, &content, &content_html);
         let final_html = handlebars.render_template(&template_html, &current_content_context).unwrap();

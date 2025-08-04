@@ -16,15 +16,15 @@
               {{#if this.children}}
                 <nav class="nav nav-pills flex-column">
                 {{#each this.children}}
-                  <a class="nav-link ms-4 my-2" href="{{this.url}}">{{this.name}}</a>
+                  <a class="nav-link ms-5 my-2" href="{{this.url}}">{{this.name}}</a>
                   {{#if this.children}}
                     <nav class="nav nav-pills flex-column">
                     {{#each this.children}}
-                      <a class="nav-link ms-4 my-2" href="{{this.url}}">{{this.name}}</a>
+                      <a class="nav-link ms-6 my-2" href="{{this.url}}">{{this.name}}</a>
                       {{#if this.children}}
                         <nav class="nav nav-pills flex-column">
                         {{#each this.children}}
-                          <a class="nav-link ms-4 my-2" href="{{this.url}}">{{this.name}}</a>
+                          <a class="nav-link ms-7 my-2" href="{{this.url}}">{{this.name}}</a>
                         {{/each}}
                         </nav>
                       {{/if}}
