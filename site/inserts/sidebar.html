@@ -1,4 +1,4 @@
-<!-- Need to make insert stuff before I can work on this more -->
+<!-- NO_ESCAPE -->
         <div class="col-4">
           <div data-bs-spy="scroll" data-bs-target="#navbar-example3" data-bs-offset="0" tabindex="0">
             
@@ -8,7 +8,6 @@
               {{#if table_of_contents.children}}
               <nav class="nav nav-pills flex-column">
               {{#each table_of_contents.children}}
-                <!-- {{this.title}} -->
                 <a class="nav-link" href="{{this.url}}">{{this.name}}</a>
                 
                 {{#if this.children}}

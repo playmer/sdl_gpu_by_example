@@ -8,97 +8,12 @@
   </head>
   <body>
       
-    <nav class="navbar navbar-expand-lg navbar-light bg-light">
-      <div class="container-fluid">
-        <a class="navbar-brand" href="/Index.html">SDL GPU by Example</a>
-        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
-          <span class="navbar-toggler-icon"></span>
-        </button>
-        <div class="collapse navbar-collapse" id="navbarSupportedContent">
-          <ul class="navbar-nav me-auto mb-2 mb-lg-0">
-            <li class="nav-item">
-              <a class="nav-link" href="/Index.html">Home</a>
-            </li>
-            <li class="nav-item">
-              <a class="nav-link" href="/About.html">About</a>
-            </li>
-            <li class="nav-item">
-              <a class="nav-link" href="/Resources.html">Resources</a>
-            </li>
-            <li class="nav-item dropdown">
-              <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                Dropdown
-              </a>
-              <ul class="dropdown-menu" aria-labelledby="navbarDropdown">
-                <li><a class="dropdown-item" href="#">Action</a></li>
-                <li><a class="dropdown-item" href="#">Another action</a></li>
-                <li><hr class="dropdown-divider"></li>
-                <li><a class="dropdown-item" href="#">Something else here</a></li>
-              </ul>
-            </li>
-          </ul>
-          <form class="d-flex">
-            <input class="form-control me-2" type="search" placeholder="Search" aria-label="Search">
-            <button class="btn btn-outline-success" type="submit">Search</button>
-          </form>
-        </div>
-      </div>
-    </nav>
-
-
+    {{inserts.navbar}}
 
     <div class="bd-example">
       <div class="row">
-
-        <div class="col-4">
-          <div data-bs-spy="scroll" data-bs-target="#navbar-example3" data-bs-offset="0" tabindex="0">
-            
-            <nav id="navbar-example3" class="navbar navbar-light bg-light flex-column align-items-stretch p-3">
-              <a class="navbar-brand" href="#">{{current_content.title}}</a>
-              
-              {{#if table_of_contents.children}}
-              <nav class="nav nav-pills flex-column">
-              {{#each table_of_contents.children}}
-                <!-- {{this.title}} -->
-                <a class="nav-link" href="{{this.url}}">{{this.name}}</a>
-                
-                {{#if this.children}}
-                <nav class="nav nav-pills flex-column">
-                {{#each this.children}}
-                  <a class="nav-link ms-4 my-2" href="{{this.url}}">{{this.name}}</a>
-                  
-                  {{#if this.children}}
-                  <nav class="nav nav-pills flex-column">
-                  {{#each this.children}}
-                    <a class="nav-link ms-5 my-3" href="{{this.url}}">{{this.name}}</a>
-                    {{#if this.children}}
-                    <nav class="nav nav-pills flex-column">
-                    {{#each this.children}}
-                      <a class="nav-link ms-6 my-4" href="{{this.url}}">{{this.name}}</a>
-                      {{#if this.children}}
-                      <nav class="nav nav-pills flex-column">
-                      {{#each this.children}}
-                        <a class="nav-link ms-7 my-5" href="{{this.url}}">{{this.name}}</a>
-                      {{/each}}
-                      </nav>
-                      {{/if}}
-                    {{/each}}
-                    </nav>
-                    {{/if}}
-                  {{/each}}
-                  </nav>
-                  {{/if}}
-                {{/each}}
-                </nav>
-                {{/if}}
-              {{/each}}
-              </nav>
-              {{/if}}
-            </nav>
-
-          </div>
-
-        </div>
+        
+        {{inserts.sidebar}}
 
         <div class="col-8">
           <div data-bs-spy="scroll" data-bs-target="#navbar-example3" data-bs-offset="0" class="scrollspy-example-2" tabindex="0">

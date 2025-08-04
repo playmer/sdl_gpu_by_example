@@ -33,7 +33,7 @@ static STATIC_DATA_DIR: &str =  "../static_data";
 static TEMPLATE_DIR: &str =  "../template";
 
 static OUTPUT_DIR: &str =  "output";
-static NO_ESCAPE: &str =  "<!-- NO_ESCAPE -->\n";
+static NO_ESCAPE: &str =  "<!-- NO_ESCAPE -->";
 
 fn get_folders_or_paths(asset_dir: &Path, want_dirs: bool) -> Vec<PathBuf>
 {
@@ -323,7 +323,7 @@ fn get_content_info(content: &Content) -> serde_json::Map<String, Value> {
     map.insert("file_path".to_string(), Value::String(content.file_path.to_str().unwrap().to_string()));
     map.insert("title".to_string(), Value::String(content.front_matter["title"].as_str().unwrap().to_string()));
     map.insert("description".to_string(), Value::String(content.front_matter["description"].as_str().unwrap().to_string()));
-    map.insert("url".to_string(), Value::String(content.file_path.with_extension("html").to_str().unwrap().to_string()));
+    map.insert("url".to_string(), Value::String(content.file_path.with_extension("html").to_str().unwrap().to_string().replace("\\", "/")));
 
     return map;
 }
@@ -356,7 +356,7 @@ fn get_template_context(content: &Vec<Content>) -> serde_json::Map<String, Value
 //    let obj = Value::Object(map);
 //}
 
-fn get_specific_content_context(template_context: &serde_json::Map<String, Value>, content: &Content, rendered_html: &String) -> Value {
+fn get_specific_content_context(handlebars: &Handlebars<'_>, template_context: &serde_json::Map<String, Value>, inserts: &Vec<(String, String)>, content: &Content, rendered_html: &String) -> Value {
     let mut map: serde_json::Map<String, Value> = template_context.clone();
     let mut current_content = get_content_info(&content);
     current_content.insert("rendered_html".to_string(), Value::String(rendered_html.clone()));
@@ -367,6 +367,16 @@ fn get_specific_content_context(template_context: &serde_json::Map<String, Value
     if let Some(item) = get_toc_from_content_html(&content_title, &rendered_html) {
         map.insert("table_of_contents".to_string(), item.into());
     }
+
+    let context_for_inserts: Value = map.clone().into();
+    
+    let mut insert_objects: serde_json::Map<String, Value> = serde_json::Map::new();
+
+    for (name, html) in inserts {
+        insert_objects.insert(name.clone(), handlebars.render_template(&html, &context_for_inserts).unwrap().into());
+    }
+
+    map.insert("inserts".to_string(), insert_objects.into());
 
     return map.into();
 }
@@ -499,6 +509,20 @@ fn get_toc_from_content_html(title: &String, html: &String) -> Option<Value> {
     return None
 }
 
+fn get_inserts() -> Vec<(String, String)> {
+    let inserts_dir = Path::new("../inserts");
+    let mut inserts = Vec::new();
+
+    for insert in get_files(inserts_dir) {
+        let name = insert.file_stem().unwrap().to_str().unwrap().to_string();
+        let insert_html = fs::read_to_string(inserts_dir.join(insert)).unwrap();
+
+        inserts.push((name, insert_html));
+    }
+
+    return inserts;
+}
+
 
 fn process_content() -> Vec<(PathBuf, String)> {
     let output_dir = Path::new(OUTPUT_DIR);
@@ -509,7 +533,7 @@ fn process_content() -> Vec<(PathBuf, String)> {
     let contents = get_content();
     let template_context = get_template_context(&contents);
 
-    let mut handlebars = Handlebars::new();
+    let mut handlebars: Handlebars<'_> = Handlebars::new();
     handlebars.register_escape_fn(handlebars_escape);
 
     let options = Options {
@@ -520,12 +544,14 @@ fn process_content() -> Vec<(PathBuf, String)> {
         ..Options::gfm()
     };
 
+    let inserts = get_inserts();
+
     for content in contents {
         let template_path = template_dir.join(content.front_matter["template"].as_str().unwrap());
         let template_html = std::fs::read_to_string(&template_path).unwrap();
-        let content_html = format!("{}{}", NO_ESCAPE, markdown::to_html_with_options(&content.markdown, &options).unwrap());
+        let content_html = format!("{}\n{}", NO_ESCAPE, markdown::to_html_with_options(&content.markdown, &options).unwrap());
 
-        let current_content_context = get_specific_content_context(&template_context, &content, &content_html);
+        let current_content_context = get_specific_content_context(&handlebars, &template_context, &inserts, &content, &content_html);
         let final_html = handlebars.render_template(&template_html, &current_content_context).unwrap();
 
         let final_file_path = output_dir.join(&content.file_path).with_extension("html");
