@@ -206,7 +206,7 @@ fn write_lesson_zips(output_dir: &Path) {
         let mut buffer = Vec::new();
         
         let options = SimpleFileOptions::default()
-            .compression_method(zip::CompressionMethod::Zstd)
+            .compression_method(zip::CompressionMethod::Bzip2)
             .unix_permissions(0o755);
 
         let files = {

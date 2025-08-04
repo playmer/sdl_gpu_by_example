@@ -136,7 +136,7 @@ jobs:
         with:
           arch: ${{ matrix.arch }}
 
-      - name: build
+      - name: Build Main Project
         working-directory: code
         run: |
           cmake -B build
@@ -146,6 +146,10 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: examples
+
+      - name: Build Examples
+        run: |
+          python scripts/run_examples_on_ci.py
 
   ##########################################
   # Deployment site
