@@ -29,139 +29,82 @@ defaults:
       shell: bash
 
 jobs:
-  linux:
+  build-code-project:
     strategy:
       fail-fast: false
       matrix:
         include:
           - os: ubuntu-latest
-            cc: gcc
-          - os: ubuntu-latest
+            os_name: linux
+            cc: [gcc, clang]
+          - os: macos-latest
+            os_name: macos
             cc: clang
-    
-    name: linux-${{ matrix.cc }}
-    runs-on: ${{ matrix.os }}
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          submodules: recursive
-        
-      - uses: lukka/get-cmake@latest
-
-      - name: install dependencies (Linux)
-        run: |
-          sudo add-apt-repository -y "deb http://archive.ubuntu.com/ubuntu `lsb_release -sc` main universe"
-          sudo apt-get update -y -qq
-          sudo apt-get install libasound2-dev libpulse-dev libwebp-dev libxrandr-dev tar
-
-      - name: build
-        working-directory: code
-        run: |
-          cmake -B build
-          cmake --build build --config Release
-          
-  # ##########################################
-  mac:
-    name: macos-build
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [macos-latest]
-
-    runs-on: macos-latest
-    
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          submodules: recursive
-        
-      - uses: lukka/get-cmake@latest
-
-      - name: build
-        working-directory: code
-        run: |
-          cmake -B build
-          cmake --build build --config Release
-
-  ##########################################
-  windows-mingw:
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
           - os: windows-latest
+            os_name: windows
+            style: -mingw
             sys: mingw64
             env: x86_64
             arch: x86-64
             cc: gcc
           - os: windows-latest
+            os_name: windows
+            style: -mingw
             sys: mingw32
             env: i686
             arch: i686
             cc: gcc
-    name: windows-${{matrix.env}}
-    runs-on: ${{ matrix.os }}
-    steps:
-    - uses: actions/checkout@v4
-      with:
-        submodules: recursive
-    
-    - uses: msys2/setup-msys2@v2
-      with:
-        msystem: ${{matrix.sys}}
-        update: true
-        install: 
-          mingw-w64-${{matrix.env}}-toolchain
-          mingw-w64-${{matrix.env}}-cmake
-          ninja
-
-    - shell: msys2 {0}
-      name: Build and Test
-      working-directory: code
-      run: |
-        cmake -B build .
-        cmake --build build --config Release
-
-    - uses: actions/upload-artifact@v4
-      with:
-        name: Windows ${{matrix.arch}} CMake ${{matrix.sys}} Build
-        path: ${{ github.workspace }}/onscripter-en.Windows.cmake.${{matrix.env}}.zip
-
-  ##########################################
-  windows-msvc:
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
           - os: windows-latest
+            os_name: windows
+            style: -msvc
             arch: x64
             target_arch: x86_64
           - os: windows-latest
+            os_name: windows
+            style: -msvc
             arch: amd64_arm64
             target_arch: arm64
     
-    name: windows-msvc-${{ matrix.target_arch }}
+    name: ${{ matrix.os_name }}${{ matrix.style }}-${{ matrix.cc }}
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
         with:
           submodules: recursive
-      
+        
+      - uses: msys2/setup-msys2@v2
+        if: matrix.style == '-mingw'
+        with:
+          msystem: ${{matrix.sys}}
+          update: true
+          install: 
+            mingw-w64-${{matrix.env}}-toolchain
+            mingw-w64-${{matrix.env}}-cmake
+            ninja
+
       - uses: lukka/get-cmake@latest
 
+      - name: install dependencies (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo add-apt-repository -y "deb http://archive.ubuntu.com/ubuntu `lsb_release -sc` main universe"
+          sudo apt-get update -y -qq
+          sudo apt-get install libasound2-dev libpulse-dev libwebp-dev libxrandr-dev tar
+          
       - uses: TheMrMilchmann/setup-msvc-dev@v3
+        if: matrix.style == '-msvc'
         with:
           arch: ${{ matrix.arch }}
 
-      - name: Build
+      - name: build
         working-directory: code
-        shell: cmd
         run: |
           cmake -B build
           cmake --build build --config Release
 
-  # Build job
-  site-build:
+  ##########################################
+  # Build Site
+  build-site:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -183,13 +126,14 @@ jobs:
         with:
           path: ./site/generator/output
 
-  # Deployment job
-  deploy:
+  ##########################################
+  # Deployment site
+  deploy-site:
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
-    needs: site-build
+    needs: build-site
     steps:
       - name: Deploy to GitHub Pages
         id: deployment
