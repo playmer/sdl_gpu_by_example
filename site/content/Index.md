@@ -1,5 +1,5 @@
 ---
-title: Index
+title: index
 description: The main page
 template: index_template.html
 ---
