@@ -1,7 +1,8 @@
-<!-- NO_ESCAPE -->
-<div class="col-auto" style="overflow-y: scroll;">
+<!-- NO_ESCAPE -->>
   <div data-bs-spy="scroll" data-bs-target="#lesson_navbar" data-bs-offset="0" tabindex="0">
-    <nav id="lesson_navbar" class="navbar navbar-light bg-light flex-column align-items-stretch p-3">
+    <!-- <nav id="lesson_navbar" class="navbar navbar-light bg-light flex-column align-items-stretch p-3"> -->
+
+    <nav id="lesson_navbar" class="navbar navbar-light bg-light p-3 flex-column align-items-stretch" style="min-height:0">
       <a class="nav-link" href="{{this.url}}">{{current_content.title}}</a>
       {{#if table_of_contents.children}}
         <nav class="nav nav-pills flex-column">
@@ -42,4 +43,3 @@
       {{/if}}
     </nav>
   </div>
-</div>
