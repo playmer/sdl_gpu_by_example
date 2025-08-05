@@ -16,13 +16,15 @@
         {{inserts.sidebar}}
           
         <div class="p-2 mh-100">
-          <h1 class="post-title">{{current_content.title}}<a name="title" id="title"></a></h1>
-          
-          <hr>
-          {{current_content.rendered_html}}
-          
-          <a href="/sdl_gpu_by_example/assets/code/{{current_content.file_name_no_ext}}.zip"><p>Download the source for this example here.</p>
-          
+          <div data-bs-spy="scroll" data-bs-target="#lesson_navbar" data-bs-offset="0" tabindex="0">
+            <h1 class="post-title">{{current_content.title}}<a name="title" id="title"></a></h1>
+            
+            <hr>
+            {{current_content.rendered_html}}
+            
+            <a href="/sdl_gpu_by_example/assets/code/{{current_content.file_name_no_ext}}.zip"><p>Download the source for this example here.</p>
+            
+          </div>
         </div>
       </div>
     </div>
