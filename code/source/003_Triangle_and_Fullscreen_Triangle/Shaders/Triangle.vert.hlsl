@@ -1,9 +1,3 @@
-struct Output
-{
-  float3 Color : TEXCOORD1;
-  float4 Position : SV_Position;
-};
-
 static const float2 cVertexPositions[3] = {
     { 0.0f,  1.0f},
     { 1.0f, -1.0f},
@@ -15,6 +9,13 @@ static const float3 cColors[3] = {
     { 0.0f, 1.0f, 0.0f },
     { 0.0f, 0.0f, 1.0f },
 };
+
+struct Output
+{
+  float3 Color : TEXCOORD1;
+  float4 Position : SV_Position;
+};
+
 
 Output main(uint id : SV_VertexID)
 {
