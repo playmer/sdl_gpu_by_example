@@ -30,7 +30,7 @@ Lets start looking at something more concrete
 
 ## Vertices, Briefly <a name="vertices" id="vertices"></a>
 
-For this chapter, to not _completely_ overload on information, we're only thinking about triangles, which are made up of three Vertices, essentially positions for now, that look _kind of_ like this:
+For this chapter, to not _completely_ overload on information, we're only thinking about triangles, which are each made up of three Vertices, essentially positions on a 2D plane for now, that look _kind of_ like this:
 
 ```
 typedef struct float2 {
@@ -42,13 +42,13 @@ We'll just be using static geometry within the shader, with no buffers. We'll ge
 
 TODO: Insert image of the SDL NDC
 
-We'll talk a little later on how this is related to shading besides just saying "shade here", and we'll talk _a lot_ later on what exactly the job of the vertex pipeline is and what we'll be doing in it beyond single static triangles and similar.
+We'll go into _much_ greater detail on the Vertex pipeline, Vertex shaders, and techniques that can be used with them in a chapter or two. Right now though, these are the minimum details you'll need to get going.
 
 ## The Vertex Shader <a name="vertex_shader" id="vertex_shader"></a>
 
 To display a triangle, we must produce geometry. For very simple shapes like Triangle, and even cubes, we can get away with storing this data within the shader itself. And it's helpful to learn this how to do this because this isn't unlike how you might pull geometry out of a storage buffer. Or for 2D you may store the transformations and UV info for sprites into a storage buffer but produce geometry like we will here.
 
-```
+```hlsl
 static const float2 cVertexPositions[3] = {
     { 0.0f,  1.0f},
     { 1.0f, -1.0f},
@@ -56,7 +56,7 @@ static const float2 cVertexPositions[3] = {
 };
 ```
 
-```
+```hlsl
 static const float3 cColors[3] = {
     { 1.0f, 0.0f, 0.0f },
     { 0.0f, 1.0f, 0.0f },
@@ -64,7 +64,7 @@ static const float3 cColors[3] = {
 };
 ```
 
-```
+```hlsl
 struct Output
 {
   float3 Color : TEXCOORD1;
@@ -72,7 +72,7 @@ struct Output
 };
 ```
 
-```
+```hlsl
 Output main(uint id : SV_VertexID)
 {
   uint vertexIndex = id % 3;
