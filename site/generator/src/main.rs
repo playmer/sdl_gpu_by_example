@@ -218,7 +218,13 @@ fn get_code_assets_lesson_needs(assets: &Vec<PathBuf>, lesson_c_source_path: &Pa
     
     let mut assets_lesson_needs : Vec<PathBuf> = Vec::new();
     
-    let c_source = std::fs::read_to_string(lesson_c_source_path).unwrap();
+    let c_source = std::fs::read_to_string(lesson_c_source_path);
+
+    if c_source.is_err() {
+        return assets_lesson_needs;
+    }
+
+    let c_source = c_source.unwrap();
 
     for file_asset in assets {
         let file_name = file_asset.file_name().unwrap();
@@ -364,6 +370,7 @@ fn get_content() -> Vec<Content> {
 
     for file_path in get_files(&content_dir) {
         let file_name = file_path.file_name().unwrap().to_str().unwrap().to_string();
+        println!("Getting Content for {file_name}");
 
         let front_matter_and_markdown: String = std::fs::read_to_string(&content_dir.join(&file_path)).unwrap();
         

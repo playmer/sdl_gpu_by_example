@@ -223,16 +223,20 @@ if (!SDL_WaitAndAcquireGPUSwapchainTexture(commandBuffer, context.mWindow, &swap
 
 Not too bad, but you'll notice we didn't use our `sdl_check` macro. These two operations are okay to fail, if they do, we'll just skip rendering this frame. That said, you're probably wondering what these are.
 
-A command buffer is, fundamentally, how we record commands to instruct the GPU what to do. This includes things like uploading data in a Copy Pass, executing generic work on the GPUs many cores in a Compute Pass, and of course executing graphics related work in a Render Pass. We'll get into more details as this series moves along, but the command buffer is how we'll be doing the actual communication with the GPU. SDL_GPU handles the management of these, which you'll appreciate coming from something like Vulkan. 
+A command buffer is how we record commands to instruct the GPU what to do. This includes things like uploading data in a Copy Pass, executing generic work on the GPUs many cores in a Compute Pass, and of course executing graphics related work in a Render Pass. We'll get into more details as this series moves along, but the command buffer is how we'll be doing the actual communication with the GPU. SDL_GPU handles the management of these, which you'll appreciate coming from something like Vulkan.
 
-Once you have a command buffer, we can request a Swapchain texture. As mentioned ealier, this is the texture that is tied to, and gets displayed on the Window, by default, SDL_GPU allocates 3 of them. That said, this can be changed, as well as how precisely we wait for them, and if we wait at all. We'll try to cover some of these at a later time, for now this is a fairly simple way to handle acquisitions and submissions.
+Once you have a command buffer, we can request a Swapchain texture. As mentioned ealier, this is the texture that is tied to, and gets displayed on the Window. By default SDL_GPU allocates 3 of them, that said this can be changed, as well as how precisely we wait for them, and if we wait at all. We'll try to cover some of these at a later time, for now this is a fairly simple way to handle acquisitions and submissions. The extra parameters which we've passed `NULL` to are simply to aquire the width and height of the given texture. This will become useful later, but we don't need it for now.
 
 
 #### The Render Pass <a name="render_pass" id="render_pass"></a>
 
-Now we can finally finish out the chapter by doing what we've set out to do: clear the screen.
+Now we can finally finish out the chapter by doing one of the "simplest" graphics applications, clearing the screen. Or, more specifically, clearing the swapchain texture we aquired and then displaying that texture onto the screen.
 
-This requires creating a RenderPass, configured to use the swapchain we just received as a color target, and setting the clear color to whatever we prefer. Lets see what that looks like.
+This requires a RenderPass, which is how we instruct the GPU to run through the vertex pipeline into the shading pipeline, out to an image. We'll go over that in more details in subsequent chapters, but you can think of this as the Pass which does most of the actual graphics work. There's also Copy and Compute Passes we have access to in SDL_GPU, and those essentially do what they sound like, letting you copy to/from GPU memory, and doing general purpose computing work respectively.
+
+So the configuration of a RenderPass ignoring for a moment the additional work we can do once we have one, is mostly about the final image(s) we're outputting to. These are more generally called Targets, as you can both have more than one, and there are several kinds. These are what we'll be drawing to in subsequent chapters.
+
+To clear the swapchain texture though, we actually only need to Begin and End a RenderPass, as this alone will allow us to configure the swapchain texture as a target, tell the RenderPass to clear it to a particular color, and to store that clear to the texture at the end. Lets see what that looks like:
 
 ```c
 SDL_GPUColorTargetInfo colorTargetInfo;
@@ -261,13 +265,13 @@ We did it! You should be seeing a window with a blue background!
 
 <p>{{img "/sdl_gpu_by_example/assets/images/002_Window_and_Clearing__Running.jpg" "A window on Windows, with the contents just being a solid shade of blue."}}</p>
 
-[`SDL_BeginGPURenderPass`](https://wiki.libsdl.org/SDL3/SDL_BeginGPURenderPass) is the first time an SDL GPU call requires a fair bit of configuration, but it won't be the last by a long shot. [`SDL_GPUColorTargetInfo`](https://wiki.libsdl.org/SDL3/SDL_GPUColorTargetInfo) is one of many create/info structs we'll be going over. As will become tradition, we zero it out to "default" the fields, but right now, we can concern ourselves with just the 4 fields we're setting here:
+[`SDL_BeginGPURenderPass`](https://wiki.libsdl.org/SDL3/SDL_BeginGPURenderPass) is the first time for us that an SDL GPU call requires a fair bit of configuration, but it won't be the last by a long shot. [`SDL_GPUColorTargetInfo`](https://wiki.libsdl.org/SDL3/SDL_GPUColorTargetInfo) is one of many create/info structs we'll be going over. As will become tradition, we zero it out to "default" the fields, but right now, we can concern ourselves with just the 4 fields we're setting here:
   - texture: The is the texture we're rendering to, the "target".
   - load_op: How the Render Pass should be treating the contents of the texture before you start executing it. By your choice, it can either keep the previous contents, clear to a color (what we're doing to get that blue color), or tell it that we don't care. If we don't care the API doesn't either, you can't rely on the image looking like anything in particular.
   - store_op: The converse, how the Render Pass treats that same texture as it ends. Typically you'll just want to store here. You can also tell it not to care, or do some "Resolve" variations. Being honest, I don't know what that's for. When I do, I'll update this, and also write an example about it.
   - clear_color: As you might expect, this is just a small struct with rgba floats in it to clear the Render Target to when we pass [`SDL_GPU_LOADOP_CLEAR`](https://wiki.libsdl.org/SDL3/SDL_GPU_LOADOP_CLEAR).
 
-As you may notice from the parameters of [`SDL_BeginGPURenderPass`](https://wiki.libsdl.org/SDL3/SDL_BeginGPURenderPass) you can actually pass an array of Color Targets. We'll be going some very simple fullscreen effects in the next chapter, but when we get further along and learn more about textures, we can play around with this functionality with more interesting fullscreen effects. Similarly we'll get to the [`SDL_GPUDepthStencilTargetInfo`](https://wiki.libsdl.org/SDL3/SDL_GPUDepthStencilTargetInfo) parameter later on when we start playing with 3D.
+As you may notice from the parameters of [`SDL_BeginGPURenderPass`](https://wiki.libsdl.org/SDL3/SDL_BeginGPURenderPass) as well as the discussion above, you can actually pass an array of Color Targets. We'll be going through some very simple fullscreen effects in the next chapter, but when we get further along and learn more about textures, we can play around with this functionality with more interesting fullscreen effects. Similarly we'll get to the [`SDL_GPUDepthStencilTargetInfo`](https://wiki.libsdl.org/SDL3/SDL_GPUDepthStencilTargetInfo) parameter later on when we start playing with 3D. 
 
 After that, it's really just about ending the render pass with [`SDL_EndGPURenderPass`](https://wiki.libsdl.org/SDL3/SDL_EndGPURenderPass) and submitting the command buffer with [`SDL_SubmitGPUCommandBuffer`](https://wiki.libsdl.org/SDL3/SDL_SubmitGPUCommandBuffer) to the GPU so that our commands are run.
 
@@ -275,9 +279,9 @@ After that, it's really just about ending the render pass with [`SDL_EndGPURende
 {{collapsible-card}}
 ### Covered in this Section
 - [`SDL_AcquireGPUCommandBuffer`](https://wiki.libsdl.org/SDL3/SDL_AcquireGPUCommandBuffer)
-  - blah blah talk about threads
+  - A common thing we hear about in Graphics is about doing things on other threads, such as recording command buffers. In practice, this isn't really all that slow, or at least the recording part isn't, perhaps walking your scene might be but that's an architectural issue. That said, I won't say there's no uses of threads here. In my experience, it can be very useful to do mid-frame uploads when you do things like load assets. The upload itself usually isn't the slow part, but it can be easier to do the upload on another thread if you're already doing the unpacking on another thread. We might look into these strategies in a later chapter if I can find a compelling use case that doesn't take a lot of non-GPU work.
 - [`SDL_SubmitGPUCommandBuffer`](https://wiki.libsdl.org/SDL3/SDL_SubmitGPUCommandBuffer)
-  - blah
+  - Not much to say here, but if you're looking into threading, it may well be that you'll want to look into the sibling function [`SDL_SubmitGPUCommandBufferAndAcquireFence`](https://wiki.libsdl.org/SDL3/SDL_SubmitGPUCommandBufferAndAcquireFence), which lets you get a fence to wait on if you need a command buffer to complete before proceeding, such as when doing a read of GPU memory from the CPU side.
 - [`SDL_WaitAndAcquireGPUSwapchainTexture`](https://wiki.libsdl.org/SDL3/SDL_WaitAndAcquireGPUSwapchainTexture)
   - There's not too much to say here, this is how we ask for a Swapchain to manipulate in our passes.
   - Some other APIs related to Swapchains that I alluded to above for further reading if you want to look ahead or the tutorial hasn't covered them yet:
@@ -288,9 +292,9 @@ After that, it's really just about ending the render pass with [`SDL_EndGPURende
     - ['SDL_SetGPUSwapchainParameters'](https://wiki.libsdl.org/SDL3/SDL_SetGPUSwapchainParameters)
       -  Change the format of the Texture, as well as the presentation mode. Changing the format is useful when you want to render an HDR image, changing the present mode would allow you to turn off VSYNC and switch to allowing screen tearing or mailbox where you can keep submitting and the GPU will use the latest image given when it's time to display. Both of these need to be queried for support before changing.
 - [`SDL_GPUColorTargetInfo`](https://wiki.libsdl.org/SDL3/SDL_GPUColorTargetInfo)
-  - I covered the immediately relevant properties above, but there's a fair bit of stuff you can adjust here, including more about the "Resolve" store_op properties that now make a bit more sense to me reading this again now. Still not going to cover it yet. We'll obviously touch on some of these as we proceed, but it never hurts to take a look early.
+  - I covered the immediately relevant properties above, but there's a fair bit of stuff you can adjust here, such as a resolve texture for doing various multi-sampling techniques. We'll try to explore this functionality in a later chapter at some point.
 - [`SDL_BeginGPURenderPass`](https://wiki.libsdl.org/SDL3/SDL_BeginGPURenderPass)
-  - blah
+  - Nothing additional to point out about this, there's depth textures, but we'll go over it later on, perhaps in a sprite batching chapter.
 - [`SDL_EndGPURenderPass`](https://wiki.libsdl.org/SDL3/SDL_EndGPURenderPass)
   - As simple as it gets, this ends the Render Pass you were adding commands to. It should be noted that it's not unlikely you'll have several of these in a frame, though obviously you don't want to go overboard. As you may suspect, you'll need to End a Render Pass and Begin a new one if you have to change the Textures you're rendering to. One example may be a blur shader, where you need to read from a target you did your initial geometry rendering to, render to an intermediate Texture for a horizontal blur, and finally render to a final Texture using a vertical blur pass.
 {{collapsible-card-end}}
