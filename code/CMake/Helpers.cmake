@@ -53,7 +53,7 @@ endmacro()
 macro(list_directories result)
     message(STATUS "List Dir: ${CMAKE_CURRENT_LIST_DIR}")
     #file(GLOB children LIST_DIRECTORIES true RELATIVE CONFIGURE_DEPENDS ${CMAKE_CURRENT_LIST_DIR})
-    file(GLOB children RELATIVE ${CMAKE_CURRENT_LIST_DIR} ${CMAKE_CURRENT_LIST_DIR}/*)
+    file(GLOB children RELATIVE ${CMAKE_CURRENT_LIST_DIR} CONFIGURE_DEPENDS ${CMAKE_CURRENT_LIST_DIR}/*)
     
     message(STATUS "\tchildren: ${children}")
     set(directory_list "")
