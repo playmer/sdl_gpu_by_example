@@ -1,13 +1,18 @@
 
-static const float3 cColors[2] =
-{
-    { 1.0f, 1.0f, 1.0f },
-    { 0.0f, 0.0f, 0.0f },
-};
 
+cbuffer UBO : register(b0, space3)
+{
+    float4 color;
+};
 
 float4 main(float2 aTextureCoordinates : TEXCOORD0) : SV_Target0
 {
+    const float3 cColors[2] =
+    {
+        color.xyz,
+        { 0.0f, 0.0f, 0.0f },
+    };
+
     // We want easy values to manipulate into uints so we can do some indexing.
     // The NDC of Vulkan is (-1, -1) -> (1, 1), so we'll first add 1 to both components
     // which will bring it up to (0,0) -> (2,2). Then we'll multiply by 50 to get up to

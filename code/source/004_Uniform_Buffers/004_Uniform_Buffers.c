@@ -144,7 +144,7 @@ TrianglePipeline CreateTrianglePipeline() {
   graphicsPipelineCreateInfo.primitive_type = SDL_GPU_PRIMITIVETYPE_TRIANGLELIST;
 
   graphicsPipelineCreateInfo.vertex_shader = CreateShader(
-    "Triangle.vert",
+    "UniformTriangle.vert",
     SDL_GPU_SHADERSTAGE_VERTEX,
     0,
     1,
@@ -155,7 +155,7 @@ TrianglePipeline CreateTrianglePipeline() {
   sdl_check(graphicsPipelineCreateInfo.vertex_shader, "Failed to create the Triangle vertex shader: ");
 
   graphicsPipelineCreateInfo.fragment_shader = CreateShader(
-    "Triangle.frag",
+    "UniformTriangle.frag",
     SDL_GPU_SHADERSTAGE_FRAGMENT,
     0,
     0,
@@ -176,8 +176,8 @@ TrianglePipeline CreateTrianglePipeline() {
 
   pipeline.mPosition.x = 0.f;
   pipeline.mPosition.y = 0.f;
-  pipeline.mPosition.w = 0.f;
-  pipeline.mPosition.h = 0.f;
+  pipeline.mPosition.w = 1.f;
+  pipeline.mPosition.h = 1.f;
 
   SDL_ReleaseGPUShader(gContext.mDevice, graphicsPipelineCreateInfo.vertex_shader);
   SDL_ReleaseGPUShader(gContext.mDevice, graphicsPipelineCreateInfo.fragment_shader);
@@ -188,7 +188,7 @@ TrianglePipeline CreateTrianglePipeline() {
 void DrawTrianglePipeline(TrianglePipeline* aPipeline, SDL_GPUCommandBuffer* aCommandBuffer, SDL_GPURenderPass* aRenderPass)
 {
   SDL_BindGPUGraphicsPipeline(aRenderPass, aPipeline->mPipeline);
-  SDL_PushGPUComputeUniformData(aCommandBuffer, 0, &aPipeline->mPosition, sizeof(aPipeline->mPosition));
+  SDL_PushGPUVertexUniformData(aCommandBuffer, 0, &aPipeline->mPosition, sizeof(aPipeline->mPosition));
   SDL_DrawGPUPrimitives(aRenderPass, 3, 1, 0, 0);
 }
 
@@ -225,7 +225,7 @@ FullscreenPipeline CreateFullscreenPipeline() {
   graphicsPipelineCreateInfo.primitive_type = SDL_GPU_PRIMITIVETYPE_TRIANGLELIST;
 
   graphicsPipelineCreateInfo.vertex_shader = CreateShader(
-    "FullscreenTriangle.vert",
+    "UniformFullscreenTriangle.vert",
     SDL_GPU_SHADERSTAGE_VERTEX,
     0,
     0,
@@ -236,7 +236,7 @@ FullscreenPipeline CreateFullscreenPipeline() {
   sdl_check(graphicsPipelineCreateInfo.vertex_shader, "Failed to create the Triangle vertex shader: ");
 
   graphicsPipelineCreateInfo.fragment_shader = CreateShader(
-    "FullscreenTriangle.frag",
+    "UniformFullscreenTriangle.frag",
     SDL_GPU_SHADERSTAGE_FRAGMENT,
     0,
     1,
@@ -264,14 +264,14 @@ FullscreenPipeline CreateFullscreenPipeline() {
 
 void DrawFullscreenPipeline(FullscreenPipeline* aPipeline, SDL_GPUCommandBuffer* aCommandBuffer, SDL_GPURenderPass* aRenderPass)
 {
-  SDL_Color colors[] = {
-    {255, 0, 0, 255},
-    {0, 255, 0, 255},
-    {0, 0, 255, 255}
+  SDL_FColor colors[] = {
+    {1, 0, 0, 1},
+    {0, 1, 0, 1},
+    {0, 0, 1, 1}
   };
 
   SDL_BindGPUGraphicsPipeline(aRenderPass, aPipeline->mPipeline);
-  SDL_PushGPUFragmentUniformData(aCommandBuffer, 0, &colors[aPipeline->mColorIndex], sizeof(SDL_Color));
+  SDL_PushGPUFragmentUniformData(aCommandBuffer, 0, &colors[aPipeline->mColorIndex], sizeof(SDL_FColor));
   SDL_DrawGPUPrimitives(aRenderPass, 3, 1, 0, 0);
 }
 
@@ -298,13 +298,17 @@ int main(int argc, char** argv)
   FullscreenPipeline fullscreenPipeline = CreateFullscreenPipeline();
   TrianglePipeline trianglePipeline = CreateTrianglePipeline();
 
-  const float speed = 0.005f;
-  float dt = 1.0f;
+  const float speed = 1.f;
+  Uint64 last_frame_ticks_so_far = SDL_GetTicksNS();
   int keys;
   const bool* key_map = SDL_GetKeyboardState(&keys);
   bool running = true;
 
   while (running) {
+    Uint64 current_frame_ticks_so_far = SDL_GetTicksNS();
+    float dt = (current_frame_ticks_so_far - last_frame_ticks_so_far) / 1000000000.f;
+    last_frame_ticks_so_far = current_frame_ticks_so_far;
+    SDL_Log("dt: %f", dt);
     SDL_Event event;
     while (SDL_PollEvent(&event)) {
       switch (event.common.type) {
@@ -316,13 +320,28 @@ int main(int argc, char** argv)
           case SDL_SCANCODE_1: fullscreenPipeline.mColorIndex = 0; break;
           case SDL_SCANCODE_2: fullscreenPipeline.mColorIndex = 1; break;
           case SDL_SCANCODE_3: fullscreenPipeline.mColorIndex = 2; break;
+          default: break;
         }
         break;
       }
     }
+      
+    if (key_map[SDL_SCANCODE_D]) trianglePipeline.mPosition.x += speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_A]) trianglePipeline.mPosition.x -= speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_W]) trianglePipeline.mPosition.y += speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_S]) trianglePipeline.mPosition.y -= speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_R]) trianglePipeline.mPosition.w += speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_F]) trianglePipeline.mPosition.w -= speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_T]) trianglePipeline.mPosition.h += speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_G]) trianglePipeline.mPosition.h -= speed * dt * 1.0f;
 
-    if (key_map[SDL_SCANCODE_A]) trianglePipeline.mPosition.x += speed * dt * 1.0f;
-
+//    SDL_Log("%d, {%f, %f}, {%f, %f}}",
+//      fullscreenPipeline.mColorIndex,
+//      trianglePipeline.mPosition.x,
+//      trianglePipeline.mPosition.y,
+//      trianglePipeline.mPosition.w,
+//      trianglePipeline.mPosition.h
+//    );
 
     SDL_GPUCommandBuffer* commandBuffer = SDL_AcquireGPUCommandBuffer(gContext.mDevice);
     if (!commandBuffer)
