@@ -176,8 +176,8 @@ QuadPipeline CreateQuadPipeline() {
 
   pipeline.mPosition.x = 0.f;
   pipeline.mPosition.y = 0.f;
-  pipeline.mPosition.w = 1.f;
-  pipeline.mPosition.h = 1.f;
+  pipeline.mPosition.w = 0.5f;
+  pipeline.mPosition.h = 0.5f;
 
   SDL_ReleaseGPUShader(gContext.mDevice, graphicsPipelineCreateInfo.vertex_shader);
   SDL_ReleaseGPUShader(gContext.mDevice, graphicsPipelineCreateInfo.fragment_shader);
