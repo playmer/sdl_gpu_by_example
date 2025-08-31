@@ -299,7 +299,7 @@ int main(int argc, char** argv)
   TrianglePipeline trianglePipeline = CreateTrianglePipeline();
 
   const float speed = 1.f;
-  Uint64 last_frame_ticks_so_far = SDL_GetTicksNS();
+  Uint64 last_frame_ticks_so_far = SDL_GetTicksNS();	
   int keys;
   const bool* key_map = SDL_GetKeyboardState(&keys);
   bool running = true;

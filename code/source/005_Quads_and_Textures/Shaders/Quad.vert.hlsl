@@ -10,15 +10,9 @@ static const uint cVertexIndicies[6] = {
   0, 3, 1
 };
 
-static const float3 cColors[3] = {
-    { 1.0f, 0.0f, 0.0f },
-    { 0.0f, 1.0f, 0.0f },
-    { 0.0f, 0.0f, 1.0f },
-};
-
 struct Output
 {
-  float3 Color : TEXCOORD1;
+  float2 UV : TEXCOORD1;
   float4 Position : SV_Position;
 };
 
@@ -35,14 +29,18 @@ Output main(uint id : SV_VertexID)
   uint indiciesIndex = id % 6;
   uint vertexIndex = cVertexIndicies[indiciesIndex];
 
-  float3x3 translationScale = {
-    {    w, 0.0f,    x },
-    { 0.0f,    h,    y },
-    { 0.0f, 0.0f, 1.0f },
-  };
+  // float3x3 translationScale = {
+  //   {    w, 0.0f,    x },
+  //   { 0.0f,    h,    y },
+  //   { 0.0f, 0.0f, 1.0f },
+  // };
+  // output.Position = float4(mul(translationScale, float3(cVertexPositions[vertexIndex], 1.0f)).xy, 0.0f, 1.0f);
 
   Output output;
-  output.Position = float4(mul(translationScale, float3(cVertexPositions[vertexIndex], 1.0f)).xy, 0.0f, 1.0f);
-  output.Color = cColors[vertexIndex];
+  float2 vertex = cVertexPositions[vertexIndex];
+  float2 scaledVertex = float2(vertex.x * w, vertex.y * h);
+  float2 translatedVertex = float2(scaledVertex.x + x, scaledVertex.y + y);
+  output.Position = float4(translatedVertex, 0.0f,1.0f);
+  output.UV = (vertex + 1.0f) * 0.5f;
   return output;
 }
