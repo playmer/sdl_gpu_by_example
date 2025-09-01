@@ -28,24 +28,22 @@ typedef struct float4x4 {
   };
 } float4x4;
 
-
 float4x4 OrthographicProjectionLHZO(float aLeft, float aRight, float aBottom, float aTop, float aNear, float aFar) {
   float4x4 toReturn;
   SDL_zero(toReturn);
 
   toReturn.mat[0][0] = 2.0f / (aRight - aLeft);
   toReturn.mat[1][1] = 2.0f / (aTop - aBottom);
-  toReturn.mat[2][2] = 1.0f / (aNear - aFar);
+  toReturn.mat[2][2] = 1.0f / (aFar - aNear);
 
-  toReturn.mat[3][0] = - (aRight + aLeft) / (aLeft - aRight);
-  toReturn.mat[3][1] = - (aTop + aBottom) / (aBottom - aTop);
-  toReturn.mat[3][2] = - aNear / (aNear - aFar);
+  toReturn.mat[3][0] = - (aRight + aLeft) / (aRight - aLeft);
+  toReturn.mat[3][1] = - (aTop + aBottom) / (aTop - aBottom);
+  toReturn.mat[3][2] = - aNear / (aFar - aNear);
 
   toReturn.mat[3][3] = 1.0f;
 
   return toReturn;
 }
-
 
 typedef struct GpuContext {
   SDL_Window* mWindow;
@@ -293,8 +291,8 @@ QuadPipeline CreateQuadPipeline() {
   pipeline.mSampler = SDL_CreateGPUSampler(gContext.mDevice, &samplerCreateInfo);
   sdl_check(pipeline.mPipeline, "Failed to create the GPU Pipeline: ");
 
-  pipeline.mPosition.x = 0.f;
-  pipeline.mPosition.y = 0.f;
+  pipeline.mPosition.x = 128.f;
+  pipeline.mPosition.y = 128.f;
   pipeline.mPosition.w = 256.f;
   pipeline.mPosition.h = 256.f;
 
@@ -309,7 +307,6 @@ void DrawQuadPipeline(QuadPipeline* aPipeline, SDL_GPUCommandBuffer* aCommandBuf
   SDL_BindGPUGraphicsPipeline(aRenderPass, aPipeline->mPipeline);
   SDL_PushGPUVertexUniformData(aCommandBuffer, 0, &aPipeline->mPosition, sizeof(aPipeline->mPosition));
   SDL_PushGPUVertexUniformData(aCommandBuffer, 1, &gContext.WorldToNDC, sizeof(gContext.WorldToNDC));
-  
 
   {
     SDL_GPUTextureSamplerBinding textureBinding;
@@ -354,7 +351,7 @@ int main(int argc, char** argv)
     float dt = (current_frame_ticks_so_far - last_frame_ticks_so_far) / 1000000000.f;
     last_frame_ticks_so_far = current_frame_ticks_so_far;
 
-    SDL_Log("dt: %f", dt);
+//    SDL_Log("dt: %f", dt);
     SDL_Event event;
     while (SDL_PollEvent(&event)) {
       switch (event.common.type) {
@@ -382,13 +379,12 @@ int main(int argc, char** argv)
     if (key_map[SDL_SCANCODE_T]) quadPipeline.mPosition.h += speed * dt * 1.0f;
     if (key_map[SDL_SCANCODE_G]) quadPipeline.mPosition.h -= speed * dt * 1.0f;
 
-//    SDL_Log("%d, {%f, %f}, {%f, %f}}",
-//      fullscreenPipeline.mColorIndex,
-//      quadPipeline.mPosition.x,
-//      quadPipeline.mPosition.y,
-//      quadPipeline.mPosition.w,
-//      quadPipeline.mPosition.h
-//    );
+    SDL_Log("{%f, %f}, {%f, %f}}",
+      quadPipeline.mPosition.x,
+      quadPipeline.mPosition.y,
+      quadPipeline.mPosition.w,
+      quadPipeline.mPosition.h
+    );
 
     SDL_GPUCommandBuffer* commandBuffer = SDL_AcquireGPUCommandBuffer(gContext.mDevice);
     if (!commandBuffer)

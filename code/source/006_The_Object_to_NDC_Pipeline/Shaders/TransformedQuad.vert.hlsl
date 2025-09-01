@@ -35,18 +35,24 @@ Output main(uint id : SV_VertexID)
   uint indiciesIndex = id % 6;
   uint vertexIndex = cVertexIndicies[indiciesIndex];
 
-  //float3x3 objectToWorld = {
-  //  {    w, 0.0f,    x },
-  //  { 0.0f,    h,    y },
-  //  { 0.0f, 0.0f, 1.0f },
-  //};
-  //output.Position = float4(mul(objectToWorld, float3(cVertexPositions[vertexIndex], 1.0f)).xy, 0.0f, 1.0f);
+  // float3x3 objectToWorld = {
+  //   {    w, 0.0f,    x + (x / 2.f) },
+  //   { 0.0f,    h,    y + (y / 2.f) },
+  //   { 0.0f, 0.0f, 1.0f },
+  // };
+
 
   Output output;
   float2 vertex = cVertexPositions[vertexIndex];
-  float2 scaledVertex = float2(vertex.x * w, vertex.y * h);
-  float2 translatedVertex = float2(scaledVertex.x + x, scaledVertex.y + y);
-  output.Position = mul(WorldToNDC, float4(translatedVertex, 0.0f,1.0f));
+
+  float4x4 ObjectToWorld = {
+    {    w / 2.0f,     0.0f, 0.0f,    x },
+    {        0.0f, h / 2.0f, 0.0f,    y },
+    {        0.0f,     0.0f, 1.0f, 0.0f },
+    {        0.0f,     0.0f, 0.0f, 1.0f },
+  };
+
+  output.Position = mul(WorldToNDC, mul(objectToWorld, float4(vertex, 0.0f, 1.0f)));
   output.UV = (vertex + 1.0f) * 0.5f;
   return output;
 }
