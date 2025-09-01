@@ -35,13 +35,6 @@ Output main(uint id : SV_VertexID)
   uint indiciesIndex = id % 6;
   uint vertexIndex = cVertexIndicies[indiciesIndex];
 
-  // float3x3 objectToWorld = {
-  //   {    w, 0.0f,    x + (x / 2.f) },
-  //   { 0.0f,    h,    y + (y / 2.f) },
-  //   { 0.0f, 0.0f, 1.0f },
-  // };
-
-
   Output output;
   float2 vertex = cVertexPositions[vertexIndex];
 
