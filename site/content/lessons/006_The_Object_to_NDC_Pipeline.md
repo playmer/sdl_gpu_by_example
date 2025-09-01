@@ -42,9 +42,34 @@ We're not going to go deep on the math involved here, that's better suited to a 
 
 
 
+## Coordinate Spaces
 
+### Object
 
+### World
 
+### Camera
 
+### NDC
 
-As for strips, they're just another way of passing verts so you can share them between other triangles. We tend to use index buffers for this as strips can be limiting.
+NDC space is the Unit cuboid the GPU API uses for rendering. Anything outside of it gets clipped during the vertex stage. In SDL GPU, it's a Cuboid with the bottom-left-front point is {-1, -1, 0}, it's top-right-front point is {1, 1, 0}, and it extends into the Z dimention to 1 unit which is farther away from the screen.
+
+INSERT DIAGRAM
+
+## Transformations
+
+### Object to World (Model Matrix)
+
+### World to Camera (View Matrix)
+
+### Camera to NDC (Projection Matrix)
+
+Finally we need a matrix that maps from the Camera space to NDC space. 
+
+## Projections
+
+### Orthographic
+
+### Perspective
+
+## Orthographic Projection in Practice

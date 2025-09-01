@@ -16,6 +16,37 @@
         } \
     } while (0)
 
+  
+typedef struct float4 {
+  float x,y,z,w;
+} float4;
+
+typedef struct float4x4 {
+  union {
+    float4 columns[4];
+    float mat[4][4];
+  };
+} float4x4;
+
+
+float4x4 OrthographicProjectionLHZO(float aLeft, float aRight, float aBottom, float aTop, float aNear, float aFar) {
+  float4x4 toReturn;
+  SDL_zero(toReturn);
+
+  toReturn.mat[0][0] = 2.0f / (aRight - aLeft);
+  toReturn.mat[1][1] = 2.0f / (aTop - aBottom);
+  toReturn.mat[2][2] = 1.0f / (aNear - aFar);
+
+  toReturn.mat[3][0] = - (aRight + aLeft) / (aLeft - aRight);
+  toReturn.mat[3][1] = - (aTop + aBottom) / (aBottom - aTop);
+  toReturn.mat[3][2] = - aNear / (aNear - aFar);
+
+  toReturn.mat[3][3] = 1.0f;
+
+  return toReturn;
+}
+
+
 typedef struct GpuContext {
   SDL_Window* mWindow;
   SDL_GPUDevice* mDevice;
@@ -23,6 +54,7 @@ typedef struct GpuContext {
   const char* mShaderEntryPoint;
   SDL_GPUShaderFormat mChosenBackendFormat;
   const char* mChosenBackendFormatExtension;
+  float4x4 WorldToNDC;
 } GpuContext;
 
 GpuContext gContext;
@@ -224,10 +256,10 @@ QuadPipeline CreateQuadPipeline() {
   graphicsPipelineCreateInfo.primitive_type = SDL_GPU_PRIMITIVETYPE_TRIANGLELIST;
 
   graphicsPipelineCreateInfo.vertex_shader = CreateShader(
-    "Quad.vert",
+    "TransformedQuad.vert",
     SDL_GPU_SHADERSTAGE_VERTEX,
     0,
-    1,
+    2,
     0,
     0,
     SDL_PROPERTY_TYPE_INVALID
@@ -235,7 +267,7 @@ QuadPipeline CreateQuadPipeline() {
   sdl_check(graphicsPipelineCreateInfo.vertex_shader, "Failed to create the Triangle vertex shader: ");
 
   graphicsPipelineCreateInfo.fragment_shader = CreateShader(
-    "Quad.frag",
+    "TransformedQuad.frag",
     SDL_GPU_SHADERSTAGE_FRAGMENT,
     1,
     0,
@@ -263,8 +295,8 @@ QuadPipeline CreateQuadPipeline() {
 
   pipeline.mPosition.x = 0.f;
   pipeline.mPosition.y = 0.f;
-  pipeline.mPosition.w = 0.5f;
-  pipeline.mPosition.h = 0.5f;
+  pipeline.mPosition.w = 256.f;
+  pipeline.mPosition.h = 256.f;
 
   SDL_ReleaseGPUShader(gContext.mDevice, graphicsPipelineCreateInfo.vertex_shader);
   SDL_ReleaseGPUShader(gContext.mDevice, graphicsPipelineCreateInfo.fragment_shader);
@@ -276,6 +308,8 @@ void DrawQuadPipeline(QuadPipeline* aPipeline, SDL_GPUCommandBuffer* aCommandBuf
 {
   SDL_BindGPUGraphicsPipeline(aRenderPass, aPipeline->mPipeline);
   SDL_PushGPUVertexUniformData(aCommandBuffer, 0, &aPipeline->mPosition, sizeof(aPipeline->mPosition));
+  SDL_PushGPUVertexUniformData(aCommandBuffer, 1, &gContext.WorldToNDC, sizeof(gContext.WorldToNDC));
+  
 
   {
     SDL_GPUTextureSamplerBinding textureBinding;
@@ -295,25 +329,6 @@ void DestroyQuadPipeline(QuadPipeline* aPipeline)
 }
 
 
-typedef struct float4 {
-  float x,y,z,w;
-} float4;
-
-typedef struct float4x4 {
-  union {
-    float4 rows[4];
-    float mat[16];
-  };
-} float4x4;
-
-float4x4 OrthographicProjectionLH(float aLeft, float aRight, float bBottom, float aTop, float aNear, float aFar) {
-  float4x4 toReturn;
-
-
-
-  return toReturn;
-}
-
 
 int main(int argc, char** argv)
 {
@@ -328,7 +343,7 @@ int main(int argc, char** argv)
 
   QuadPipeline quadPipeline = CreateQuadPipeline();
 
-  const float speed = 1.f;
+  const float speed = 200.f;
   Uint64 last_frame_ticks_so_far = SDL_GetTicksNS();
   int keys;
   const bool* key_map = SDL_GetKeyboardState(&keys);
@@ -338,6 +353,7 @@ int main(int argc, char** argv)
     Uint64 current_frame_ticks_so_far = SDL_GetTicksNS();
     float dt = (current_frame_ticks_so_far - last_frame_ticks_so_far) / 1000000000.f;
     last_frame_ticks_so_far = current_frame_ticks_so_far;
+
     SDL_Log("dt: %f", dt);
     SDL_Event event;
     while (SDL_PollEvent(&event)) {
@@ -347,6 +363,15 @@ int main(int argc, char** argv)
           break;
       }
     }
+    
+    int w = 0, h = 0;
+    SDL_GetWindowSizeInPixels(gContext.mWindow, &w, &h);
+
+    gContext.WorldToNDC = OrthographicProjectionLHZO(
+      0, w,
+      0, h,
+      0.0f, 1.0f
+    );
       
     if (key_map[SDL_SCANCODE_D]) quadPipeline.mPosition.x += speed * dt * 1.0f;
     if (key_map[SDL_SCANCODE_A]) quadPipeline.mPosition.x -= speed * dt * 1.0f;
