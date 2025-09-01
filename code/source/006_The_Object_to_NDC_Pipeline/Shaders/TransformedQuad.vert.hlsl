@@ -52,7 +52,7 @@ Output main(uint id : SV_VertexID)
     {        0.0f,     0.0f, 0.0f, 1.0f },
   };
 
-  output.Position = mul(WorldToNDC, mul(objectToWorld, float4(vertex, 0.0f, 1.0f)));
+  output.Position = mul(WorldToNDC, mul(ObjectToWorld, float4(vertex, 0.0f, 1.0f)));
   output.UV = (vertex + 1.0f) * 0.5f;
   return output;
 }
