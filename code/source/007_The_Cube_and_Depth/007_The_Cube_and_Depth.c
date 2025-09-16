@@ -250,12 +250,16 @@ SDL_GPUTexture* CreateAndUploadTexture(SDL_GPUCopyPass* aCopyPass, const char* a
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Technique Code
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+typedef struct CubeInfo {
+  float4 mPosition;
+  float4 mScale;
+} CubeInfo;
+
 typedef struct CubePipeline {
   SDL_GPUGraphicsPipeline* mPipeline;
   SDL_GPUTexture* mTexture;
   SDL_GPUSampler* mSampler;
-  float4 mPosition;
-  float4 mScale;
+  CubeInfo mInfo[2];
 } CubePipeline;
 
 CubePipeline CreateCubePipeline() {
@@ -314,14 +318,23 @@ CubePipeline CreateCubePipeline() {
   pipeline.mSampler = SDL_CreateGPUSampler(gContext.mDevice, &samplerCreateInfo);
   SDL_assert(pipeline.mPipeline);
 
-  pipeline.mPosition.x =  0.f;
-  pipeline.mPosition.y = -1.f;
-  pipeline.mPosition.z =  5.f;
-  pipeline.mPosition.w =  0.f;
-  pipeline.mScale.x = 1.f;
-  pipeline.mScale.y = 1.f;
-  pipeline.mScale.z = 1.f;
-  pipeline.mScale.w = 1.f;
+  pipeline.mInfo[0].mPosition.x =  0.f;
+  pipeline.mInfo[0].mPosition.y = -1.f;
+  pipeline.mInfo[0].mPosition.z =  5.f;
+  pipeline.mInfo[0].mPosition.w =  0.f;
+  pipeline.mInfo[0].mScale.x = 1.f;
+  pipeline.mInfo[0].mScale.y = 1.f;
+  pipeline.mInfo[0].mScale.z = 1.f;
+  pipeline.mInfo[0].mScale.w = 1.f;
+
+  pipeline.mInfo[1].mPosition.x = 0.f;
+  pipeline.mInfo[1].mPosition.y = -1.f;
+  pipeline.mInfo[1].mPosition.z = 10.f;
+  pipeline.mInfo[1].mPosition.w = 0.f;
+  pipeline.mInfo[1].mScale.x = 2.f;
+  pipeline.mInfo[1].mScale.y = 2.f;
+  pipeline.mInfo[1].mScale.z = 2.f;
+  pipeline.mInfo[1].mScale.w = 2.f;
 
   SDL_ReleaseGPUShader(gContext.mDevice, graphicsPipelineCreateInfo.vertex_shader);
   SDL_ReleaseGPUShader(gContext.mDevice, graphicsPipelineCreateInfo.fragment_shader);
@@ -332,7 +345,7 @@ CubePipeline CreateCubePipeline() {
 void DrawCubePipeline(CubePipeline* aPipeline, SDL_GPUCommandBuffer* aCommandBuffer, SDL_GPURenderPass* aRenderPass)
 {
   SDL_BindGPUGraphicsPipeline(aRenderPass, aPipeline->mPipeline);
-  SDL_PushGPUVertexUniformData(aCommandBuffer, 0, &aPipeline->mPosition, sizeof(aPipeline->mPosition) + sizeof(aPipeline->mScale));
+  SDL_PushGPUVertexUniformData(aCommandBuffer, 0, &aPipeline->mInfo[0], sizeof(aPipeline->mInfo[0]));
   SDL_PushGPUVertexUniformData(aCommandBuffer, 1, &gContext.WorldToNDC, sizeof(gContext.WorldToNDC));
 
   {
@@ -343,7 +356,12 @@ void DrawCubePipeline(CubePipeline* aPipeline, SDL_GPUCommandBuffer* aCommandBuf
     SDL_BindGPUFragmentSamplers(aRenderPass, 0, &textureBinding, 1);
   }
 
-  SDL_DrawGPUPrimitives(aRenderPass, 6 /* 6 per face */ * 6 /* 6 sides of our cube */ * 1 /*number of cubes*/, 1, 0, 0);
+  // Draw the first cube
+  SDL_DrawGPUPrimitives(aRenderPass, 6 /* 6 per face */ * 6 /* 6 sides of our cube */, 1, 0, 0);
+
+  // Draw the second cube
+  SDL_PushGPUVertexUniformData(aCommandBuffer, 0, &aPipeline->mInfo[1], sizeof(aPipeline->mInfo[1]));
+  SDL_DrawGPUPrimitives(aRenderPass, 6 /* 6 per face */ * 6 /* 6 sides of our cube */, 1, 0, 0);
 }
 
 void DestroyCubePipeline(CubePipeline* aPipeline)
@@ -398,21 +416,21 @@ int main(int argc, char** argv)
       0.0f, 1.0f
     );
       
-    if (key_map[SDL_SCANCODE_D]) cubePipeline.mPosition.x += speed * dt * 1.0f;
-    if (key_map[SDL_SCANCODE_A]) cubePipeline.mPosition.x -= speed * dt * 1.0f;
-    if (key_map[SDL_SCANCODE_W]) cubePipeline.mPosition.y += speed * dt * 1.0f;
-    if (key_map[SDL_SCANCODE_S]) cubePipeline.mPosition.y -= speed * dt * 1.0f;
-    if (key_map[SDL_SCANCODE_E]) cubePipeline.mPosition.z += speed * dt * 1.0f;
-    if (key_map[SDL_SCANCODE_Q]) cubePipeline.mPosition.z -= speed * dt * 1.0f;
-    if (key_map[SDL_SCANCODE_R]) cubePipeline.mScale.x += speed * dt * 1.0f;
-    if (key_map[SDL_SCANCODE_F]) cubePipeline.mScale.x -= speed * dt * 1.0f;
-    if (key_map[SDL_SCANCODE_T]) cubePipeline.mScale.y += speed * dt * 1.0f;
-    if (key_map[SDL_SCANCODE_G]) cubePipeline.mScale.y -= speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_D]) cubePipeline.mInfo[0].mPosition.x += speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_A]) cubePipeline.mInfo[0].mPosition.x -= speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_W]) cubePipeline.mInfo[0].mPosition.y += speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_S]) cubePipeline.mInfo[0].mPosition.y -= speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_E]) cubePipeline.mInfo[0].mPosition.z += speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_Q]) cubePipeline.mInfo[0].mPosition.z -= speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_R]) cubePipeline.mInfo[0].mScale.x += speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_F]) cubePipeline.mInfo[0].mScale.x -= speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_T]) cubePipeline.mInfo[0].mScale.y += speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_G]) cubePipeline.mInfo[0].mScale.y -= speed * dt * 1.0f;
 
     SDL_Log("{%f, %f, %f}}",
-      cubePipeline.mPosition.x,
-      cubePipeline.mPosition.y,
-      cubePipeline.mPosition.z
+      cubePipeline.mInfo[0].mPosition.x,
+      cubePipeline.mInfo[0].mPosition.y,
+      cubePipeline.mInfo[0].mPosition.z
     );
 
     SDL_GPUCommandBuffer* commandBuffer = SDL_AcquireGPUCommandBuffer(gContext.mDevice);
