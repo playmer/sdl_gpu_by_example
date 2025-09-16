@@ -27,25 +27,13 @@ SDL_DestroyWindow(window);
 
 So we've created a simple window, checked that it's initialized, and then destroyed it. I wouldn't advise you to run this, as how something like this gets displayed is platform dependant, but we can expect either a flash of a window, or nothing at all.
 
-To save our fingers just a bit of typing, lets write a small macro to ease error checking SDL:
+Something very important with any library, but particularly with SDL is error checking. SDL thankfully provides a macro for us to use, so lets adjust our code above. Feel free to use whatever is most ergonomic for you or your language of choice if you're not using C, or would like more detailed errors.
 
 ```c
-#define sdl_check(aCondition, aMessage, aExitCode) \
-    do { \
-        if (!aCondition) { \
-            SDL_Quit(); \
-            exit(aExitCode); \
-        } \
-    } while (0)
-```
-
-So now we can use this while initializing objects and SDL itself. Feel free to use whatever is most ergonomic for you or your language of choice.
-
-```c
-sdl_check(SDL_Init(SDL_INIT_VIDEO), "Couldn't initialize SDL: ", 1);
+SDL_assert(SDL_Init(SDL_INIT_VIDEO));
 
 SDL_Window* window = SDL_CreateWindow("002-Window_and_Clearing", 1280, 720, 0);
-sdl_check(window, "Couldn't create a window: ", 1);
+SDL_assert(window);
 ```
 
 ### An Event Loop <a name="event_loop" id="event_loop"></a>
@@ -106,9 +94,9 @@ Finally, we can do one of the first things you'll ever do in a Graphics API, cre
 
 ```c
 SDL_GPUDevice* device = SDL_CreateGPUDevice(SDL_GPU_SHADERFORMAT_SPIRV | SDL_GPU_SHADERFORMAT_DXIL | SDL_GPU_SHADERFORMAT_MSL, true, "vulkan");
-sdl_check(device, "Couldn't create a GPU Device: ", 2);
+SDL_assert(device);
 
-sdl_check(SDL_ClaimWindowForGPUDevice(mDevice, mWindow), "Couldn't claim the Window for the GPU device: ", 3);
+SDL_assert(SDL_ClaimWindowForGPUDevice(mDevice, mWindow));
 ```
 Pretty easy right? If you've dabbled in some of the APIs SDL_GPU is built on top of, you'd know initialization can be a bit of a bear at times. SDL_GPU generally takes care of most of those details, later on we'll look at how some of these details can be tweaked using a Properties version of SDL_CreateGPUDevice. 
 
@@ -141,12 +129,12 @@ GpuContext CreateGpuContext(SDL_Window* aWindow) {
 
   context.mWindow = aWindow;
   context.mDevice = SDL_CreateGPUDevice(SDL_GPU_SHADERFORMAT_SPIRV | SDL_GPU_SHADERFORMAT_DXIL | SDL_GPU_SHADERFORMAT_MSL, true, NULL);
-  sdl_check(context.mDevice, "Couldn't create a GPU Device: ", 2);
+  SDL_assert(context.mDevice);
 
-  sdl_check(SDL_ClaimWindowForGPUDevice(context.mDevice, context.mWindow), "Couldn't claim the Window for the GPU device: ", 3);
+  SDL_assert(SDL_ClaimWindowForGPUDevice(context.mDevice, context.mWindow));
 
   context.mProperties = SDL_CreateProperties();
-  sdl_check(context.mProperties, "Couldn't create a property set for GPU device calls: ", 4);
+  SDL_assert(context.mProperties);
 
   SDL_GPUShaderFormat availableFormats = SDL_GetGPUShaderFormats(context.mDevice);
   context.mShaderEntryPoint = NULL;
@@ -221,7 +209,7 @@ if (!SDL_WaitAndAcquireGPUSwapchainTexture(commandBuffer, context.mWindow, &swap
 }
 ```
 
-Not too bad, but you'll notice we didn't use our `sdl_check` macro. These two operations are okay to fail, if they do, we'll just skip rendering this frame. That said, you're probably wondering what these are.
+Not too bad, but you'll notice we didn't use `SDL_assert`. These two operations are okay to fail, if they do, we'll just skip rendering this frame. That said, you're probably wondering what these are.
 
 A command buffer is how we record commands to instruct the GPU what to do. This includes things like uploading data in a Copy Pass, executing generic work on the GPUs many cores in a Compute Pass, and of course executing graphics related work in a Render Pass. We'll get into more details as this series moves along, but the command buffer is how we'll be doing the actual communication with the GPU. SDL_GPU handles the management of these, which you'll appreciate coming from something like Vulkan.
 

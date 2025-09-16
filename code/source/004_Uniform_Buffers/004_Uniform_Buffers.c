@@ -6,16 +6,9 @@
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_main.h>
 
-#define sdl_check(aCondition, aMessage, ...) \
-    do { \
-        if (!aCondition) { \
-          SDL_Log("%s(%d):  " aMessage, __FILE__, __LINE__,##__VA_ARGS__ ); \
-          SDL_Log("\tSDL_Error: %s", SDL_GetError()); \
-          SDL_Quit(); \
-          exit(1); \
-        } \
-    } while (0)
-
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Shared GPU Code
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 typedef struct GpuContext {
   SDL_Window* mWindow;
   SDL_GPUDevice* mDevice;
@@ -32,12 +25,12 @@ void CreateGpuContext(SDL_Window* aWindow) {
 
   gContext.mWindow = aWindow;
   gContext.mDevice = SDL_CreateGPUDevice(SDL_GPU_SHADERFORMAT_SPIRV | SDL_GPU_SHADERFORMAT_DXIL | SDL_GPU_SHADERFORMAT_MSL, true, NULL);
-  sdl_check(gContext.mDevice, "Couldn't create a GPU Device: ");
+  SDL_assert(gContext.mDevice);
 
-  sdl_check(SDL_ClaimWindowForGPUDevice(gContext.mDevice, gContext.mWindow), "Couldn't claim the Window for the GPU device: ");
+  SDL_assert(SDL_ClaimWindowForGPUDevice(gContext.mDevice, gContext.mWindow));
 
   gContext.mProperties = SDL_CreateProperties();
-  sdl_check(gContext.mProperties, "Couldn't create a property set for GPU device calls: ");
+  SDL_assert(gContext.mProperties);
 
   SDL_GPUShaderFormat availableFormats = SDL_GetGPUShaderFormats(gContext.mDevice);
   gContext.mShaderEntryPoint = NULL;
@@ -83,7 +76,7 @@ SDL_GPUShader* CreateShader(
 
   size_t fileSize = 0;
   void* fileData = SDL_LoadFile(shader_path, &fileSize);
-  sdl_check(fileData, "Couldn't load the shader file (%s) from disk: ", shader_path);
+  SDL_assert(fileData);
 
   SDL_GPUShaderCreateInfo shaderCreateInfo;
   SDL_zero(shaderCreateInfo);
@@ -94,11 +87,7 @@ SDL_GPUShader* CreateShader(
     properties = aProperties;
   }
 
-  sdl_check(
-    SDL_SetStringProperty(properties, SDL_PROP_GPU_SHADER_CREATE_NAME_STRING, aShaderFilename),
-    "While creating a shader (%s), there was an error setting the GPU Shader Name property: ",
-    shader_path
-  );
+  SDL_assert(SDL_SetStringProperty(properties, SDL_PROP_GPU_SHADER_CREATE_NAME_STRING, aShaderFilename));
 
   shaderCreateInfo.entrypoint = gContext.mShaderEntryPoint;
   shaderCreateInfo.format = gContext.mChosenBackendFormat;
@@ -114,11 +103,17 @@ SDL_GPUShader* CreateShader(
   SDL_GPUShader* shader = SDL_CreateGPUShader(gContext.mDevice, &shaderCreateInfo);
 
   SDL_free(fileData);
-  sdl_check(shader, "While creating a shader (%s), there was an error creating the GPU shader: ", shader_path);
+  SDL_assert(shader);
 
   return shader;
 }
 
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Technique Code
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+////////////////////////////////////////////////////////////
+/// TrianglePipeline
 typedef struct TrianglePipeline {
   SDL_GPUGraphicsPipeline* mPipeline;
   SDL_FRect mPosition;
@@ -152,7 +147,7 @@ TrianglePipeline CreateTrianglePipeline() {
     0,
     SDL_PROPERTY_TYPE_INVALID
   );
-  sdl_check(graphicsPipelineCreateInfo.vertex_shader, "Failed to create the Triangle vertex shader: ");
+  SDL_assert(graphicsPipelineCreateInfo.vertex_shader);
 
   graphicsPipelineCreateInfo.fragment_shader = CreateShader(
     "UniformTriangle.frag",
@@ -163,16 +158,13 @@ TrianglePipeline CreateTrianglePipeline() {
     0,
     SDL_PROPERTY_TYPE_INVALID
   );
-  sdl_check(graphicsPipelineCreateInfo.fragment_shader, "Failed to create the Triangle fragment shader: ");
+  SDL_assert(graphicsPipelineCreateInfo.fragment_shader);
 
-  sdl_check(
-    SDL_SetStringProperty(gContext.mProperties, SDL_PROP_GPU_SHADER_CREATE_NAME_STRING, "TrianglePipeline"),
-    "While creating the TrianglePipeline, there was an error setting the GPU Shader Name property: "
-  );
+  SDL_assert(SDL_SetStringProperty(gContext.mProperties, SDL_PROP_GPU_SHADER_CREATE_NAME_STRING, "TrianglePipeline"));
 
   TrianglePipeline pipeline;
   pipeline.mPipeline = SDL_CreateGPUGraphicsPipeline(gContext.mDevice, &graphicsPipelineCreateInfo);
-  sdl_check(pipeline.mPipeline, "Failed to create the GPU Pipeline: ");
+  SDL_assert(pipeline.mPipeline);
 
   pipeline.mPosition.x = 0.f;
   pipeline.mPosition.y = 0.f;
@@ -233,7 +225,7 @@ FullscreenPipeline CreateFullscreenPipeline() {
     0,
     SDL_PROPERTY_TYPE_INVALID
   );
-  sdl_check(graphicsPipelineCreateInfo.vertex_shader, "Failed to create the Triangle vertex shader: ");
+  SDL_assert(graphicsPipelineCreateInfo.vertex_shader);
 
   graphicsPipelineCreateInfo.fragment_shader = CreateShader(
     "UniformFullscreenTriangle.frag",
@@ -244,16 +236,13 @@ FullscreenPipeline CreateFullscreenPipeline() {
     0,
     SDL_PROPERTY_TYPE_INVALID
   );
-  sdl_check(graphicsPipelineCreateInfo.fragment_shader, "Failed to create the Triangle fragment shader: ");
+  SDL_assert(graphicsPipelineCreateInfo.fragment_shader);
 
-  sdl_check(
-    SDL_SetStringProperty(gContext.mProperties, SDL_PROP_GPU_SHADER_CREATE_NAME_STRING, "FullscreenPipeline"),
-    "While creating the FullscreenPipeline, there was an error setting the GPU Shader Name property: "
-  );
+  SDL_assert(SDL_SetStringProperty(gContext.mProperties, SDL_PROP_GPU_SHADER_CREATE_NAME_STRING, "FullscreenPipeline"));
 
   FullscreenPipeline pipeline;
   pipeline.mPipeline = SDL_CreateGPUGraphicsPipeline(gContext.mDevice, &graphicsPipelineCreateInfo);
-  sdl_check(pipeline.mPipeline, "Failed to create the GPU Pipeline: ");
+  SDL_assert(pipeline.mPipeline);
   pipeline.mColorIndex = 0;
 
   SDL_ReleaseGPUShader(gContext.mDevice, graphicsPipelineCreateInfo.vertex_shader);
@@ -281,17 +270,17 @@ void DestroyFullscreenPipeline(FullscreenPipeline* aPipeline)
   SDL_zero(*aPipeline);
 }
 
-//002_Window_and_Clearing__Running.jpg
-
-
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Main
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 int main(int argc, char** argv)
 {
   (void)argc;
   (void)argv;
-  sdl_check(SDL_Init(SDL_INIT_VIDEO), "Couldn't initialize SDL: ");
+  SDL_assert(SDL_Init(SDL_INIT_VIDEO));
 
   SDL_Window* window = SDL_CreateWindow("003-Triangle_and_Fullscreen_Triangle", 1280, 720, 0);
-  sdl_check(window, "Couldn't create a window: ");
+  SDL_assert(window);
 
   CreateGpuContext(window);
 
@@ -334,14 +323,6 @@ int main(int argc, char** argv)
     if (key_map[SDL_SCANCODE_F]) trianglePipeline.mPosition.w -= speed * dt * 1.0f;
     if (key_map[SDL_SCANCODE_T]) trianglePipeline.mPosition.h += speed * dt * 1.0f;
     if (key_map[SDL_SCANCODE_G]) trianglePipeline.mPosition.h -= speed * dt * 1.0f;
-
-//    SDL_Log("%d, {%f, %f}, {%f, %f}}",
-//      fullscreenPipeline.mColorIndex,
-//      trianglePipeline.mPosition.x,
-//      trianglePipeline.mPosition.y,
-//      trianglePipeline.mPosition.w,
-//      trianglePipeline.mPosition.h
-//    );
 
     SDL_GPUCommandBuffer* commandBuffer = SDL_AcquireGPUCommandBuffer(gContext.mDevice);
     if (!commandBuffer)

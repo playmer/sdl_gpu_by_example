@@ -3,16 +3,9 @@
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_main.h>
 
-#define sdl_check(aCondition, aMessage, ...) \
-    do { \
-        if (!(aCondition)) { \
-          SDL_Log("%s(%d):  " aMessage, __FILE__, __LINE__ ,##__VA_ARGS__ ); \
-          SDL_Log("\tSDL_Error: %s", SDL_GetError()); \
-          SDL_Quit(); \
-          exit(1); \
-        } \
-    } while (0)
-
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Shared GPU Code
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 typedef struct GpuContext {
   SDL_Window* mWindow;
   SDL_GPUDevice* mDevice;
@@ -22,62 +15,63 @@ typedef struct GpuContext {
   const char* mChosenBackendFormatExtension;
 } GpuContext;
 
-//003_Triangle_and_Fullscreen_Triangle_1.png
+GpuContext gContext;
 
-GpuContext CreateGpuContext(SDL_Window* aWindow) {
-  GpuContext context;
-  SDL_zero(context);
+void CreateGpuContext(SDL_Window* aWindow) {
+  SDL_zero(gContext);
 
-  context.mWindow = aWindow;
-  context.mDevice = SDL_CreateGPUDevice(SDL_GPU_SHADERFORMAT_SPIRV | SDL_GPU_SHADERFORMAT_DXIL | SDL_GPU_SHADERFORMAT_MSL, true, NULL);
-  sdl_check(context.mDevice, "Couldn't create a GPU Device: ");
+  gContext.mWindow = aWindow;
+  gContext.mDevice = SDL_CreateGPUDevice(SDL_GPU_SHADERFORMAT_SPIRV | SDL_GPU_SHADERFORMAT_DXIL | SDL_GPU_SHADERFORMAT_MSL, true, NULL);
+  SDL_assert(gContext.mDevice);
 
-  sdl_check(SDL_ClaimWindowForGPUDevice(context.mDevice, context.mWindow), "Couldn't claim the Window for the GPU device: ");
+  SDL_assert(SDL_ClaimWindowForGPUDevice(gContext.mDevice, gContext.mWindow));
 
-  context.mProperties = SDL_CreateProperties();
-  sdl_check(context.mProperties, "Couldn't create a property set for GPU device calls: ");
+  gContext.mProperties = SDL_CreateProperties();
+  SDL_assert(gContext.mProperties);
 
-  SDL_GPUShaderFormat availableFormats = SDL_GetGPUShaderFormats(context.mDevice);
-  context.mShaderEntryPoint = NULL;
+  SDL_GPUShaderFormat availableFormats = SDL_GetGPUShaderFormats(gContext.mDevice);
+  gContext.mShaderEntryPoint = NULL;
 
   if (availableFormats & SDL_GPU_SHADERFORMAT_SPIRV)
   {
-    context.mChosenBackendFormat = SDL_GPU_SHADERFORMAT_SPIRV;
-    context.mShaderEntryPoint = "main";
-    context.mChosenBackendFormatExtension = "spv";
+    gContext.mChosenBackendFormat = SDL_GPU_SHADERFORMAT_SPIRV;
+    gContext.mShaderEntryPoint = "main";
+    gContext.mChosenBackendFormatExtension = "spv";
   }
   else if (availableFormats & SDL_GPU_SHADERFORMAT_MSL)
   {
-    context.mChosenBackendFormat = SDL_GPU_SHADERFORMAT_MSL;
-    context.mShaderEntryPoint = "main0";
-    context.mChosenBackendFormatExtension = "msl";
+    gContext.mChosenBackendFormat = SDL_GPU_SHADERFORMAT_MSL;
+    gContext.mShaderEntryPoint = "main0";
+    gContext.mChosenBackendFormatExtension = "msl";
   }
   else if (availableFormats & SDL_GPU_SHADERFORMAT_DXIL)
   {
-    context.mChosenBackendFormat = SDL_GPU_SHADERFORMAT_DXIL;
-    context.mShaderEntryPoint = "main";
-    context.mChosenBackendFormatExtension = "dxil";
+    gContext.mChosenBackendFormat = SDL_GPU_SHADERFORMAT_DXIL;
+    gContext.mShaderEntryPoint = "main";
+    gContext.mChosenBackendFormatExtension = "dxil";
   }
-
-  return context;
 }
 
-void DestroyGpuContext(GpuContext* aContext) {
-  SDL_DestroyProperties(aContext->mProperties);
-  SDL_DestroyGPUDevice(aContext->mDevice);
-  SDL_DestroyWindow(aContext->mWindow);
-  SDL_zero(*aContext);
+void DestroyGpuContext() {
+  SDL_DestroyProperties(gContext.mProperties);
+  SDL_DestroyGPUDevice(gContext.mDevice);
+  SDL_DestroyWindow(gContext.mWindow);
+  SDL_zero(gContext);
 }
 
-
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Main
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 int main(int argc, char** argv)
 {
-  sdl_check(SDL_Init(SDL_INIT_VIDEO), "Couldn't initialize SDL: ");
+  (void)argc;
+  (void)argv;
+  SDL_assert(SDL_Init(SDL_INIT_VIDEO));
 
   SDL_Window* window = SDL_CreateWindow("002-Window_and_Clearing", 1280, 720, 0);
-  sdl_check(window, "Couldn't create a window: ");
+  SDL_assert(window);
 
-  GpuContext context = CreateGpuContext(window);
+  CreateGpuContext(window);
 
   bool shown = true;
   bool running = true;
@@ -102,7 +96,7 @@ int main(int argc, char** argv)
         }
     }
 
-    SDL_GPUCommandBuffer* commandBuffer = SDL_AcquireGPUCommandBuffer(context.mDevice);
+    SDL_GPUCommandBuffer* commandBuffer = SDL_AcquireGPUCommandBuffer(gContext.mDevice);
     if (!commandBuffer)
     {
         SDL_Log("AcquireGPUCommandBuffer failed: %s", SDL_GetError());
@@ -110,7 +104,7 @@ int main(int argc, char** argv)
     }
 
     SDL_GPUTexture* swapchainTexture;
-    if (!SDL_WaitAndAcquireGPUSwapchainTexture(commandBuffer, context.mWindow, &swapchainTexture, NULL, NULL))
+    if (!SDL_WaitAndAcquireGPUSwapchainTexture(commandBuffer, gContext.mWindow, &swapchainTexture, NULL, NULL))
     {
         SDL_Log("WaitAndAcquireGPUSwapchainTexture failed: %s", SDL_GetError());
         continue;
@@ -138,7 +132,7 @@ int main(int argc, char** argv)
     SDL_SubmitGPUCommandBuffer(commandBuffer);
   }
 
-  DestroyGpuContext(&context);
+  DestroyGpuContext();
 
   SDL_Quit();
   return 0;

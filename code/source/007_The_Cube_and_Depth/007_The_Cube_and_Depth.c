@@ -6,17 +6,9 @@
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_main.h>
 
-#define sdl_check(aCondition, aMessage, ...) \
-    do { \
-        if (!aCondition) { \
-          SDL_Log("%s(%d):  " aMessage, __FILE__, __LINE__,##__VA_ARGS__ ); \
-          SDL_Log("\tSDL_Error: %s", SDL_GetError()); \
-          SDL_Quit(); \
-          exit(1); \
-        } \
-    } while (0)
-
-  
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// MATH
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 typedef struct float4 {
   float x,y,z,w;
 } float4;
@@ -60,7 +52,9 @@ float4x4 PerspectiveProjectionLHZO(float aFov, float aAspectRatio, float aNear, 
   return toReturn;
 }
 
-
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Shared GPU Code
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 typedef struct GpuContext {
   SDL_Window* mWindow;
   SDL_GPUDevice* mDevice;
@@ -78,12 +72,12 @@ void CreateGpuContext(SDL_Window* aWindow) {
 
   gContext.mWindow = aWindow;
   gContext.mDevice = SDL_CreateGPUDevice(SDL_GPU_SHADERFORMAT_SPIRV | SDL_GPU_SHADERFORMAT_DXIL | SDL_GPU_SHADERFORMAT_MSL, true, NULL);
-  sdl_check(gContext.mDevice, "Couldn't create a GPU Device: ");
+  SDL_assert(gContext.mDevice);
 
-  sdl_check(SDL_ClaimWindowForGPUDevice(gContext.mDevice, gContext.mWindow), "Couldn't claim the Window for the GPU device: ");
+  SDL_assert(SDL_ClaimWindowForGPUDevice(gContext.mDevice, gContext.mWindow));
 
   gContext.mProperties = SDL_CreateProperties();
-  sdl_check(gContext.mProperties, "Couldn't create a property set for GPU device calls: ");
+  SDL_assert(gContext.mProperties);
 
   SDL_GPUShaderFormat availableFormats = SDL_GetGPUShaderFormats(gContext.mDevice);
   gContext.mShaderEntryPoint = NULL;
@@ -129,7 +123,7 @@ SDL_GPUShader* CreateShader(
 
   size_t fileSize = 0;
   void* fileData = SDL_LoadFile(shader_path, &fileSize);
-  sdl_check(fileData, "Couldn't load the shader file (%s) from disk: ", shader_path);
+  SDL_assert(fileData);
 
   SDL_GPUShaderCreateInfo shaderCreateInfo;
   SDL_zero(shaderCreateInfo);
@@ -140,11 +134,7 @@ SDL_GPUShader* CreateShader(
     properties = aProperties;
   }
 
-  sdl_check(
-    SDL_SetStringProperty(properties, SDL_PROP_GPU_SHADER_CREATE_NAME_STRING, aShaderFilename),
-    "While creating a shader (%s), there was an error setting the GPU Shader Name property: ",
-    shader_path
-  );
+  SDL_assert(SDL_SetStringProperty(properties, SDL_PROP_GPU_SHADER_CREATE_NAME_STRING, aShaderFilename));
 
   shaderCreateInfo.entrypoint = gContext.mShaderEntryPoint;
   shaderCreateInfo.format = gContext.mChosenBackendFormat;
@@ -160,7 +150,7 @@ SDL_GPUShader* CreateShader(
   SDL_GPUShader* shader = SDL_CreateGPUShader(gContext.mDevice, &shaderCreateInfo);
 
   SDL_free(fileData);
-  sdl_check(shader, "While creating a shader (%s), there was an error creating the GPU shader: ", shader_path);
+  SDL_assert(shader);
 
   return shader;
 }
@@ -175,7 +165,7 @@ SDL_GPUBuffer* CreateGPUBuffer(Uint32 aSize, SDL_GPUBufferUsageFlags aUsage, con
   createInfo.usage = aUsage;
 
   SDL_GPUBuffer* buffer = SDL_CreateGPUBuffer(gContext.mDevice, &createInfo);
-  sdl_check(buffer, "Couldn't create GPU buffer (%s)", aName);
+  SDL_assert(buffer);
 
   return buffer;
 }
@@ -257,12 +247,15 @@ SDL_GPUTexture* CreateAndUploadTexture(SDL_GPUCopyPass* aCopyPass, const char* a
   return texture;
 }
 
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Technique Code
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 typedef struct CubePipeline {
   SDL_GPUGraphicsPipeline* mPipeline;
   SDL_GPUTexture* mTexture;
   SDL_GPUSampler* mSampler;
-  float mPosition[4];
-  float mScale[4];
+  float4 mPosition;
+  float4 mScale;
 } CubePipeline;
 
 CubePipeline CreateCubePipeline() {
@@ -295,7 +288,7 @@ CubePipeline CreateCubePipeline() {
     0,
     SDL_PROPERTY_TYPE_INVALID
   );
-  sdl_check(graphicsPipelineCreateInfo.vertex_shader, "Failed to create the Triangle vertex shader: ");
+  SDL_assert(graphicsPipelineCreateInfo.vertex_shader);
 
   graphicsPipelineCreateInfo.fragment_shader = CreateShader(
     "Cube.frag",
@@ -306,12 +299,9 @@ CubePipeline CreateCubePipeline() {
     0,
     SDL_PROPERTY_TYPE_INVALID
   );
-  sdl_check(graphicsPipelineCreateInfo.fragment_shader, "Failed to create the Triangle fragment shader: ");
+  SDL_assert(graphicsPipelineCreateInfo.fragment_shader);
 
-  sdl_check(
-    SDL_SetStringProperty(gContext.mProperties, SDL_PROP_GPU_SHADER_CREATE_NAME_STRING, "CubePipeline"),
-    "While creating the CubePipeline, there was an error setting the GPU Shader Name property: "
-  );
+  SDL_assert(SDL_SetStringProperty(gContext.mProperties, SDL_PROP_GPU_SHADER_CREATE_NAME_STRING, "CubePipeline"));
 
   CubePipeline pipeline;
   pipeline.mPipeline = SDL_CreateGPUGraphicsPipeline(gContext.mDevice, &graphicsPipelineCreateInfo);
@@ -322,16 +312,16 @@ CubePipeline CreateCubePipeline() {
   samplerCreateInfo.address_mode_u = SDL_GPU_SAMPLERADDRESSMODE_REPEAT;
   samplerCreateInfo.address_mode_v = SDL_GPU_SAMPLERADDRESSMODE_REPEAT;
   pipeline.mSampler = SDL_CreateGPUSampler(gContext.mDevice, &samplerCreateInfo);
-  sdl_check(pipeline.mPipeline, "Failed to create the GPU Pipeline: ");
+  SDL_assert(pipeline.mPipeline);
 
-  pipeline.mPosition[0] = 0.f;
-  pipeline.mPosition[1] = 0.f;
-  pipeline.mPosition[2] = 0.f;
-  pipeline.mPosition[3] = 0.f;
-  pipeline.mScale[0] = 1.f;
-  pipeline.mScale[1] = 1.f;
-  pipeline.mScale[2] = 1.f;
-  pipeline.mScale[3] = 1.f;
+  pipeline.mPosition.x =  0.f;
+  pipeline.mPosition.y = -1.f;
+  pipeline.mPosition.z =  5.f;
+  pipeline.mPosition.w =  0.f;
+  pipeline.mScale.x = 1.f;
+  pipeline.mScale.y = 1.f;
+  pipeline.mScale.z = 1.f;
+  pipeline.mScale.w = 1.f;
 
   SDL_ReleaseGPUShader(gContext.mDevice, graphicsPipelineCreateInfo.vertex_shader);
   SDL_ReleaseGPUShader(gContext.mDevice, graphicsPipelineCreateInfo.fragment_shader);
@@ -353,7 +343,7 @@ void DrawCubePipeline(CubePipeline* aPipeline, SDL_GPUCommandBuffer* aCommandBuf
     SDL_BindGPUFragmentSamplers(aRenderPass, 0, &textureBinding, 1);
   }
 
-  SDL_DrawGPUPrimitives(aRenderPass, 6 /* 6 per face */ * 6 /* 6 sides of our cube */, 1, 0, 0);
+  SDL_DrawGPUPrimitives(aRenderPass, 6 /* 6 per face */ * 6 /* 6 sides of our cube */ * 1 /*number of cubes*/, 1, 0, 0);
 }
 
 void DestroyCubePipeline(CubePipeline* aPipeline)
@@ -363,15 +353,17 @@ void DestroyCubePipeline(CubePipeline* aPipeline)
 }
 
 
-
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Main
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 int main(int argc, char** argv)
 {
   (void)argc;
   (void)argv;
-  sdl_check(SDL_Init(SDL_INIT_VIDEO), "Couldn't initialize SDL: ");
+  SDL_assert(SDL_Init(SDL_INIT_VIDEO));
 
   SDL_Window* window = SDL_CreateWindow("003-Triangle_and_Fullscreen_Triangle", 1280, 720, 0);
-  sdl_check(window, "Couldn't create a window: ");
+  SDL_assert(window);
 
   CreateGpuContext(window);
 
@@ -406,24 +398,21 @@ int main(int argc, char** argv)
       0.0f, 1.0f
     );
       
-    if (key_map[SDL_SCANCODE_D]) cubePipeline.mPosition[0] += speed * dt * 1.0f;
-    if (key_map[SDL_SCANCODE_A]) cubePipeline.mPosition[0] -= speed * dt * 1.0f;
-    if (key_map[SDL_SCANCODE_W]) cubePipeline.mPosition[1] += speed * dt * 1.0f;
-    if (key_map[SDL_SCANCODE_S]) cubePipeline.mPosition[1] -= speed * dt * 1.0f;
-    if (key_map[SDL_SCANCODE_E]) cubePipeline.mPosition[2] += speed * dt * 1.0f;
-    if (key_map[SDL_SCANCODE_Q]) cubePipeline.mPosition[2] -= speed * dt * 1.0f;
-    if (key_map[SDL_SCANCODE_R]) cubePipeline.mScale[0] += speed * dt * 1.0f;
-    if (key_map[SDL_SCANCODE_F]) cubePipeline.mScale[0] -= speed * dt * 1.0f;
-    if (key_map[SDL_SCANCODE_T]) cubePipeline.mScale[0] += speed * dt * 1.0f;
-    if (key_map[SDL_SCANCODE_G]) cubePipeline.mScale[0] -= speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_D]) cubePipeline.mPosition.x += speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_A]) cubePipeline.mPosition.x -= speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_W]) cubePipeline.mPosition.y += speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_S]) cubePipeline.mPosition.y -= speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_E]) cubePipeline.mPosition.z += speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_Q]) cubePipeline.mPosition.z -= speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_R]) cubePipeline.mScale.x += speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_F]) cubePipeline.mScale.x -= speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_T]) cubePipeline.mScale.y += speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_G]) cubePipeline.mScale.y -= speed * dt * 1.0f;
 
-    SDL_Log("{%f, %f}, {%f, %f}, {%f, %f}}",
-      cubePipeline.mPosition[0],
-      cubePipeline.mPosition[0],
-      cubePipeline.mPosition[1],
-      cubePipeline.mPosition[1],
-      cubePipeline.mPosition[2],
-      cubePipeline.mPosition[2]
+    SDL_Log("{%f, %f, %f}}",
+      cubePipeline.mPosition.x,
+      cubePipeline.mPosition.y,
+      cubePipeline.mPosition.z
     );
 
     SDL_GPUCommandBuffer* commandBuffer = SDL_AcquireGPUCommandBuffer(gContext.mDevice);
