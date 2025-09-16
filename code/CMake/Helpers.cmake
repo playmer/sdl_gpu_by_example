@@ -39,6 +39,8 @@ macro(find_and_compile_shaders aShaderCrossExecutable aTarget aShaderDirectory a
     
     add_dependencies(${aTarget} ${aTarget}_Shaders)
 
+    set_target_properties(${aTarget}_Shaders PROPERTIES FOLDER Shaders)
+
     target_sources(${aTarget} 
     PRIVATE
         ${ShadersSources}
