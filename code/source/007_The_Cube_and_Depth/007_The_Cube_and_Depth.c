@@ -170,6 +170,19 @@ SDL_GPUBuffer* CreateGPUBuffer(Uint32 aSize, SDL_GPUBufferUsageFlags aUsage, con
   return buffer;
 }
 
+SDL_GPUTexture* CreateTexture(Uint32 aWidth, Uint32 aHeight, SDL_GPUTextureUsageFlags aUsage, SDL_GPUTextureFormat aFormat)
+{
+  SDL_GPUTextureCreateInfo textureCreateInfo;
+  SDL_zero(textureCreateInfo);
+  textureCreateInfo.width = aWidth;
+  textureCreateInfo.height = aHeight;
+  textureCreateInfo.layer_count_or_depth = 1;
+  textureCreateInfo.num_levels = 1;
+  textureCreateInfo.usage = aUsage;
+  textureCreateInfo.format = aFormat;
+  return SDL_CreateGPUTexture(gContext.mDevice, &textureCreateInfo);
+}
+
 SDL_GPUTexture* CreateAndUploadTexture(SDL_GPUCopyPass* aCopyPass, const char* aTextureName) {
   char texture_path[4096];
   sprintf(texture_path, "Assets/Images/%s.bmp", aTextureName);
@@ -205,15 +218,8 @@ SDL_GPUTexture* CreateAndUploadTexture(SDL_GPUCopyPass* aCopyPass, const char* a
     copyPass = SDL_BeginGPUCopyPass(commandBuffer);
   }
 
-  SDL_GPUTextureCreateInfo textureCreateInfo;
-  SDL_zero(textureCreateInfo);
-  textureCreateInfo.width = surface->w;
-  textureCreateInfo.height = surface->h;
-  textureCreateInfo.layer_count_or_depth = 1;
-  textureCreateInfo.num_levels = 1;
-  textureCreateInfo.usage = SDL_GPU_TEXTUREUSAGE_SAMPLER;
-  textureCreateInfo.format = SDL_GPU_TEXTUREFORMAT_R8G8B8A8_UNORM;
-  SDL_GPUTexture* texture = SDL_CreateGPUTexture(gContext.mDevice, &textureCreateInfo);
+  SDL_GPUTexture* texture = CreateTexture(surface->w, surface->h, SDL_GPU_TEXTUREUSAGE_SAMPLER, SDL_GPU_TEXTUREFORMAT_R8G8B8A8_UNORM);
+  SDL_assert(texture);
 
   // Copy to GPU
   SDL_GPUTextureTransferInfo textureTransferInfo;
@@ -247,6 +253,32 @@ SDL_GPUTexture* CreateAndUploadTexture(SDL_GPUCopyPass* aCopyPass, const char* a
   return texture;
 }
 
+SDL_GPUTextureFormat GetSupportedDepthFormat()
+{
+  SDL_GPUTextureFormat possibleFormats[] = {
+    SDL_GPU_TEXTUREFORMAT_D32_FLOAT_S8_UINT,
+    SDL_GPU_TEXTUREFORMAT_D24_UNORM_S8_UINT,
+    SDL_GPU_TEXTUREFORMAT_D32_FLOAT,
+    SDL_GPU_TEXTUREFORMAT_D24_UNORM,
+    SDL_GPU_TEXTUREFORMAT_D16_UNORM,
+  };
+
+  for (size_t i = 0; i < SDL_arraysize(possibleFormats); ++i) {
+    if (SDL_GPUTextureSupportsFormat(gContext.mDevice,
+      possibleFormats[i],
+      SDL_GPU_TEXTURETYPE_2D,
+      SDL_GPU_TEXTUREUSAGE_DEPTH_STENCIL_TARGET))
+    {
+      return possibleFormats[i];
+    }
+  }
+
+  // Didn't find a suitable depth format.
+  SDL_assert(false);
+
+  return SDL_GPU_TEXTUREFORMAT_INVALID;
+}
+
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Technique Code
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -262,7 +294,7 @@ typedef struct CubePipeline {
   CubeInfo mUbo[2];
 } CubePipeline;
 
-CubePipeline CreateCubePipeline() {
+CubePipeline CreateCubePipeline(SDL_GPUTextureFormat aDepthFormat) {
   SDL_GPUColorTargetDescription colorTargetDescription;
   SDL_zero(colorTargetDescription);
   colorTargetDescription.format = SDL_GetGPUSwapchainTextureFormat(gContext.mDevice, gContext.mWindow);
@@ -279,9 +311,30 @@ CubePipeline CreateCubePipeline() {
 
   graphicsPipelineCreateInfo.target_info.num_color_targets = 1;
   graphicsPipelineCreateInfo.target_info.color_target_descriptions = &colorTargetDescription;
+  graphicsPipelineCreateInfo.target_info.depth_stencil_format = aDepthFormat;
+  graphicsPipelineCreateInfo.target_info.has_depth_stencil_target = true;
   graphicsPipelineCreateInfo.primitive_type = SDL_GPU_PRIMITIVETYPE_TRIANGLELIST;
   //graphicsPipelineCreateInfo.rasterizer_state.front_face = SDL_GPU_FRONTFACE_CLOCKWISE;
   graphicsPipelineCreateInfo.rasterizer_state.cull_mode = SDL_GPU_CULLMODE_BACK;
+
+  // Remember to come back to this later in the tutorial, don't show it off immediately.
+  graphicsPipelineCreateInfo.depth_stencil_state.compare_op = SDL_GPU_COMPAREOP_LESS_OR_EQUAL;
+
+  /*graphicsPipelineCreateInfo.depth_stencil_state.front_stencil_state.compare_op = SDL_GPU_COMPAREOP_LESS_OR_EQUAL;
+  graphicsPipelineCreateInfo.depth_stencil_state.front_stencil_state.fail_op = SDL_GPU_STENCILOP_KEEP;
+  graphicsPipelineCreateInfo.depth_stencil_state.front_stencil_state.pass_op = SDL_GPU_STENCILOP_REPLACE;
+  graphicsPipelineCreateInfo.depth_stencil_state.front_stencil_state.depth_fail_op = SDL_GPU_STENCILOP_KEEP;
+
+  graphicsPipelineCreateInfo.depth_stencil_state.back_stencil_state.compare_op = SDL_GPU_COMPAREOP_LESS_OR_EQUAL;
+  graphicsPipelineCreateInfo.depth_stencil_state.back_stencil_state.fail_op = SDL_GPU_STENCILOP_KEEP;
+  graphicsPipelineCreateInfo.depth_stencil_state.back_stencil_state.pass_op = SDL_GPU_STENCILOP_REPLACE;
+  graphicsPipelineCreateInfo.depth_stencil_state.back_stencil_state.depth_fail_op = SDL_GPU_STENCILOP_KEEP;*/
+
+  //graphicsPipelineCreateInfo.depth_stencil_state.compare_mask = 0xFF;
+  //graphicsPipelineCreateInfo.depth_stencil_state.write_mask = 0xFF;
+  graphicsPipelineCreateInfo.depth_stencil_state.enable_depth_test = true;
+  graphicsPipelineCreateInfo.depth_stencil_state.enable_depth_write = true;
+  //graphicsPipelineCreateInfo.depth_stencil_state.enable_stencil_test = true;
 
   graphicsPipelineCreateInfo.vertex_shader = CreateShader(
     "Cube.vert",
@@ -355,6 +408,7 @@ void DrawCubePipeline(CubePipeline* aPipeline, SDL_GPUCommandBuffer* aCommandBuf
     textureBinding.sampler = aPipeline->mSampler;
     SDL_BindGPUFragmentSamplers(aRenderPass, 0, &textureBinding, 1);
   }
+  //SDL_SetGPUStencilReference(aRenderPass, 1);
 
   // Draw the first cube
   SDL_DrawGPUPrimitives(aRenderPass, 6 /* 6 per face */ * 6 /* 6 sides of our cube */, 1, 0, 0);
@@ -385,7 +439,12 @@ int main(int argc, char** argv)
 
   CreateGpuContext(window);
 
-  CubePipeline cubePipeline = CreateCubePipeline();
+  SDL_GPUTexture* depthTexture = NULL;
+  Uint32 depthWidth = 0;
+  Uint32 depthHeight = 0;
+  SDL_GPUTextureFormat depthFormat = GetSupportedDepthFormat();
+
+  CubePipeline cubePipeline = CreateCubePipeline(depthFormat);
 
   const float speed = 5.f;
   Uint64 last_frame_ticks_so_far = SDL_GetTicksNS();
@@ -413,7 +472,7 @@ int main(int argc, char** argv)
     gContext.WorldToNDC = PerspectiveProjectionLHZO(
       45.0f * SDL_PI_F / 180.0f,
       (float)w / (float)h,
-      0.0f, 1.0f
+      20.0f, 60.0f
     );
       
     if (key_map[SDL_SCANCODE_D]) cubePipeline.mUbo[0].mPosition.x += speed * dt * 1.0f;
@@ -441,10 +500,19 @@ int main(int argc, char** argv)
     }
 
     SDL_GPUTexture* swapchainTexture;
-    if (!SDL_WaitAndAcquireGPUSwapchainTexture(commandBuffer, gContext.mWindow, &swapchainTexture, NULL, NULL))
+    Uint32 swapchainWidth = 0;
+    Uint32 swapchainHeight = 0;
+    if (!SDL_WaitAndAcquireGPUSwapchainTexture(commandBuffer, gContext.mWindow, &swapchainTexture, &swapchainWidth, &swapchainHeight))
     {
       SDL_Log("WaitAndAcquireGPUSwapchainTexture failed: %s", SDL_GetError());
       continue;
+    }
+
+    if (depthWidth != swapchainWidth || depthHeight != swapchainHeight)
+    {
+      SDL_ReleaseGPUTexture(gContext.mDevice, depthTexture);
+      depthTexture = CreateTexture(swapchainWidth, swapchainHeight, SDL_GPU_TEXTUREUSAGE_DEPTH_STENCIL_TARGET, depthFormat);
+      SDL_assert(depthTexture);
     }
 
     SDL_GPUColorTargetInfo colorTargetInfo;
@@ -458,11 +526,25 @@ int main(int argc, char** argv)
     colorTargetInfo.clear_color.b = 0.85f;
     colorTargetInfo.clear_color.a = 1.0f;
 
+
+    // Remember to come back to this later in the tutorial, don't show it off immediately.
+    SDL_GPUDepthStencilTargetInfo depthStencilTargetInfo;
+    SDL_zero(depthStencilTargetInfo);
+
+    depthStencilTargetInfo.texture = depthTexture;
+    depthStencilTargetInfo.clear_depth = 1.f;
+    depthStencilTargetInfo.clear_stencil = 1.f;
+    depthStencilTargetInfo.load_op = SDL_GPU_LOADOP_CLEAR;
+    depthStencilTargetInfo.store_op = SDL_GPU_STOREOP_DONT_CARE;
+    depthStencilTargetInfo.stencil_load_op = SDL_GPU_LOADOP_CLEAR;
+    depthStencilTargetInfo.stencil_store_op = SDL_GPU_STOREOP_DONT_CARE;
+    depthStencilTargetInfo.cycle = true; // NOTE: Introduce cycling
+
     SDL_GPURenderPass* renderPass = SDL_BeginGPURenderPass(
       commandBuffer,
       &colorTargetInfo,
       1,
-      NULL
+      &depthStencilTargetInfo
     );
 
     DrawCubePipeline(&cubePipeline, commandBuffer, renderPass);
