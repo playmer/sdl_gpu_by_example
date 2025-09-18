@@ -18,10 +18,7 @@ collections: ["lessons"]
 ## Uploads <a name="uploads" id="uploads"></a>
 
 
-## UV Coordinates and Shaders <a name="uv-shaders" id="uv-shaders"></a>
-
-
-## The Draw <a name="draw" id="draw"></a>
+## The Vertex Shader
 
 ### The Quad and an index array
 
@@ -63,3 +60,7 @@ static const uint cVertexIndicies[6] = {
 ```
 
 We can see our indices align with the diagram above. An astute reader might also notice that these vertices match the dimensions of the screen. Don't worry, we'll learn how to adjust the size of it in this chapter so it won't take up the whole screen!
+
+### UV Coordinates <a name="uv-shaders" id="uv-shaders"></a>
+
+## The Pixel Shader
