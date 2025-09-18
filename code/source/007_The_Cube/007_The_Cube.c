@@ -13,7 +13,7 @@ typedef struct float4x4 {
   float columns[4][4];
 } float4x4;
 
-float4x4 MatMul(const float4x4* aLeft, const float4x4* aRight)
+float4x4 Float4x4_Multiply(const float4x4* aLeft, const float4x4* aRight)
 {
   float4x4 toReturn;
   SDL_zero(toReturn);
@@ -24,6 +24,91 @@ float4x4 MatMul(const float4x4* aLeft, const float4x4* aRight)
         toReturn.columns[j][i] += aLeft->columns[n][i] * aRight->columns[j][n];
 
   return toReturn;
+}
+
+float4x4 IdentityMatrix() {
+  float4x4 toReturn;
+  SDL_zero(toReturn);
+
+  toReturn.columns[0][0] = 1.0f;
+  toReturn.columns[1][1] = 1.0f;
+  toReturn.columns[2][2] = 1.0f;
+  toReturn.columns[3][3] = 1.0f;
+
+  return toReturn;
+}
+
+float4x4 TranslationMatrix(float4 aPosition) {
+  float4x4 toReturn = IdentityMatrix();
+
+  toReturn.columns[3][0] = aPosition.x;
+  toReturn.columns[3][1] = aPosition.y;
+  toReturn.columns[3][2] = aPosition.z;
+  
+  return toReturn;
+}
+
+float4x4 ScaleMatrix(float4 aScale) {
+  float4x4 toReturn = IdentityMatrix();
+
+  toReturn.columns[0][0] = aScale.x;
+  toReturn.columns[1][1] = aScale.y;
+  toReturn.columns[2][2] = aScale.z;
+
+  return toReturn;
+}
+
+float4x4 RotationMatrixX(float aAngle) {
+  float4x4 toReturn = IdentityMatrix();
+
+  toReturn.columns[1][1] =  SDL_cosf(aAngle);
+  toReturn.columns[1][2] =  SDL_sinf(aAngle);
+  toReturn.columns[2][1] = -SDL_sinf(aAngle);
+  toReturn.columns[2][2] =  SDL_cosf(aAngle);
+
+  return toReturn;
+}
+
+float4x4 RotationMatrixY(float aAngle) {
+  float4x4 toReturn = IdentityMatrix();
+
+  toReturn.columns[0][0] =  SDL_cosf(aAngle);
+  toReturn.columns[0][2] = -SDL_sinf(aAngle);
+  toReturn.columns[2][0] =  SDL_sinf(aAngle);
+  toReturn.columns[2][2] =  SDL_cosf(aAngle);
+
+  return toReturn;
+}
+
+float4x4 RotationMatrixZ(float aAngle) {
+  float4x4 toReturn = IdentityMatrix();
+
+  toReturn.columns[0][0] =  SDL_cosf(aAngle);
+  toReturn.columns[0][1] =  SDL_sinf(aAngle);
+  toReturn.columns[1][0] = -SDL_sinf(aAngle);
+  toReturn.columns[1][1] =  SDL_cosf(aAngle);
+
+  return toReturn;
+}
+
+float4x4 RotationMatrix(float4 aPosition) {
+  float4x4 xRotation = RotationMatrixX(aPosition.x);
+  float4x4 yRotation = RotationMatrixY(aPosition.y);
+  float4x4 zRotation = RotationMatrixZ(aPosition.z);
+  
+  float4x4 xyRotation = Float4x4_Multiply(&yRotation, &xRotation);
+  
+  return Float4x4_Multiply(&zRotation, &xyRotation);
+}
+
+float4x4 CreateModelMatrix(float4 aPosition, float4 aScale, float4 aRotation) {
+  float4x4 translation = TranslationMatrix(aPosition);
+  float4x4 rotation = RotationMatrix(aRotation);
+  float4x4 scale = ScaleMatrix(aScale);
+
+  float4x4 scale_rotation = Float4x4_Multiply(&rotation, &scale);
+
+  return Float4x4_Multiply(&translation, &scale_rotation);
 }
 
 float4x4 OrthographicProjectionLHZO(float aLeft, float aRight, float aBottom, float aTop, float aNear, float aFar) {
@@ -335,10 +420,10 @@ CubePipeline CreateCubePipeline() {
   pipeline.mUbo.mPosition.y = -1.f;
   pipeline.mUbo.mPosition.z =  5.f;
   pipeline.mUbo.mPosition.w =  0.f;
-  pipeline.mUbo.mScale.x = 1.f;
-  pipeline.mUbo.mScale.y = 1.f;
-  pipeline.mUbo.mScale.z = 1.f;
-  pipeline.mUbo.mScale.w = 1.f;
+  pipeline.mUbo.mScale.x = 0.5f;
+  pipeline.mUbo.mScale.y = 0.5f;
+  pipeline.mUbo.mScale.z = 0.5f;
+  pipeline.mUbo.mScale.w = 0.5f;
   pipeline.mUbo.mRotation.x = 0.f;
   pipeline.mUbo.mRotation.y = 0.f;
   pipeline.mUbo.mRotation.z = 0.f;
@@ -355,6 +440,8 @@ void DrawCubePipeline(CubePipeline* aPipeline, SDL_GPUCommandBuffer* aCommandBuf
   SDL_BindGPUGraphicsPipeline(aRenderPass, aPipeline->mPipeline);
   SDL_PushGPUVertexUniformData(aCommandBuffer, 0, &aPipeline->mUbo, sizeof(aPipeline->mUbo));
   SDL_PushGPUVertexUniformData(aCommandBuffer, 1, &gContext.WorldToNDC, sizeof(gContext.WorldToNDC));
+
+  float4x4 model = CreateModelMatrix(aPipeline->mUbo.mPosition, aPipeline->mUbo.mScale, aPipeline->mUbo.mRotation);
 
   {
     SDL_GPUTextureSamplerBinding textureBinding;
