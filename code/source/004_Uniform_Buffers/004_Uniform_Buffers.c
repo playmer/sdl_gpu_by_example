@@ -1,10 +1,6 @@
-#define _CRT_SECURE_NO_WARNINGS
-
-#include <stdio.h>
-#include <stdlib.h>
-
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_main.h>
+#include <SDL3/SDL_stdinc.h>
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Shared GPU Code
@@ -72,7 +68,7 @@ SDL_GPUShader* CreateShader(
   SDL_PropertiesID aProperties)
 {
   char shader_path[4096];
-  sprintf(shader_path, "Assets/Shaders/%s.%s", aShaderFilename, gContext.mChosenBackendFormatExtension);
+  SDL_snprintf(shader_path, SDL_arraysize(shader_path), "Assets/Shaders/%s.%s", aShaderFilename, gContext.mChosenBackendFormatExtension);
 
   size_t fileSize = 0;
   void* fileData = SDL_LoadFile(shader_path, &fileSize);

@@ -5,32 +5,58 @@ template: lesson_template.html
 collections: ["lessons"]
 ---
 
-The big one, it's time to draw a Triangle. And after that, we're going to learn a trick on how to extend this triangle to display over the entire screen. This technique is a small optimization that gets used when you start learning fullscreen effects. We'll be using it in the next chapter to play around with pixel shaders to get a little more comfortable with writing code on the GPU.
+The big one, it's time to draw a Triangle. And after that, we're going to learn a trick on how to extend this triangle to display over the entire screen. This technique is a small optimization that gets used when you start learning about fullscreen effects. We'll be using it in the next chapter to play around with pixel shaders to get a little more comfortable with writing transfering data to the GPU as well as writing code for it.
 
-I figured it'd be nice to go over these together, because realistically, it's not common that you need to draw a single triangle on the screen. Maybe a Quad, two triangles making the shape of a Rectangle or Square, but that requires textures, transfer buffers, and bindings. That said, if you adjust the positions of that triangle? Suddenly it has a very practical purpose! And it's something we can learn about with only a few additional function calls without needing to get into everything needed to display a texture. Of course, don't worry, we'll get there. But let's build up step by step and try to learn something with each step!
+That said, this is a text heavy one, we need to get into a bit of the high level details on how GPUs work, as well as some geometry. If you just want to work through the examples, I understand, and you can do some fun stuff at a deep level. Just know that to have a good understanding of these, you'll want to read these sections, or similar from other sources.
 
-It's finally time to talk about math and how the GPU works, at a high level at least. That said, this is a text heavy one, if you just want to work through the examples, I understand, and you can do some fun stuff at a deep level. Just know that to have a good understanding of these, you'll want to read these sections, or similar from other sources.
+Lets start adding to the previous example
+
+## The Triangle Context
+
+Thankfully, drawing a triangle is relatively simple, so we can try to take things one step at a time. And the first is to encapsulate everything needed to draw one:
+
+```c
+typedef struct TriangleContext {
+  SDL_GPUGraphicsPipeline* mPipeline;
+} TriangleContext;
+```
+
+We actually only need a pipeline to draw a triangle, but as we proceed, we'll need much more than that, so we're going to structure this as if we were doing something more complex. 
+
+Now you'lre probably wondering about what this pipeline thing is, so lets go over it.
 
 ## Shaders and Pipelines <a name="shaders_pipelines" id="shaders_pipelines"></a>
 
 When we look at how we do real-time rendering today, it's essentially a combination of generally tweakable fixed stages and programmable stages. We got a taste of this fixed functionality when we set-up and executed a RenderPass in the previous chapter. We were able to clear the screen just by tweaking the initialization and target of the RenderPass, with no need to submit geometry to proceed through the rest of the stages.
 
-TDOD: Insert render pipeline diagram:
-Input Assembler -> Vertex Shader -> Tesselation Shader -> Geometry Shader -> Rasterization -> Fragment Shader (Aka Pixel Shaders)
+Pipelines are how we configure everything else not encapsulated in a RenderPass. You have to explain the layout of your data and how they flow from stage to stage, along with what you want the GPU to react to and modify data between and after the stages. A rough outline of the stages you'd typically see is the following:
 
-SDL GPU doesn't give us access to every programmable stage, many aren't relevant or performant today and some are too new to have been added for compatability reasons. What it does give us access to are the classics, Vertex Shaders and Fragment Shaders. It also has Compute Shaders to boot, but they're not part of the Render Pipeline, though we'll find they're still very useful for rendering later on. With regards to our concerns here, we'll write Vertex Shaders to output individual vertices, and Fragment Shaders to output colors.
+```
++-----------------+    +-----------------+    +--------------------+ 
+| Input Assembler | -> | Vertex Shader   | -> | Tesselation Shader | --+
++-----------------+    +-----------------+    +--------------------+   |
+ +---------------------------------------------------------------------+
+ |    +-----------------+  +---------------+  +---------------+
+ + -> | Geometry Shader |  | Rasterization |  | Pixel Shaders |
+      +-----------------+  +---------------+  +---------------+ 
+```
+
+We should first mention the Input Assembler which is something that's technically always happening, but we won't interact with much for some time. Essentially it takes data we describe in the Pipeline, and sets it up to be used in the subsequent stages.
+
+All that said, SDL GPU doesn't give us access to every programmable stage you see above, many aren't relevant or performant today and some are too new to have been added for compatability reasons. What it does give us access to are the classics, Vertex Shaders and Fragment Shaders. It also has Compute Shaders to boot, but they're not part of the Render Pipeline, though we'll find they're still very useful for rendering later on. With regards to our concerns here, we'll write Vertex Shaders to output individual vertices, and Fragment Shaders to output colors.
 
 > Note: If you've heard of Mesh Shaders, they effectively replace all of the geometry related stages. What we do in Vertex shaders would likely be sort of the base functionality of learning Mesh Shaders. That said, they're designed to be smarter around data management, letting you implement techniques that we'll have to split between Compute and Vertex shaders when we get there.
 
-So if you're unfamiliar, when I say "programmable" I mean it literally. Shaders are programs that execute on your GPU. Each shader stage tends to have slightly different requirements, you can think about it like function signatures albeit it's not a perfect analogy. Each Graphics API takes a different "native" shader input, Vulkan takes SPIR-V, DirectX takes DXIL, and Metal takes MSL. I should mention that when you get into extensions or development only situations there's slightly more flexibility than that, but for our purposes this is good enough to think about. Each of these are an intermediate representation of your program, lying somewhere between the text you wrote in the language you chose, and machine code that can run on your GPU. When implementing the respective Graphics API you'll need to pass it the intermediate it expects. This is also true of SDL_GPU, in which you need declare which ones you can pass, and it can fail if there isn't a backend which can accept it. 
+So if you're unfamiliar, when I say "programmable" I mean it literally. Shaders are programs that execute on your GPU. Each shader stage tends to have slightly different requirements, you can think about it like function signatures, although it's not a perfect analogy. In general they all have things they need to output, but they can optionally output additional information to be used in the next stage. In some cases that information may be interpolated, such as coordinates along the surface of a triangle. We'll get into the details later!
+
+Each Graphics API takes a different "native" shader input, Vulkan takes SPIR-V, DirectX takes DXIL, and Metal takes MSL. I should mention that when you get into extensions or development only situations there's slightly more flexibility than that, but for our purposes this is good enough to think about. Each of these are an intermediate representation of your program, lying somewhere between the text you wrote in the language you chose, and machine code that can run on your GPU. When implementing the respective Graphics API you'll need to pass it the intermediate it expects. This is also true of SDL_GPU, in which you need declare which ones you can pass, and it can fail if there isn't a backend which can accept it. 
 
 There's many languages specifically for shaders, and even general purpose programming languages that can be compiled to, but as stated in the intro, we'll be using HLSL as we have SDL_shadercross to use with well documented binding and set descriptions.
 
-Lets start looking at something more concrete
 
 ## Vertices, Briefly <a name="vertices" id="vertices"></a>
 
-For this chapter, to not _completely_ overload on information, we're only thinking about triangles, which are each made up of three Vertices, essentially positions on a 2D plane for now, that look _kind of_ like this:
+For this chapter, to not _completely_ overload on information, we're only thinking about triangles, which are each made up of three Vertices, essentially positions on a 2D plane for now, that will look like this in code:
 
 ```
 typedef struct float2 {
@@ -38,10 +64,25 @@ typedef struct float2 {
 }
 ```
 
+In practice, we're actually going to want several more of these position/vector types:
+
+```
+typedef struct float3 {
+    float x, y, z;
+}
+
+typedef struct float4 {
+    float x, y, z, w;
+}
+```
+
+These are each useful for various tasks, such as representing the previous dimensional vector in homogenous coordinates, we'll get into them more as we discuss some of the math we use later on. 
+
+Although for right now we won't need the above definitions in our C code, you can add it if you like, but the sample won't have them yet.
+
 We'll just be using static geometry within the shader, with no buffers. We'll get into these details later, but for now, just know that if the individual vertices are within the box below, the triangle will proceed to be shaded. 
 
 ```
-
 (-1, 1)                       (1, 1)
     +---------------------------+
     |                           |
@@ -53,7 +94,6 @@ We'll just be using static geometry within the shader, with no buffers. We'll ge
     |                           |
     +---------------------------+
 (-1, -1)                     (1, -1)
-  
 ```
 
 We'll go into _much_ greater detail on the Vertex pipeline, Vertex shaders, and techniques that can be used with them in a chapter or two. Right now though, these are the minimum details you'll need to get going.

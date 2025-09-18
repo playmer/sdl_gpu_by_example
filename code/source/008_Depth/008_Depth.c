@@ -1,10 +1,6 @@
-#define _CRT_SECURE_NO_WARNINGS
-
-#include <stdio.h>
-#include <stdlib.h>
-
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_main.h>
+#include <SDL3/SDL_stdinc.h>
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // MATH
@@ -60,15 +56,6 @@ float4x4 PerspectiveProjectionLHZO(float aFov, float aAspectRatio, float aNear, 
   toReturn.columns[3][2] = -(aFar * aNear) / (aFar - aNear);
 
   return toReturn;
-}
-
-void PrintMat(const float4x4* aMat)
-{
-  printf("| %.3f | %.3f | %.3f | %.3f |", aMat->columns[0][0], aMat->columns[0][1], aMat->columns[0][2], aMat->columns[0][3]);
-  printf("| %.3f | %.3f | %.3f | %.3f |", aMat->columns[1][0], aMat->columns[1][1], aMat->columns[1][2], aMat->columns[1][3]);
-  printf("| %.3f | %.3f | %.3f | %.3f |", aMat->columns[2][0], aMat->columns[2][1], aMat->columns[2][2], aMat->columns[2][3]);
-  printf("| %.3f | %.3f | %.3f | %.3f |", aMat->columns[3][0], aMat->columns[3][1], aMat->columns[3][2], aMat->columns[3][3]);
-  fflush(stdout);
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -138,7 +125,7 @@ SDL_GPUShader* CreateShader(
   SDL_PropertiesID aProperties)
 {
   char shader_path[4096];
-  sprintf(shader_path, "Assets/Shaders/%s.%s", aShaderFilename, gContext.mChosenBackendFormatExtension);
+  SDL_snprintf(shader_path, SDL_arraysize(shader_path), "Assets/Shaders/%s.%s", aShaderFilename, gContext.mChosenBackendFormatExtension);
 
   size_t fileSize = 0;
   void* fileData = SDL_LoadFile(shader_path, &fileSize);
@@ -204,7 +191,7 @@ SDL_GPUTexture* CreateTexture(Uint32 aWidth, Uint32 aHeight, SDL_GPUTextureUsage
 
 SDL_GPUTexture* CreateAndUploadTexture(SDL_GPUCopyPass* aCopyPass, const char* aTextureName) {
   char texture_path[4096];
-  sprintf(texture_path, "Assets/Images/%s.bmp", aTextureName);
+  SDL_snprintf(texture_path, SDL_arraysize(texture_path), "Assets/Images/%s.bmp", aTextureName);
   SDL_Surface* surface = SDL_LoadBMP(texture_path);
   if (surface->format != SDL_PIXELFORMAT_RGBA32)
   {

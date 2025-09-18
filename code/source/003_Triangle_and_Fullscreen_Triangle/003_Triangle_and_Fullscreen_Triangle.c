@@ -1,10 +1,6 @@
-#define _CRT_SECURE_NO_WARNINGS
-
-#include <stdio.h>
-#include <stdlib.h>
-
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_main.h>
+#include <SDL3/SDL_stdinc.h>
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Shared GPU Code
@@ -72,7 +68,8 @@ SDL_GPUShader* CreateShader(
   SDL_PropertiesID aProperties)
 {
   char shader_path[4096];
-  sprintf(shader_path, "Assets/Shaders/%s.%s", aShaderFilename, gContext.mChosenBackendFormatExtension);
+
+  SDL_snprintf(shader_path, SDL_arraysize(shader_path), "Assets/Shaders/%s.%s", aShaderFilename, gContext.mChosenBackendFormatExtension);
 
   size_t fileSize = 0;
   void* fileData = SDL_LoadFile(shader_path, &fileSize);
@@ -114,22 +111,22 @@ SDL_GPUShader* CreateShader(
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 ////////////////////////////////////////////////////////////
-/// TrianglePipeline
-typedef struct TrianglePipeline {
+/// TriangleContext
+typedef struct TriangleContext {
   SDL_GPUGraphicsPipeline* mPipeline;
-} TrianglePipeline;
+} TriangleContext;
 
-TrianglePipeline CreateTrianglePipeline() {
+TriangleContext CreateTriangleContext() {
   SDL_GPUColorTargetDescription colorTargetDescription;
   SDL_zero(colorTargetDescription);
   colorTargetDescription.format = SDL_GetGPUSwapchainTextureFormat(gContext.mDevice, gContext.mWindow);
-  colorTargetDescription.blend_state.enable_blend = true;
-  colorTargetDescription.blend_state.color_blend_op = SDL_GPU_BLENDOP_ADD;
-  colorTargetDescription.blend_state.alpha_blend_op = SDL_GPU_BLENDOP_ADD;
-  colorTargetDescription.blend_state.src_color_blendfactor = SDL_GPU_BLENDFACTOR_SRC_ALPHA;
-  colorTargetDescription.blend_state.dst_color_blendfactor = SDL_GPU_BLENDFACTOR_ONE_MINUS_SRC_ALPHA;
-  colorTargetDescription.blend_state.src_alpha_blendfactor = SDL_GPU_BLENDFACTOR_SRC_ALPHA;
-  colorTargetDescription.blend_state.dst_alpha_blendfactor = SDL_GPU_BLENDFACTOR_ONE_MINUS_SRC_ALPHA;
+  //colorTargetDescription.blend_state.enable_blend = true;
+  //colorTargetDescription.blend_state.color_blend_op = SDL_GPU_BLENDOP_ADD;
+  //colorTargetDescription.blend_state.alpha_blend_op = SDL_GPU_BLENDOP_ADD;
+  //colorTargetDescription.blend_state.src_color_blendfactor = SDL_GPU_BLENDFACTOR_SRC_ALPHA;
+  //colorTargetDescription.blend_state.dst_color_blendfactor = SDL_GPU_BLENDFACTOR_ONE_MINUS_SRC_ALPHA;
+  //colorTargetDescription.blend_state.src_alpha_blendfactor = SDL_GPU_BLENDFACTOR_SRC_ALPHA;
+  //colorTargetDescription.blend_state.dst_alpha_blendfactor = SDL_GPU_BLENDFACTOR_ONE_MINUS_SRC_ALPHA;
 
   SDL_GPUGraphicsPipelineCreateInfo graphicsPipelineCreateInfo;
   SDL_zero(graphicsPipelineCreateInfo);
@@ -160,9 +157,9 @@ TrianglePipeline CreateTrianglePipeline() {
   );
   SDL_assert(graphicsPipelineCreateInfo.fragment_shader);
 
-  SDL_assert(SDL_SetStringProperty(gContext.mProperties, SDL_PROP_GPU_SHADER_CREATE_NAME_STRING, "TrianglePipeline"));
+  SDL_assert(SDL_SetStringProperty(gContext.mProperties, SDL_PROP_GPU_SHADER_CREATE_NAME_STRING, "TriangleContext"));
 
-  TrianglePipeline pipeline;
+  TriangleContext pipeline;
   pipeline.mPipeline = SDL_CreateGPUGraphicsPipeline(gContext.mDevice, &graphicsPipelineCreateInfo);
   SDL_assert(pipeline.mPipeline);
 
@@ -172,35 +169,35 @@ TrianglePipeline CreateTrianglePipeline() {
   return pipeline;
 }
 
-void DrawTrianglePipeline(TrianglePipeline* aPipeline, SDL_GPURenderPass* aRenderPass)
+void DrawTriangleContext(TriangleContext* aPipeline, SDL_GPURenderPass* aRenderPass)
 {
   SDL_BindGPUGraphicsPipeline(aRenderPass, aPipeline->mPipeline);
   SDL_DrawGPUPrimitives(aRenderPass, 3, 1, 0, 0);
 }
 
-void DestroyTrianglePipeline(TrianglePipeline* aPipeline)
+void DestroyTriangleContext(TriangleContext* aPipeline)
 {
   SDL_ReleaseGPUGraphicsPipeline(gContext.mDevice, aPipeline->mPipeline);
   SDL_zero(*aPipeline);
 }
 
 ////////////////////////////////////////////////////////////
-/// FullscreenPipeline
-typedef struct FullscreenPipeline {
+/// FullscreenContext
+typedef struct FullscreenContext {
   SDL_GPUGraphicsPipeline* mPipeline;
-} FullscreenPipeline;
+} FullscreenContext;
 
-FullscreenPipeline CreateFullscreenPipeline() {
+FullscreenContext CreateFullscreenContext() {
   SDL_GPUColorTargetDescription colorTargetDescription;
   SDL_zero(colorTargetDescription);
   colorTargetDescription.format = SDL_GetGPUSwapchainTextureFormat(gContext.mDevice, gContext.mWindow);
-  colorTargetDescription.blend_state.enable_blend = true;
-  colorTargetDescription.blend_state.color_blend_op = SDL_GPU_BLENDOP_ADD;
-  colorTargetDescription.blend_state.alpha_blend_op = SDL_GPU_BLENDOP_ADD;
-  colorTargetDescription.blend_state.src_color_blendfactor = SDL_GPU_BLENDFACTOR_SRC_ALPHA;
-  colorTargetDescription.blend_state.dst_color_blendfactor = SDL_GPU_BLENDFACTOR_ONE_MINUS_SRC_ALPHA;
-  colorTargetDescription.blend_state.src_alpha_blendfactor = SDL_GPU_BLENDFACTOR_SRC_ALPHA;
-  colorTargetDescription.blend_state.dst_alpha_blendfactor = SDL_GPU_BLENDFACTOR_ONE_MINUS_SRC_ALPHA;
+  //colorTargetDescription.blend_state.enable_blend = true;
+  //colorTargetDescription.blend_state.color_blend_op = SDL_GPU_BLENDOP_ADD;
+  //colorTargetDescription.blend_state.alpha_blend_op = SDL_GPU_BLENDOP_ADD;
+  //colorTargetDescription.blend_state.src_color_blendfactor = SDL_GPU_BLENDFACTOR_SRC_ALPHA;
+  //colorTargetDescription.blend_state.dst_color_blendfactor = SDL_GPU_BLENDFACTOR_ONE_MINUS_SRC_ALPHA;
+  //colorTargetDescription.blend_state.src_alpha_blendfactor = SDL_GPU_BLENDFACTOR_SRC_ALPHA;
+  //colorTargetDescription.blend_state.dst_alpha_blendfactor = SDL_GPU_BLENDFACTOR_ONE_MINUS_SRC_ALPHA;
 
   SDL_GPUGraphicsPipelineCreateInfo graphicsPipelineCreateInfo;
   SDL_zero(graphicsPipelineCreateInfo);
@@ -231,9 +228,9 @@ FullscreenPipeline CreateFullscreenPipeline() {
   );
   SDL_assert(graphicsPipelineCreateInfo.fragment_shader);
 
-  SDL_assert(SDL_SetStringProperty(gContext.mProperties, SDL_PROP_GPU_SHADER_CREATE_NAME_STRING, "FullscreenPipeline"));
+  SDL_assert(SDL_SetStringProperty(gContext.mProperties, SDL_PROP_GPU_SHADER_CREATE_NAME_STRING, "FullscreenContext"));
 
-  FullscreenPipeline pipeline;
+  FullscreenContext pipeline;
   pipeline.mPipeline = SDL_CreateGPUGraphicsPipeline(gContext.mDevice, &graphicsPipelineCreateInfo);
   SDL_assert(pipeline.mPipeline);
 
@@ -243,13 +240,13 @@ FullscreenPipeline CreateFullscreenPipeline() {
   return pipeline;
 }
 
-void DrawFullscreenPipeline(FullscreenPipeline* aPipeline, SDL_GPURenderPass* aRenderPass)
+void DrawFullscreenContext(FullscreenContext* aPipeline, SDL_GPURenderPass* aRenderPass)
 {
   SDL_BindGPUGraphicsPipeline(aRenderPass, aPipeline->mPipeline);
   SDL_DrawGPUPrimitives(aRenderPass, 3, 1, 0, 0);
 }
 
-void DestroyFullscreenPipeline(FullscreenPipeline* aPipeline)
+void DestroyFullscreenContext(FullscreenContext* aPipeline)
 {
   SDL_ReleaseGPUGraphicsPipeline(gContext.mDevice, aPipeline->mPipeline);
   SDL_zero(*aPipeline);
@@ -269,8 +266,8 @@ int main(int argc, char** argv)
 
   CreateGpuContext(window);
 
-  FullscreenPipeline fullscreenPipeline = CreateFullscreenPipeline();
-  TrianglePipeline trianglePipeline = CreateTrianglePipeline();
+  FullscreenContext fullscreenContext = CreateFullscreenContext();
+  TriangleContext triangleContext = CreateTriangleContext();
 
   bool running = true;
 
@@ -316,15 +313,15 @@ int main(int argc, char** argv)
       NULL
     );
 
-    DrawFullscreenPipeline(&fullscreenPipeline, renderPass);
-    DrawTrianglePipeline(&trianglePipeline, renderPass);
+    DrawFullscreenContext(&fullscreenContext, renderPass);
+    DrawTriangleContext(&triangleContext, renderPass);
 
     SDL_EndGPURenderPass(renderPass);
     SDL_SubmitGPUCommandBuffer(commandBuffer);
   }
 
-  DestroyTrianglePipeline(&trianglePipeline);
-  DestroyFullscreenPipeline(&fullscreenPipeline);
+  DestroyTriangleContext(&triangleContext);
+  DestroyFullscreenContext(&fullscreenContext);
 
   DestroyGpuContext();
 
