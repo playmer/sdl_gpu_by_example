@@ -314,27 +314,14 @@ CubePipeline CreateCubePipeline(SDL_GPUTextureFormat aDepthFormat) {
   graphicsPipelineCreateInfo.target_info.depth_stencil_format = aDepthFormat;
   graphicsPipelineCreateInfo.target_info.has_depth_stencil_target = true;
   graphicsPipelineCreateInfo.primitive_type = SDL_GPU_PRIMITIVETYPE_TRIANGLELIST;
-  //graphicsPipelineCreateInfo.rasterizer_state.front_face = SDL_GPU_FRONTFACE_CLOCKWISE;
+  graphicsPipelineCreateInfo.rasterizer_state.front_face = SDL_GPU_FRONTFACE_CLOCKWISE;
   graphicsPipelineCreateInfo.rasterizer_state.cull_mode = SDL_GPU_CULLMODE_BACK;
 
   // Remember to come back to this later in the tutorial, don't show it off immediately.
   graphicsPipelineCreateInfo.depth_stencil_state.compare_op = SDL_GPU_COMPAREOP_LESS_OR_EQUAL;
 
-  /*graphicsPipelineCreateInfo.depth_stencil_state.front_stencil_state.compare_op = SDL_GPU_COMPAREOP_LESS_OR_EQUAL;
-  graphicsPipelineCreateInfo.depth_stencil_state.front_stencil_state.fail_op = SDL_GPU_STENCILOP_KEEP;
-  graphicsPipelineCreateInfo.depth_stencil_state.front_stencil_state.pass_op = SDL_GPU_STENCILOP_REPLACE;
-  graphicsPipelineCreateInfo.depth_stencil_state.front_stencil_state.depth_fail_op = SDL_GPU_STENCILOP_KEEP;
-
-  graphicsPipelineCreateInfo.depth_stencil_state.back_stencil_state.compare_op = SDL_GPU_COMPAREOP_LESS_OR_EQUAL;
-  graphicsPipelineCreateInfo.depth_stencil_state.back_stencil_state.fail_op = SDL_GPU_STENCILOP_KEEP;
-  graphicsPipelineCreateInfo.depth_stencil_state.back_stencil_state.pass_op = SDL_GPU_STENCILOP_REPLACE;
-  graphicsPipelineCreateInfo.depth_stencil_state.back_stencil_state.depth_fail_op = SDL_GPU_STENCILOP_KEEP;*/
-
-  //graphicsPipelineCreateInfo.depth_stencil_state.compare_mask = 0xFF;
-  //graphicsPipelineCreateInfo.depth_stencil_state.write_mask = 0xFF;
   graphicsPipelineCreateInfo.depth_stencil_state.enable_depth_test = true;
   graphicsPipelineCreateInfo.depth_stencil_state.enable_depth_write = true;
-  //graphicsPipelineCreateInfo.depth_stencil_state.enable_stencil_test = true;
 
   graphicsPipelineCreateInfo.vertex_shader = CreateShader(
     "Cube.vert",
