@@ -479,12 +479,6 @@ int main(int argc, char** argv)
     if (key_map[SDL_SCANCODE_T]) cubePipeline.mUbo[0].mScale.y += speed * dt * 1.0f;
     if (key_map[SDL_SCANCODE_G]) cubePipeline.mUbo[0].mScale.y -= speed * dt * 1.0f;
 
-    SDL_Log("{%f, %f, %f}}",
-      cubePipeline.mUbo[0].mPosition.x,
-      cubePipeline.mUbo[0].mPosition.y,
-      cubePipeline.mUbo[0].mPosition.z
-    );
-
     SDL_GPUCommandBuffer* commandBuffer = SDL_AcquireGPUCommandBuffer(gContext.mDevice);
     if (!commandBuffer)
     {

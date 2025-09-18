@@ -438,10 +438,11 @@ CubePipeline CreateCubePipeline() {
 void DrawCubePipeline(CubePipeline* aPipeline, SDL_GPUCommandBuffer* aCommandBuffer, SDL_GPURenderPass* aRenderPass)
 {
   SDL_BindGPUGraphicsPipeline(aRenderPass, aPipeline->mPipeline);
-  SDL_PushGPUVertexUniformData(aCommandBuffer, 0, &aPipeline->mUbo, sizeof(aPipeline->mUbo));
-  SDL_PushGPUVertexUniformData(aCommandBuffer, 1, &gContext.WorldToNDC, sizeof(gContext.WorldToNDC));
 
   float4x4 model = CreateModelMatrix(aPipeline->mUbo.mPosition, aPipeline->mUbo.mScale, aPipeline->mUbo.mRotation);
+
+  SDL_PushGPUVertexUniformData(aCommandBuffer, 0, &model, sizeof(model));
+  SDL_PushGPUVertexUniformData(aCommandBuffer, 1, &gContext.WorldToNDC, sizeof(gContext.WorldToNDC));
 
   {
     SDL_GPUTextureSamplerBinding textureBinding;
@@ -522,12 +523,6 @@ int main(int argc, char** argv)
     if (key_map[SDL_SCANCODE_END])      cubePipeline.mUbo.mRotation.y -= speed * dt * 1.0f;
     if (key_map[SDL_SCANCODE_PAGEUP])   cubePipeline.mUbo.mRotation.y += speed * dt * 1.0f;
     if (key_map[SDL_SCANCODE_PAGEDOWN]) cubePipeline.mUbo.mRotation.y -= speed * dt * 1.0f;
-
-    SDL_Log("{%f, %f, %f}}",
-      cubePipeline.mUbo.mPosition.x,
-      cubePipeline.mUbo.mPosition.y,
-      cubePipeline.mUbo.mPosition.z
-    );
 
     SDL_GPUCommandBuffer* commandBuffer = SDL_AcquireGPUCommandBuffer(gContext.mDevice);
     if (!commandBuffer)
