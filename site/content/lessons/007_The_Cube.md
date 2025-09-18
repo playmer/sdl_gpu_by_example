@@ -5,8 +5,55 @@ template: lesson_template.html
 collections: ["lessons"]
 ---
 
-## Vertex and Index "Buffers"
+## Vertex and Index arrays in more detail
 
-INSERT DIAGRAM OF VERTEX POSITIONS/INDICIES ON CUBE
 
-## Perspective Projection
+
+## Front and Back Face Culling
+
+
+```
+           4---------------------5
+          /|                    /|
+         / |      +y           / |
+        /  |       |          /  |
+       /   |       |         /   |
+      /    |       |        /    |
+     0-----|-------|-------1     |
+     |     |       |       |     |
+     |     |       | +z    |     |
+     |     |       | /     |     |
+     |     6-------|/------|-----7
+-----|----/--------*-------|----/------+x
+     |   /         |       |   /
+     |  /          |       |  /
+     | /           |       | /
+     |/            |       |/
+     2---------------------3
+                   |
+                   |
+                   |
+                   |
+
+```
+
+
+### Clockwise
+
+
+```
+     0------------------1    1
+     |                 /    /|
+     |  Triangle 1   /    /  |
+     |             /    /    |
+     |           /    /      |
+     |         /    /        |
+     |       /    /          |
+     |     /    /            |
+     |   /    /  Triangle 2  |
+     | /    /                |
+     2     2-----------------3
+```
+
+
+## Perspective Projection Matrix

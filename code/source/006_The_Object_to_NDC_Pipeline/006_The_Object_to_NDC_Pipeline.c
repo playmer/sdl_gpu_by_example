@@ -14,27 +14,46 @@ typedef struct float4 {
 } float4;
 
 typedef struct float4x4 {
-  union {
-    float4 columns[4];
-    float mat[4][4];
-  };
+  float columns[4][4];
 } float4x4;
+
+float4x4 MatMul(const float4x4* aLeft, const float4x4* aRight)
+{
+  float4x4 toReturn;
+  SDL_zero(toReturn);
+  
+  for (size_t j = 0; j < 4; ++j) // Column
+    for (size_t i = 0; i < 4; ++i) // Row
+      for (size_t n = 0; n < 4; ++n) // Iterative Muls
+        toReturn.columns[j][i] += aLeft->columns[n][i] * aRight->columns[j][n];
+
+  return toReturn;
+}
 
 float4x4 OrthographicProjectionLHZO(float aLeft, float aRight, float aBottom, float aTop, float aNear, float aFar) {
   float4x4 toReturn;
   SDL_zero(toReturn);
 
-  toReturn.mat[0][0] = 2.0f / (aRight - aLeft);
-  toReturn.mat[1][1] = 2.0f / (aTop - aBottom);
-  toReturn.mat[2][2] = 1.0f / (aFar - aNear);
+  toReturn.columns[0][0] = 2.0f / (aRight - aLeft);
+  toReturn.columns[1][1] = 2.0f / (aTop - aBottom);
+  toReturn.columns[2][2] = 1.0f / (aFar - aNear);
 
-  toReturn.mat[3][0] = - (aRight + aLeft) / (aRight - aLeft);
-  toReturn.mat[3][1] = - (aTop + aBottom) / (aTop - aBottom);
-  toReturn.mat[3][2] = - aNear / (aFar - aNear);
+  toReturn.columns[3][0] = -(aRight + aLeft) / (aRight - aLeft);
+  toReturn.columns[3][1] = -(aTop + aBottom) / (aTop - aBottom);
+  toReturn.columns[3][2] = -aNear / (aFar - aNear);
 
-  toReturn.mat[3][3] = 1.0f;
+  toReturn.columns[3][3] = 1.0f;
 
   return toReturn;
+}
+
+void PrintMat(const float4x4* aMat)
+{
+  printf("| %.3f | %.3f | %.3f | %.3f |", aMat->columns[0][0], aMat->columns[0][1], aMat->columns[0][2], aMat->columns[0][3]);
+  printf("| %.3f | %.3f | %.3f | %.3f |", aMat->columns[1][0], aMat->columns[1][1], aMat->columns[1][2], aMat->columns[1][3]);
+  printf("| %.3f | %.3f | %.3f | %.3f |", aMat->columns[2][0], aMat->columns[2][1], aMat->columns[2][2], aMat->columns[2][3]);
+  printf("| %.3f | %.3f | %.3f | %.3f |", aMat->columns[3][0], aMat->columns[3][1], aMat->columns[3][2], aMat->columns[3][3]);
+  fflush(stdout);
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -140,6 +159,34 @@ SDL_GPUShader* CreateShader(
   return shader;
 }
 
+SDL_GPUBuffer* CreateGPUBuffer(Uint32 aSize, SDL_GPUBufferUsageFlags aUsage, const char* aName)
+{
+  SDL_GPUBufferCreateInfo createInfo;
+
+  SDL_SetStringProperty(gContext.mProperties, SDL_PROP_GPU_BUFFER_CREATE_NAME_STRING, aName);
+  createInfo.props = gContext.mProperties;
+  createInfo.size = aSize;
+  createInfo.usage = aUsage;
+
+  SDL_GPUBuffer* buffer = SDL_CreateGPUBuffer(gContext.mDevice, &createInfo);
+  SDL_assert(buffer);
+
+  return buffer;
+}
+
+SDL_GPUTexture* CreateTexture(Uint32 aWidth, Uint32 aHeight, SDL_GPUTextureUsageFlags aUsage, SDL_GPUTextureFormat aFormat)
+{
+  SDL_GPUTextureCreateInfo textureCreateInfo;
+  SDL_zero(textureCreateInfo);
+  textureCreateInfo.width = aWidth;
+  textureCreateInfo.height = aHeight;
+  textureCreateInfo.layer_count_or_depth = 1;
+  textureCreateInfo.num_levels = 1;
+  textureCreateInfo.usage = aUsage;
+  textureCreateInfo.format = aFormat;
+  return SDL_CreateGPUTexture(gContext.mDevice, &textureCreateInfo);
+}
+
 SDL_GPUTexture* CreateAndUploadTexture(SDL_GPUCopyPass* aCopyPass, const char* aTextureName) {
   char texture_path[4096];
   sprintf(texture_path, "Assets/Images/%s.bmp", aTextureName);
@@ -159,7 +206,6 @@ SDL_GPUTexture* CreateAndUploadTexture(SDL_GPUCopyPass* aCopyPass, const char* a
   
   {
     const SDL_PixelFormatDetails* formatDetails = SDL_GetPixelFormatDetails(surface->format);
-    //transferCreateInfo.size = surface->h * ((surface->w * formatDetails->bytes_per_pixel) + surface->pitch);
     transferCreateInfo.size = surface->h * surface->pitch;
   }
 
@@ -176,15 +222,8 @@ SDL_GPUTexture* CreateAndUploadTexture(SDL_GPUCopyPass* aCopyPass, const char* a
     copyPass = SDL_BeginGPUCopyPass(commandBuffer);
   }
 
-  SDL_GPUTextureCreateInfo textureCreateInfo;
-  SDL_zero(textureCreateInfo);
-  textureCreateInfo.width = surface->w;
-  textureCreateInfo.height = surface->h;
-  textureCreateInfo.layer_count_or_depth = 1;
-  textureCreateInfo.num_levels = 1;
-  textureCreateInfo.usage = SDL_GPU_TEXTUREUSAGE_SAMPLER;
-  textureCreateInfo.format = SDL_GPU_TEXTUREFORMAT_R8G8B8A8_UNORM;
-  SDL_GPUTexture* texture = SDL_CreateGPUTexture(gContext.mDevice, &textureCreateInfo);
+  SDL_GPUTexture* texture = CreateTexture(surface->w, surface->h, SDL_GPU_TEXTUREUSAGE_SAMPLER, SDL_GPU_TEXTUREFORMAT_R8G8B8A8_UNORM);
+  SDL_assert(texture);
 
   // Copy to GPU
   SDL_GPUTextureTransferInfo textureTransferInfo;
@@ -217,7 +256,6 @@ SDL_GPUTexture* CreateAndUploadTexture(SDL_GPUCopyPass* aCopyPass, const char* a
 
   return texture;
 }
-
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Technique Code
@@ -343,8 +381,6 @@ int main(int argc, char** argv)
     Uint64 current_frame_ticks_so_far = SDL_GetTicksNS();
     float dt = (current_frame_ticks_so_far - last_frame_ticks_so_far) / 1000000000.f;
     last_frame_ticks_so_far = current_frame_ticks_so_far;
-
-//    SDL_Log("dt: %f", dt);
     SDL_Event event;
     while (SDL_PollEvent(&event)) {
       switch (event.common.type) {

@@ -39,9 +39,6 @@ Object Space -> World Space -> Camera Space -> NDC
 We're not going to go deep on the math involved here, that's better suited to a Linear Algebra text. You'll need to understand the basics of Points and how to transform them using Matrices
 
 
-
-
-
 ## Coordinate Spaces
 
 ### Object
@@ -73,3 +70,12 @@ Finally we need a matrix that maps from the Camera space to NDC space.
 ### Perspective
 
 ## Orthographic Projection in Practice
+
+Pull up your code from the last chapter, there might've been a lot to learn in this chapter, but the changes will be fairly minor.
+
+### Matrix Representations, Column Major or Row Major (It's Column)
+
+### The Orthographic Projection Matrix
+
+### Object To World, in-shader
+

@@ -40,13 +40,47 @@ typedef struct float2 {
 
 We'll just be using static geometry within the shader, with no buffers. We'll get into these details later, but for now, just know that if the individual vertices are within the box below, the triangle will proceed to be shaded. 
 
-TODO: Insert image of the SDL NDC
+```
+
+(-1, 1)                       (1, 1)
+    +---------------------------+
+    |                           |
+    |                           |
+    |                           |
+    |                           |
+    |                           |
+    |                           |
+    |                           |
+    +---------------------------+
+(-1, -1)                     (1, -1)
+  
+```
 
 We'll go into _much_ greater detail on the Vertex pipeline, Vertex shaders, and techniques that can be used with them in a chapter or two. Right now though, these are the minimum details you'll need to get going.
 
 ## The Vertex Shader <a name="vertex_shader" id="vertex_shader"></a>
 
 To display a triangle, we must produce geometry. For very simple shapes like Triangle, and even cubes, we can get away with storing this data within the shader itself. And it's helpful to learn this how to do this because this isn't unlike how you might pull geometry out of a storage buffer. Or for 2D you may store the transformations and UV info for sprites into a storage buffer but produce geometry like we will here.
+
+Our first set of geometry will be a triangle that looks roughly like this:
+
+```
+
+(-1, 1)                       (1, 1)
+    +---------------------------+
+    |             0  (0, 1)     |
+    |           /   \           |
+    |         /       \         |
+    |       /           \       |
+    |     /               \     |
+    |   /                   \   |
+    | /                       \ |
+    2---------------------------1
+(-1, -1)                     (1, -1)
+  
+```
+
+With each number at the points representing a vertex in an array. We're specifically laying out the geometry clockwise, which won't come up in this particular example, but will be relevant later in the cube example.
 
 ```hlsl
 static const float2 cVertexPositions[3] = {
@@ -55,6 +89,8 @@ static const float2 cVertexPositions[3] = {
     {-1.0f, -1.0f},
 };
 ```
+
+We're going to give each coordinate a color as well, so it'll stand out a little more. We'll be able to pass this data from the vertex shader to the pixel shader, we'll go into more detail in a moment. 
 
 ```hlsl
 static const float3 cColors[3] = {
@@ -87,7 +123,38 @@ Output main(uint id : SV_VertexID)
 
 ## Pixels (and Fragments) <a name="pixels" id="pixels"></a>
 
-blah
+### The Fullscreen Triangle
+
+Now lets do something a little more practical, or at least on the borders of practical. You can copy and paste the TriangleContext you made above, and just create some new shaders to use with this FullScreenContext.
+
+FullScreen triangles might be used for all sorts of things, but fundamentally they're generally there for when you just want a canvas to paint on in th Pixel Shader. We'll be doing something pretty basic here, but we'll revisit it much later. We're covering it now so that you can see that sometimes, you really do need to render a single triangle, but what's special is what's within it.
+
+#### The Vertex Shader
+
+We know from our work above that we don't actually need geometry from the CPU to output something in the vertex stage, as long as we know which vertex we're outputting. We also know that we can interpolate values between the vertices of the triangle. Thus, a fullscreen triangle is the minimum triangle that fills the entirety of the screen (NDC space) while giving us an interpolated value between (0, 0) and (1, 1) within the screen. That interpolated value is how we'll know where we are when we're inside the pixel shader, and will allow you to do some fun things, although my demonstration will be a simple checkerboard effect.
+
+It'll end up looking something like this, albeit with everything outside of the screen being clipped off and not rendered past the vertex stage.
+
+```
+2
+| \ 
+|   \
+|     \
+|       \
+|         \
+|           \
+|             \
+|               \
++--------+--------\
+|        |        | \
+|        |(0,0)   |   \
+|--------*--------|     \
+|        |        |       \
+|        |        |         \
+|        |        |           \
+0--------+---------------------1
+
+```
 
 
 

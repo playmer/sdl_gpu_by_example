@@ -39,13 +39,17 @@ Output main(uint id : SV_VertexID)
   float2 vertex = cVertexPositions[vertexIndex];
 
   float4x4 ObjectToWorld = {
-    {    w / 2.0f,     0.0f, 0.0f,    x },
-    {        0.0f, h / 2.0f, 0.0f,    y },
-    {        0.0f,     0.0f, 1.0f, 0.0f },
-    {        0.0f,     0.0f, 0.0f, 1.0f },
+    { w / 2.0f,     0.0f, 0.0f,    x },
+    {     0.0f, h / 2.0f, 0.0f,    y },
+    {     0.0f,     0.0f, 1.0f, 0.0f },
+    {     0.0f,     0.0f, 0.0f, 1.0f },
   };
+    
+  //float4 t1 = mul(mul(ObjectToWorld, WorldToNDC), float4(vertex, 0.0f, 1.0f));
+  //float4 t1 = mul(mul(float4(vertex, 0.0f, 1.0f), WorldToNDC), ObjectToWorld);
+    float4 t1 = mul(mul(WorldToNDC, ObjectToWorld), float4(vertex, 0.0f, 1.0f));
 
-  output.Position = mul(WorldToNDC, mul(ObjectToWorld, float4(vertex, 0.0f, 1.0f)));
+  output.Position = t1;
   output.UV = (vertex + 1.0f) * 0.5f;
   return output;
 }

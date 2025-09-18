@@ -14,25 +14,35 @@ typedef struct float4 {
 } float4;
 
 typedef struct float4x4 {
-  union {
-    float4 columns[4];
-    float mat[4][4];
-  };
+  float columns[4][4];
 } float4x4;
+
+float4x4 MatMul(const float4x4* aLeft, const float4x4* aRight)
+{
+  float4x4 toReturn;
+  SDL_zero(toReturn);
+  
+  for (size_t j = 0; j < 4; ++j) // Column
+    for (size_t i = 0; i < 4; ++i) // Row
+      for (size_t n = 0; n < 4; ++n) // Iterative Muls
+        toReturn.columns[j][i] += aLeft->columns[n][i] * aRight->columns[j][n];
+
+  return toReturn;
+}
 
 float4x4 OrthographicProjectionLHZO(float aLeft, float aRight, float aBottom, float aTop, float aNear, float aFar) {
   float4x4 toReturn;
   SDL_zero(toReturn);
 
-  toReturn.mat[0][0] = 2.0f / (aRight - aLeft);
-  toReturn.mat[1][1] = 2.0f / (aTop - aBottom);
-  toReturn.mat[2][2] = 1.0f / (aFar - aNear);
+  toReturn.columns[0][0] = 2.0f / (aRight - aLeft);
+  toReturn.columns[1][1] = 2.0f / (aTop - aBottom);
+  toReturn.columns[2][2] = 1.0f / (aFar - aNear);
 
-  toReturn.mat[3][0] = - (aRight + aLeft) / (aRight - aLeft);
-  toReturn.mat[3][1] = - (aTop + aBottom) / (aTop - aBottom);
-  toReturn.mat[3][2] = - aNear / (aFar - aNear);
+  toReturn.columns[3][0] = -(aRight + aLeft) / (aRight - aLeft);
+  toReturn.columns[3][1] = -(aTop + aBottom) / (aTop - aBottom);
+  toReturn.columns[3][2] = -aNear / (aFar - aNear);
 
-  toReturn.mat[3][3] = 1.0f;
+  toReturn.columns[3][3] = 1.0f;
 
   return toReturn;
 }
@@ -43,13 +53,22 @@ float4x4 PerspectiveProjectionLHZO(float aFov, float aAspectRatio, float aNear, 
 
   const float tanHalfFovy = SDL_tan(aFov / 2.0f);
 
-  toReturn.mat[0][0] = 1.0f / (aAspectRatio * tanHalfFovy);
-  toReturn.mat[1][1] = 1.0f / (tanHalfFovy);
-  toReturn.mat[2][2] = aFar / (aFar - aNear);
-  toReturn.mat[2][3] = 1.0f;
-  toReturn.mat[3][2] = -(aFar * aNear) / (aFar - aNear);
+  toReturn.columns[0][0] = 1.0f / (aAspectRatio * tanHalfFovy);
+  toReturn.columns[1][1] = 1.0f / (tanHalfFovy);
+  toReturn.columns[2][2] = aFar / (aFar - aNear);
+  toReturn.columns[2][3] = 1.0f;
+  toReturn.columns[3][2] = -(aFar * aNear) / (aFar - aNear);
 
   return toReturn;
+}
+
+void PrintMat(const float4x4* aMat)
+{
+  printf("| %.3f | %.3f | %.3f | %.3f |", aMat->columns[0][0], aMat->columns[0][1], aMat->columns[0][2], aMat->columns[0][3]);
+  printf("| %.3f | %.3f | %.3f | %.3f |", aMat->columns[1][0], aMat->columns[1][1], aMat->columns[1][2], aMat->columns[1][3]);
+  printf("| %.3f | %.3f | %.3f | %.3f |", aMat->columns[2][0], aMat->columns[2][1], aMat->columns[2][2], aMat->columns[2][3]);
+  printf("| %.3f | %.3f | %.3f | %.3f |", aMat->columns[3][0], aMat->columns[3][1], aMat->columns[3][2], aMat->columns[3][3]);
+  fflush(stdout);
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -253,32 +272,6 @@ SDL_GPUTexture* CreateAndUploadTexture(SDL_GPUCopyPass* aCopyPass, const char* a
   return texture;
 }
 
-SDL_GPUTextureFormat GetSupportedDepthFormat()
-{
-  SDL_GPUTextureFormat possibleFormats[] = {
-    SDL_GPU_TEXTUREFORMAT_D32_FLOAT_S8_UINT,
-    SDL_GPU_TEXTUREFORMAT_D24_UNORM_S8_UINT,
-    SDL_GPU_TEXTUREFORMAT_D32_FLOAT,
-    SDL_GPU_TEXTUREFORMAT_D24_UNORM,
-    SDL_GPU_TEXTUREFORMAT_D16_UNORM,
-  };
-
-  for (size_t i = 0; i < SDL_arraysize(possibleFormats); ++i) {
-    if (SDL_GPUTextureSupportsFormat(gContext.mDevice,
-      possibleFormats[i],
-      SDL_GPU_TEXTURETYPE_2D,
-      SDL_GPU_TEXTUREUSAGE_DEPTH_STENCIL_TARGET))
-    {
-      return possibleFormats[i];
-    }
-  }
-
-  // Didn't find a suitable depth format.
-  SDL_assert(false);
-
-  return SDL_GPU_TEXTUREFORMAT_INVALID;
-}
-
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Technique Code
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -379,7 +372,6 @@ void DrawCubePipeline(CubePipeline* aPipeline, SDL_GPUCommandBuffer* aCommandBuf
     SDL_BindGPUFragmentSamplers(aRenderPass, 0, &textureBinding, 1);
   }
 
-  // Draw the first cube
   SDL_DrawGPUPrimitives(aRenderPass, 6 /* 6 per face */ * 6 /* 6 sides of our cube */, 1, 0, 0);
 }
 
@@ -460,9 +452,7 @@ int main(int argc, char** argv)
     }
 
     SDL_GPUTexture* swapchainTexture;
-    Uint32 swapchainWidth = 0;
-    Uint32 swapchainHeight = 0;
-    if (!SDL_WaitAndAcquireGPUSwapchainTexture(commandBuffer, gContext.mWindow, &swapchainTexture, &swapchainWidth, &swapchainHeight))
+    if (!SDL_WaitAndAcquireGPUSwapchainTexture(commandBuffer, gContext.mWindow, &swapchainTexture, NULL, NULL))
     {
       SDL_Log("WaitAndAcquireGPUSwapchainTexture failed: %s", SDL_GetError());
       continue;

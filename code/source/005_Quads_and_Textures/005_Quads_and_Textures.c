@@ -309,7 +309,6 @@ int main(int argc, char** argv)
     Uint64 current_frame_ticks_so_far = SDL_GetTicksNS();
     float dt = (current_frame_ticks_so_far - last_frame_ticks_so_far) / 1000000000.f;
     last_frame_ticks_so_far = current_frame_ticks_so_far;
-    SDL_Log("dt: %f", dt);
     SDL_Event event;
     while (SDL_PollEvent(&event)) {
       switch (event.common.type) {
@@ -327,6 +326,13 @@ int main(int argc, char** argv)
     if (key_map[SDL_SCANCODE_F]) quadPipeline.mPosition.w -= speed * dt * 1.0f;
     if (key_map[SDL_SCANCODE_T]) quadPipeline.mPosition.h += speed * dt * 1.0f;
     if (key_map[SDL_SCANCODE_G]) quadPipeline.mPosition.h -= speed * dt * 1.0f;
+    
+    SDL_Log("{%f, %f}, {%f, %f}}",
+      quadPipeline.mPosition.x,
+      quadPipeline.mPosition.y,
+      quadPipeline.mPosition.w,
+      quadPipeline.mPosition.h
+    );
 
     SDL_GPUCommandBuffer* commandBuffer = SDL_AcquireGPUCommandBuffer(gContext.mDevice);
     if (!commandBuffer)
