@@ -6,6 +6,15 @@ template: post_template.html
 
 ## Additional Resources
 
+### Mathematics
+
+ - Eric Lengyels Books:
+   - [Foundations of Game Engine Development, Volume 1: Mathematics](https://www.amazon.com/dp/0985811749)
+   - [Foundations of Game Engine Development, Volume 1: Rendering](https://www.amazon.com/dp/0985811757)
+   - [Projective Geometric Algebra Illuminated](https://www.amazon.com/dp/B0CXY8C72T)
+
+### Graphics
+
  - [SDL_GPU Documentation](https://wiki.libsdl.org/SDL3/CategoryGPU) 
  - [SDL_gpu_examples repo](https://github.com/TheSpydog/SDL_gpu_examples/)
  - [The Graphics Programming Discord Website](https://graphics-programming.org/)
