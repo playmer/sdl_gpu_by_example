@@ -1,5 +1,5 @@
 ---
-title: Triangle and a "Fullscreen Triangle"
+title: Triangle and a "Fullscreen Triangle" (Example Done, Started Writing)
 description: Finally you can see a triangle, and then a demonstration on why you might actually use a single triangle later on in your Graphics journey. Will cover the creation of Vertex and Pixel shaders, a simple demonstration of "Vertex Pulling", and then an extension of the triangle to cover the whole screen with a shader effect.
 template: lesson_template.html
 collections: ["lessons"]

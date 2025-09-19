@@ -1,5 +1,5 @@
 ---
-title: Uniform Buffers
+title: Uniform Buffers (Example Done)
 description: More interesting rendering will require learning buffers, we'll begin with the simplest type to use, Uniform Buffers.
 template: lesson_template.html
 collections: ["lessons"]

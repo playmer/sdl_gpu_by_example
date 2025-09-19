@@ -1,5 +1,5 @@
 ---
-title: A Skybox
+title: A Skybox (Not Started)
 description: While we're at it, let's knock out a relatively simple but practical technique that you'll want now that you're rendering 3D.
 template: lesson_template.html
 collections: ["lessons"]
