@@ -74,9 +74,9 @@ struct Output
 
 cbuffer UBO : register(b0, space1)
 {
-  float4 Position;
-  float4 Scale;
+  float4x4 ObjectToWorld;
 };
+
 
 cbuffer UB1 : register(b1, space1)
 {
@@ -91,13 +91,6 @@ Output main(uint id : SV_VertexID)
   Output output;
   float3 vertex = cVertexPositions[vertexIndex];
   float2 uv = cVertexPositions[uvIndex].xy;
-
-  float4x4 ObjectToWorld = {
-    {    Scale.x / 2.0f,           0.0f,           0.0f, Position.x },
-    {              0.0f, Scale.y / 2.0f,           0.0f, Position.y },
-    {              0.0f,           0.0f, Scale.z / 2.0f, Position.z },
-    {              0.0f,           0.0f,           0.0f,       1.0f },
-  };
 
   output.Position = mul(WorldToNDC, mul(ObjectToWorld, float4(vertex, 1.0f)));
   output.UV = (uv + 1.0f) * 0.5f;

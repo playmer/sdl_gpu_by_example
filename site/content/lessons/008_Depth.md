@@ -5,8 +5,6 @@ template: lesson_template.html
 collections: ["lessons"]
 ---
 
-## Vertex Buffers and Index Buffers
+## Depth Texture
 
-INSERT DIAGRAM OF VERTEX POSITIONS/INDICIES ON CUBE
-
-## Perspective Projection
+## Fragment Shader Tweak

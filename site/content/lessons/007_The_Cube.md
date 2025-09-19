@@ -55,5 +55,30 @@ collections: ["lessons"]
      2     2-----------------3
 ```
 
+## Model Matrix
+
+It's time to build our some matrix math functionality. If you're already comfortable with these topics, and prefer to just use your own, or copy/paste the one from this sample, that is entirely valid. 
+
+> Note: The implementations here are naive and intended for learning, rather than high performance work. I intend to teach you how to do things effectively and ideally in a fairly performant manner in this series, but I'm not counting CPU cycles or planning to drop down into SIMD.
+
+
+
+### Identity
+
+### Multiplication
+
+### Scale
+
+### Rotation
+
+#### Rotation about X
+
+#### Rotation about Y
+
+#### Rotation about Z
+
+### Translation
+
+### Bring it together
 
 ## Perspective Projection Matrix
