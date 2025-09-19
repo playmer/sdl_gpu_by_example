@@ -1,6 +1,6 @@
 ---
-title: GLTF
-description: We've loaded a simple model before, lets tackle something a bit bigger.
+title: A Simple Model
+description: Time to learn how to load and render some basic arbitrary geometry.
 template: lesson_template.html
 collections: ["lessons"]
 ---
