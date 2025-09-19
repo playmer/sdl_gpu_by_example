@@ -2,9 +2,6 @@
 #include <SDL3/SDL_main.h>
 #include <SDL3/SDL_stdinc.h>
 
-#define CGLTF_IMPLEMENTATION
-#include "cgltf.h"
-
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // MATH
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -32,6 +29,10 @@ float4x4 Float4x4_Multiply(const float4x4* aLeft, const float4x4* aRight)
 
   return toReturn;
 }
+
+
+////////////////////////////////////////////////////////////
+/// Core Matrices
 
 float4x4 IdentityMatrix() {
   float4x4 toReturn;
@@ -117,6 +118,27 @@ float4x4 CreateModelMatrix(float4 aPosition, float4 aScale, float4 aRotation) {
 
   return Float4x4_Multiply(&translation, &scale_rotation);
 }
+
+////////////////////////////////////////////////////////////
+/// Views
+
+float4x4 LookAtLH(float3 aEye, float3 aCenter, float3 aUp) {
+  float4x4 toReturn;
+  SDL_zero(toReturn);
+
+  float3 forward = {aEye.x - aCenter.x, aEye.y - aCenter.y, aEye.z - aCenter.z};
+
+  //toReturn.columns[0][0] = 1.0f / (aAspectRatio * tanHalfFovy);
+  //toReturn.columns[1][1] = 1.0f / (tanHalfFovy);
+  //toReturn.columns[2][2] = aFar / (aFar - aNear);
+  //toReturn.columns[2][3] = 1.0f;
+  //toReturn.columns[3][2] = -(aFar * aNear) / (aFar - aNear);
+
+  return toReturn;
+}
+
+////////////////////////////////////////////////////////////
+/// Projections
 
 float4x4 OrthographicProjectionLHZO(float aLeft, float aRight, float aBottom, float aTop, float aNear, float aFar) {
   float4x4 toReturn;
@@ -428,109 +450,25 @@ SDL_GPUBuffer* CreateAndUploadBuffer(const void* aData, size_t aSize, SDL_GPUBuf
   return buffer;
 }
 
-typedef struct Model {
-  SDL_GPUBuffer* mPositions;          // float3
-  SDL_GPUBuffer* mNormals;            // float3
-  SDL_GPUBuffer* mTangents;           // float3
-  SDL_GPUBuffer* mTextureCoordinates; // float2
-} Model;
-
-void LoadGltfModel(const char* aModelName) {
-  char model_path[4096];
-  SDL_snprintf(model_path, SDL_arraysize(model_path), "Assets/Models/%s", aModelName);
-
-
-  cgltf_options options;
-  SDL_zero(options);
-
-  cgltf_data* data = NULL;
-  cgltf_result result = cgltf_parse_file(&options, model_path, &data);
-  SDL_assert(result == cgltf_result_success);
-
-  SDL_Log("Model: %s", model_path);
-
-
-  SDL_Log("\tMeshes:");
-
-  //size_t elementsNeeded[4] = 0;
-
-  for (size_t i = 0; i < data->nodes_count; ++i) {
-    SDL_Log("\t\t%s", data->nodes[i].name);
-
-    cgltf_mesh* mesh = data->nodes[i].mesh;
-    if (mesh == NULL) {
-      continue;
-    }
-
-    SDL_Log("\t\t\tPrimitives:");   
-
-    for (size_t j = 0; j < mesh->primitives_count; ++j) {
-      cgltf_primitive* primitive = &mesh->primitives[j];
-
-      SDL_Log("\t\t\t\tAttributes:");
-
-      for (size_t k = 0; k < primitive->attributes_count; ++k) {
-        cgltf_attribute* attribute = &primitive->attributes[k];
-        SDL_Log("\t\t\t\t\t%d: i:{%d} n: %s", attribute->type, attribute->index, attribute->name);
-      }
-    }
-
-    //SDL_Log("\tTextures:");
-    //for (size_t i = 0; i < mesh->text; ++i) {
-    //  SDL_Log("\t\t%s", data->meshes[i].name);
-    //}
-  }
-
-
-  //SDL_Log("\tMeshes:");
-  //
-  //for (size_t i = 0; i < data->meshes_count; ++i) {
-  //  SDL_Log("\t\t%s", data->meshes[i].name);
-  //}
-  //
-  //SDL_Log("\tBufferViews:");
-  //
-  //for (size_t i = 0; i < data->buffer_views_count; ++i) {
-  //  SDL_Log("\t\t%d", data->buffer_views[i].type);
-  //}
-  //
-  SDL_Log("\tMaterials:");
-  
-  for (size_t i = 0; i < data->materials_count; ++i) {
-    SDL_Log("\t\t%s", data->materials[i].name);
-
-    cgltf_material* material = &data->materials[i];
-
-    SDL_Log("\t\t\tTextures:");
-    //for (size_t j = 0; j < material->; ++j) {
-    //  SDL_Log("\t\t\t\t%s", data->meshes[j].name);
-    //}
-  }
-
-}
-
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Technique Code
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-typedef struct ModelUbo {
+typedef struct CubeUbo {
   float4 mPosition;
   float4 mScale;
   float4 mRotation;
-} ModelUbo;
+} CubeUbo;
 
-typedef struct ModelContext {
+typedef struct CubeContext {
   SDL_GPUGraphicsPipeline* mPipeline;
   SDL_GPUTexture* mTexture;
   SDL_GPUSampler* mSampler;
   SDL_GPUBuffer* mVertexBuffer;
   SDL_GPUBuffer* mIndexBuffer;
-  ModelUbo mUbo[2];
-} ModelContext;
+  CubeUbo mUbo[2];
+} CubeContext;
 
-ModelContext CreateModelContext(SDL_GPUTextureFormat aDepthFormat) {
-  LoadGltfModel("buster_drone.glb");
-
-
+CubeContext CreateCubeContext(SDL_GPUTextureFormat aDepthFormat) {
   SDL_GPUColorTargetDescription colorTargetDescription;
   SDL_zero(colorTargetDescription);
   colorTargetDescription.format = SDL_GetGPUSwapchainTextureFormat(gContext.mDevice, gContext.mWindow);
@@ -602,9 +540,9 @@ ModelContext CreateModelContext(SDL_GPUTextureFormat aDepthFormat) {
   );
   SDL_assert(graphicsPipelineCreateInfo.fragment_shader);
 
-  SDL_assert(SDL_SetStringProperty(gContext.mProperties, SDL_PROP_GPU_SHADER_CREATE_NAME_STRING, "ModelContext"));
+  SDL_assert(SDL_SetStringProperty(gContext.mProperties, SDL_PROP_GPU_SHADER_CREATE_NAME_STRING, "CubeContext"));
 
-  ModelContext context;
+  CubeContext context;
   context.mPipeline = SDL_CreateGPUGraphicsPipeline(gContext.mDevice, &graphicsPipelineCreateInfo);
   context.mTexture = CreateAndUploadTexture(NULL, "sample");
 
@@ -692,7 +630,7 @@ ModelContext CreateModelContext(SDL_GPUTextureFormat aDepthFormat) {
   return context;
 }
 
-void DrawModelContext(ModelContext* aPipeline, SDL_GPUCommandBuffer* aCommandBuffer, SDL_GPURenderPass* aRenderPass)
+void DrawCubeContext(CubeContext* aPipeline, SDL_GPUCommandBuffer* aCommandBuffer, SDL_GPURenderPass* aRenderPass)
 {
   SDL_BindGPUGraphicsPipeline(aRenderPass, aPipeline->mPipeline);
 
@@ -732,7 +670,7 @@ void DrawModelContext(ModelContext* aPipeline, SDL_GPUCommandBuffer* aCommandBuf
   SDL_DrawGPUPrimitives(aRenderPass, 6 /* 6 per face */ * 6 /* 6 sides of our cube */, 1, 0, 0);
 }
 
-void DestroyModelContext(ModelContext* aPipeline)
+void DestroyCubeContext(CubeContext* aPipeline)
 {
   SDL_ReleaseGPUGraphicsPipeline(gContext.mDevice, aPipeline->mPipeline);
   SDL_zero(*aPipeline);
@@ -758,7 +696,7 @@ int main(int argc, char** argv)
   Uint32 depthHeight = 0;
   SDL_GPUTextureFormat depthFormat = GetSupportedDepthFormat();
 
-  ModelContext cubeContext = CreateModelContext(depthFormat);
+  CubeContext cubeContext = CreateCubeContext(depthFormat);
 
   const float speed = 5.f;
   Uint64 last_frame_ticks_so_far = SDL_GetTicksNS();
@@ -864,13 +802,13 @@ int main(int argc, char** argv)
       &depthStencilTargetInfo
     );
 
-    DrawModelContext(&cubeContext, commandBuffer, renderPass);
+    DrawCubeContext(&cubeContext, commandBuffer, renderPass);
 
     SDL_EndGPURenderPass(renderPass);
     SDL_SubmitGPUCommandBuffer(commandBuffer);
   }
 
-  DestroyModelContext(&cubeContext);
+  DestroyCubeContext(&cubeContext);
 
   DestroyGpuContext();
 
