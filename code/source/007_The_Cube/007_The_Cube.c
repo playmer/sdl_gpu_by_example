@@ -351,13 +351,13 @@ typedef struct CubeUbo {
   float4 mPosition;
   float4 mScale;
   float4 mRotation;
-} CubeInfo;
+} CubeUbo;
 
 typedef struct CubeContext {
   SDL_GPUGraphicsPipeline* mPipeline;
   SDL_GPUTexture* mTexture;
   SDL_GPUSampler* mSampler;
-  CubeInfo mUbo;
+  CubeUbo mUbo;
 } CubeContext;
 
 CubeContext CreateCubeContext() {
@@ -464,7 +464,7 @@ int main(int argc, char** argv)
   (void)argv;
   SDL_assert(SDL_Init(SDL_INIT_VIDEO));
 
-  SDL_Window* window = SDL_CreateWindow("003-Triangle_and_Fullscreen_Triangle", 1280, 720, 0);
+  SDL_Window* window = SDL_CreateWindow("SDL GPU Example", 1280, 720, 0);
   SDL_assert(window);
 
   CreateGpuContext(window);
