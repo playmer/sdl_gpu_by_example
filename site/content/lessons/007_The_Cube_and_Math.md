@@ -1,6 +1,6 @@
 ---
-title: The Cube
-description: It's time to discuss vertex and index buffers, we've been able to get by without them until now, but if we want to draw models, it's the most straight forward way. We'll also need to cover depth so that we don't render objects triangles farther away from the camera on top of triangles closer to the camera.
+title: The Cube and Math
+description: We're not done learning about APIs that can help us in 2D, but it's time to start learning about 3D rendering. We'll be rendering a cube, and along the way learn about properly constructing a model matrix, and expand out our math library.
 template: lesson_template.html
 collections: ["lessons"]
 ---
@@ -57,27 +57,53 @@ collections: ["lessons"]
 
 ## Model Matrix
 
-It's time to build our some matrix math functionality. If you're already comfortable with these topics, and prefer to just use your own, or copy/paste the one from this sample, that is entirely valid. 
+It's time to build out some matrix math functionality. If you're already comfortable with these topics, and prefer to just use your own, or copy/paste the one from this sample, that is entirely valid. 
 
 > Note: The implementations here are naive and intended for learning, rather than high performance work. I intend to teach you how to do things effectively and ideally in a fairly performant manner in this series, but I'm not counting CPU cycles or planning to drop down into SIMD.
 
+### Vectors
 
+This functionality isn't really needed yet, but we might as well start introducing them here. We'll be using them in a few chapters.
 
-### Identity
+#### Types
 
-### Multiplication
+#### Operations
 
-### Scale
+##### Downcasting
 
-### Rotation
+##### Subtraction
 
-#### Rotation about X
+##### Addition
 
-#### Rotation about Y
+##### Scalar Addition
 
-#### Rotation about Z
+##### Scalar Multiplication
 
-### Translation
+##### Scalar Division
+
+##### Dot Product
+
+##### Magnitude
+
+##### Normalization
+
+### Matrices
+
+#### Identity
+
+#### Multiplication
+
+#### Scale
+
+#### Rotation
+
+##### Rotation about X
+
+##### Rotation about Y
+
+##### Rotation about Z
+
+#### Translation
 
 ### Bring it together
 

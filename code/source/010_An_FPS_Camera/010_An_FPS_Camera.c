@@ -5,6 +5,10 @@
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // MATH
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+typedef struct float2 {
+  float x, y;
+} float2;
+
 typedef struct float3 {
   float x, y, z;
 } float3;
@@ -16,6 +20,211 @@ typedef struct float4 {
 typedef struct float4x4 {
   float columns[4][4];
 } float4x4;
+
+//////////////////////////////////////////////////////
+// Downcasts
+
+float2 Float3_XY(float3 aValue) {
+  float2 toReturn = {aValue.x, aValue.y};
+  return toReturn;
+}
+
+float2 Float4_XY(float4 aValue) {
+  float2 toReturn = {aValue.x, aValue.y};
+  return toReturn;
+}
+
+float3 Float4_XYZ(float4 aValue) {
+  float3 toReturn = {aValue.x, aValue.y, aValue.z};
+  return toReturn;
+}
+
+//////////////////////////////////////////////////////
+// Subtraction
+
+float2 Float2_Subtract(float2 aValue1, float2 aValue2) {
+  float2 toReturn = {aValue1.x - aValue2.x, aValue1.y - aValue2.y};
+  return toReturn;
+}
+
+float3 Float3_Subtract(float3 aValue1, float3 aValue2) {
+  float3 toReturn = {aValue1.x - aValue2.x, aValue1.y - aValue2.y, aValue1.z - aValue2.z};
+  return toReturn;
+}
+
+float4 Float4_Subtract(float4 aValue1, float4 aValue2) {
+  float4 toReturn = {aValue1.x - aValue2.x, aValue1.y - aValue2.y, aValue1.z - aValue2.z, aValue1.w - aValue2.w};
+  return toReturn;
+}
+
+//////////////////////////////////////////////////////
+// Addition
+
+float2 Float2_Add(float2 aValue1, float2 aValue2) {
+  float2 toReturn = {aValue1.x + aValue2.x, aValue1.y + aValue2.y};
+  return toReturn;
+}
+
+float3 Float3_Add(float3 aValue1, float3 aValue2) {
+  float3 toReturn = {aValue1.x + aValue2.x, aValue1.y + aValue2.y, aValue1.z + aValue2.z};
+  return toReturn;
+}
+
+float4 Float4_Add(float4 aValue1, float4 aValue2) {
+  float4 toReturn = {aValue1.x + aValue2.x, aValue1.y + aValue2.y, aValue1.z + aValue2.z, aValue1.w + aValue2.w};
+  return toReturn;
+}
+
+//////////////////////////////////////////////////////
+// Scalar Addition
+
+float2 Float2_Scalar_Add(float2 aValue1, float aValue2) {
+  float2 toReturn = {aValue1.x + aValue2, aValue1.y + aValue2};
+  return toReturn;
+}
+
+float3 Float3_Scalar_Add(float3 aValue1, float aValue2) {
+  float3 toReturn = {aValue1.x + aValue2, aValue1.y + aValue2, aValue1.z + aValue2};
+  return toReturn;
+}
+
+float4 Float4_Scalar_Add(float4 aValue1, float aValue2) {
+  float4 toReturn = {aValue1.x + aValue2, aValue1.y + aValue2, aValue1.z + aValue2, aValue1.w + aValue2};
+  return toReturn;
+}
+
+//////////////////////////////////////////////////////
+// Scalar Multiplication
+
+float2 Float2_Scalar_Multiply(float2 aValue1, float aValue2) {
+  float2 toReturn = {aValue1.x * aValue2, aValue1.y * aValue2};
+  return toReturn;
+}
+
+float3 Float3_Scalar_Multiply(float3 aValue1, float aValue2) {
+  float3 toReturn = {aValue1.x * aValue2, aValue1.y * aValue2, aValue1.z * aValue2};
+  return toReturn;
+}
+
+float4 Float4_Scalar_Multiply(float4 aValue1, float aValue2) {
+  float4 toReturn = {aValue1.x * aValue2, aValue1.y * aValue2, aValue1.z * aValue2, aValue1.w * aValue2};
+  return toReturn;
+}
+
+//////////////////////////////////////////////////////
+// Scalar Multiplication
+
+float2 Float2_Scalar_Division(float2 aValue1, float aValue2) {
+  float2 toReturn = {aValue1.x / aValue2, aValue1.y / aValue2};
+  return toReturn;
+}
+
+float3 Float3_Scalar_Division(float3 aValue1, float aValue2) {
+  float3 toReturn = {aValue1.x / aValue2, aValue1.y / aValue2, aValue1.z / aValue2};
+  return toReturn;
+}
+
+float4 Float4_Scalar_Division(float4 aValue1, float aValue2) {
+  float4 toReturn = {aValue1.x / aValue2, aValue1.y / aValue2, aValue1.z / aValue2, aValue1.w / aValue2};
+  return toReturn;
+}
+
+//////////////////////////////////////////////////////
+// Dot Product
+
+float Float2_Dot(float2 aValue1, float2 aValue2) {
+  return 
+    (aValue1.x * aValue2.x) +
+    (aValue1.y * aValue2.y);
+}
+
+float Float3_Dot(float3 aValue1, float3 aValue2) {
+  return 
+    (aValue1.x * aValue2.x) +
+    (aValue1.y * aValue2.y) +
+    (aValue1.z * aValue2.z);
+}
+
+float Float4_Dot(float4 aValue1, float4 aValue2) {
+  return 
+    (aValue1.x * aValue2.x) +
+    (aValue1.y * aValue2.y) +
+    (aValue1.z * aValue2.z) +
+    (aValue1.w * aValue2.w);
+}
+
+//////////////////////////////////////////////////////
+// Magnitude
+
+float Float2_Magnitude(float2 aValue) {
+  return SDL_sqrt(Float2_Dot(aValue, aValue));
+}
+
+float Float3_Magnitude(float3 aValue) {
+  return SDL_sqrt(Float3_Dot(aValue, aValue));
+}
+
+float Float4_Magnitude(float4 aValue) {
+  return SDL_sqrt(Float4_Dot(aValue, aValue));
+}
+
+//////////////////////////////////////////////////////
+// Normalization
+
+float2 Float2_Normalize(float2 aValue) {
+  float magnitude = Float2_Magnitude(aValue);
+
+  float2 toReturn = {
+    aValue.x / magnitude,
+    aValue.y / magnitude
+  };
+
+  return toReturn;
+} 
+
+float3 Float3_Normalize(float3 aValue) {
+  float magnitude = Float3_Magnitude(aValue);
+
+  float3 toReturn = {
+    aValue.x / magnitude,
+    aValue.y / magnitude,
+    aValue.z / magnitude
+  };
+
+  return toReturn;
+} 
+
+float4 Float4_Normalize(float4 aValue) {
+  float magnitude = Float4_Magnitude(aValue);
+
+  float4 toReturn = {
+    aValue.x / magnitude,
+    aValue.y / magnitude,
+    aValue.z / magnitude,
+    aValue.w / magnitude
+  };
+
+  return toReturn;
+} 
+
+float4 Float4x4_Float4_Multiply(const float4x4* aLeft, const float4 aRight)
+{
+  float4 toReturn;
+  toReturn.x = 
+    (aLeft->columns[0][0] * aRight.x) +
+    (aLeft->columns[1][0] * aRight.y) +
+    (aLeft->columns[2][0] * aRight.z);
+  toReturn.y = 
+    (aLeft->columns[0][1] * aRight.x) +
+    (aLeft->columns[1][1] * aRight.y) +
+    (aLeft->columns[2][1] * aRight.z);
+  toReturn.z = 
+    (aLeft->columns[0][2] * aRight.x) +
+    (aLeft->columns[1][2] * aRight.y) +
+    (aLeft->columns[2][2] * aRight.z);
+
+  return toReturn;
+}
 
 float4x4 Float4x4_Multiply(const float4x4* aLeft, const float4x4* aRight)
 {
@@ -126,7 +335,7 @@ float4x4 LookAtLH(float3 aEye, float3 aCenter, float3 aUp) {
   float4x4 toReturn;
   SDL_zero(toReturn);
 
-  float3 forward = {aEye.x - aCenter.x, aEye.y - aCenter.y, aEye.z - aCenter.z};
+  float3 forward = Float3_Normalize(Float3_Subtract(aEye, aCenter));
 
   //toReturn.columns[0][0] = 1.0f / (aAspectRatio * tanHalfFovy);
   //toReturn.columns[1][1] = 1.0f / (tanHalfFovy);
