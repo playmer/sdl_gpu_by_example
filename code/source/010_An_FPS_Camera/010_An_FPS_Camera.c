@@ -42,115 +42,139 @@ float3 Float4_XYZ(float4 aValue) {
 //////////////////////////////////////////////////////
 // Subtraction
 
-float2 Float2_Subtract(float2 aValue1, float2 aValue2) {
-  float2 toReturn = {aValue1.x - aValue2.x, aValue1.y - aValue2.y};
+float2 Float2_Subtract(float2 aLeft, float2 aRight) {
+  float2 toReturn = {aLeft.x - aRight.x, aLeft.y - aRight.y};
   return toReturn;
 }
 
-float3 Float3_Subtract(float3 aValue1, float3 aValue2) {
-  float3 toReturn = {aValue1.x - aValue2.x, aValue1.y - aValue2.y, aValue1.z - aValue2.z};
+float3 Float3_Subtract(float3 aLeft, float3 aRight) {
+  float3 toReturn = {aLeft.x - aRight.x, aLeft.y - aRight.y, aLeft.z - aRight.z};
   return toReturn;
 }
 
-float4 Float4_Subtract(float4 aValue1, float4 aValue2) {
-  float4 toReturn = {aValue1.x - aValue2.x, aValue1.y - aValue2.y, aValue1.z - aValue2.z, aValue1.w - aValue2.w};
+float4 Float4_Subtract(float4 aLeft, float4 aRight) {
+  float4 toReturn = {aLeft.x - aRight.x, aLeft.y - aRight.y, aLeft.z - aRight.z, aLeft.w - aRight.w};
   return toReturn;
 }
 
 //////////////////////////////////////////////////////
 // Addition
 
-float2 Float2_Add(float2 aValue1, float2 aValue2) {
-  float2 toReturn = {aValue1.x + aValue2.x, aValue1.y + aValue2.y};
+float2 Float2_Add(float2 aLeft, float2 aRight) {
+  float2 toReturn = {aLeft.x + aRight.x, aLeft.y + aRight.y};
   return toReturn;
 }
 
-float3 Float3_Add(float3 aValue1, float3 aValue2) {
-  float3 toReturn = {aValue1.x + aValue2.x, aValue1.y + aValue2.y, aValue1.z + aValue2.z};
+float3 Float3_Add(float3 aLeft, float3 aRight) {
+  float3 toReturn = {aLeft.x + aRight.x, aLeft.y + aRight.y, aLeft.z + aRight.z};
   return toReturn;
 }
 
-float4 Float4_Add(float4 aValue1, float4 aValue2) {
-  float4 toReturn = {aValue1.x + aValue2.x, aValue1.y + aValue2.y, aValue1.z + aValue2.z, aValue1.w + aValue2.w};
+float4 Float4_Add(float4 aLeft, float4 aRight) {
+  float4 toReturn = {aLeft.x + aRight.x, aLeft.y + aRight.y, aLeft.z + aRight.z, aLeft.w + aRight.w};
   return toReturn;
 }
 
 //////////////////////////////////////////////////////
 // Scalar Addition
 
-float2 Float2_Scalar_Add(float2 aValue1, float aValue2) {
-  float2 toReturn = {aValue1.x + aValue2, aValue1.y + aValue2};
+float2 Float2_Scalar_Add(float2 aLeft, float aRight) {
+  float2 toReturn = {aLeft.x + aRight, aLeft.y + aRight};
   return toReturn;
 }
 
-float3 Float3_Scalar_Add(float3 aValue1, float aValue2) {
-  float3 toReturn = {aValue1.x + aValue2, aValue1.y + aValue2, aValue1.z + aValue2};
+float3 Float3_Scalar_Add(float3 aLeft, float aRight) {
+  float3 toReturn = {aLeft.x + aRight, aLeft.y + aRight, aLeft.z + aRight};
   return toReturn;
 }
 
-float4 Float4_Scalar_Add(float4 aValue1, float aValue2) {
-  float4 toReturn = {aValue1.x + aValue2, aValue1.y + aValue2, aValue1.z + aValue2, aValue1.w + aValue2};
-  return toReturn;
-}
-
-//////////////////////////////////////////////////////
-// Scalar Multiplication
-
-float2 Float2_Scalar_Multiply(float2 aValue1, float aValue2) {
-  float2 toReturn = {aValue1.x * aValue2, aValue1.y * aValue2};
-  return toReturn;
-}
-
-float3 Float3_Scalar_Multiply(float3 aValue1, float aValue2) {
-  float3 toReturn = {aValue1.x * aValue2, aValue1.y * aValue2, aValue1.z * aValue2};
-  return toReturn;
-}
-
-float4 Float4_Scalar_Multiply(float4 aValue1, float aValue2) {
-  float4 toReturn = {aValue1.x * aValue2, aValue1.y * aValue2, aValue1.z * aValue2, aValue1.w * aValue2};
+float4 Float4_Scalar_Add(float4 aLeft, float aRight) {
+  float4 toReturn = {aLeft.x + aRight, aLeft.y + aRight, aLeft.z + aRight, aLeft.w + aRight};
   return toReturn;
 }
 
 //////////////////////////////////////////////////////
 // Scalar Multiplication
 
-float2 Float2_Scalar_Division(float2 aValue1, float aValue2) {
-  float2 toReturn = {aValue1.x / aValue2, aValue1.y / aValue2};
+float2 Float2_Scalar_Multiply(float2 aLeft, float aRight) {
+  float2 toReturn = {aLeft.x * aRight, aLeft.y * aRight};
   return toReturn;
 }
 
-float3 Float3_Scalar_Division(float3 aValue1, float aValue2) {
-  float3 toReturn = {aValue1.x / aValue2, aValue1.y / aValue2, aValue1.z / aValue2};
+float3 Float3_Scalar_Multiply(float3 aLeft, float aRight) {
+  float3 toReturn = {aLeft.x * aRight, aLeft.y * aRight, aLeft.z * aRight};
   return toReturn;
 }
 
-float4 Float4_Scalar_Division(float4 aValue1, float aValue2) {
-  float4 toReturn = {aValue1.x / aValue2, aValue1.y / aValue2, aValue1.z / aValue2, aValue1.w / aValue2};
+float4 Float4_Scalar_Multiply(float4 aLeft, float aRight) {
+  float4 toReturn = {aLeft.x * aRight, aLeft.y * aRight, aLeft.z * aRight, aLeft.w * aRight};
+  return toReturn;
+}
+
+//////////////////////////////////////////////////////
+// Scalar Multiplication
+
+float2 Float2_Scalar_Division(float2 aLeft, float aRight) {
+  float2 toReturn = {aLeft.x / aRight, aLeft.y / aRight};
+  return toReturn;
+}
+
+float3 Float3_Scalar_Division(float3 aLeft, float aRight) {
+  float3 toReturn = {aLeft.x / aRight, aLeft.y / aRight, aLeft.z / aRight};
+  return toReturn;
+}
+
+float4 Float4_Scalar_Division(float4 aLeft, float aRight) {
+  float4 toReturn = {aLeft.x / aRight, aLeft.y / aRight, aLeft.z / aRight, aLeft.w / aRight};
   return toReturn;
 }
 
 //////////////////////////////////////////////////////
 // Dot Product
 
-float Float2_Dot(float2 aValue1, float2 aValue2) {
+float Float2_Dot(float2 aLeft, float2 aRight) {
   return 
-    (aValue1.x * aValue2.x) +
-    (aValue1.y * aValue2.y);
+    (aLeft.x * aRight.x) +
+    (aLeft.y * aRight.y);
 }
 
-float Float3_Dot(float3 aValue1, float3 aValue2) {
+float Float3_Dot(float3 aLeft, float3 aRight) {
   return 
-    (aValue1.x * aValue2.x) +
-    (aValue1.y * aValue2.y) +
-    (aValue1.z * aValue2.z);
+    (aLeft.x * aRight.x) +
+    (aLeft.y * aRight.y) +
+    (aLeft.z * aRight.z);
 }
 
-float Float4_Dot(float4 aValue1, float4 aValue2) {
+float Float4_Dot(float4 aLeft, float4 aRight) {
   return 
-    (aValue1.x * aValue2.x) +
-    (aValue1.y * aValue2.y) +
-    (aValue1.z * aValue2.z) +
-    (aValue1.w * aValue2.w);
+    (aLeft.x * aRight.x) +
+    (aLeft.y * aRight.y) +
+    (aLeft.z * aRight.z) +
+    (aLeft.w * aRight.w);
+}
+
+//////////////////////////////////////////////////////
+// Cross Product
+
+float3 Float3_Cross(float3 aLeft, float3 aRight) {
+  float3 toReturn = {
+    (aLeft.y * aRight.z) - (aLeft.z * aRight.y),
+    (aLeft.z * aRight.x) - (aLeft.x * aRight.z),
+    (aLeft.x * aRight.y) - (aLeft.y * aRight.x)
+  };
+
+  return toReturn;
+}
+
+// Convience function that ignores the 4th component, assuming it was irrelevant.
+float3 Float4_Cross(float4 aLeft, float4 aRight) {
+  float3 toReturn = {
+    (aLeft.y * aRight.z) - (aLeft.z * aRight.y),
+    (aLeft.z * aRight.x) - (aLeft.x * aRight.z),
+    (aLeft.x * aRight.y) - (aLeft.y * aRight.x)
+  };
+
+  return toReturn;
 }
 
 //////////////////////////////////////////////////////
@@ -205,7 +229,10 @@ float4 Float4_Normalize(float4 aValue) {
   };
 
   return toReturn;
-} 
+}
+
+//////////////////////////////////////////////////////
+// Matrix Operations
 
 float4 Float4x4_Float4_Multiply(const float4x4* aLeft, const float4 aRight)
 {
