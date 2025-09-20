@@ -14,3 +14,13 @@ All that said, we want to ease our way into the concept so lets try Uniform Buff
 ## Uniform Buffers <a name="uniforma-buffers" id="uniforma-buffers"></a>
 
 We're going to start off with the example from the previous chapter, as we can demonstrate some simple uses of Uniform Buffers it's shaders. Our goals are going to be to move around the Triangle, and change the color of the the black squares in the checkerboard fullscreen effect.
+
+We've not discussed it before in this tutorial, but you may have heard about structs containing "padding" between fields for alignment reasons. When you're just writing in one language, this mostly isn't something you need to concern yourself with, unless you're trying to optimize your layouts. When you're transferring data between languages, or in this case, between languages _and_ processors, you need to ensure both sides agree on the layout of structs and their padding.
+
+
+
+{{collapsible-card}}
+
+[OpenGL Specification](https://registry.khronos.org/OpenGL/specs/gl/glspec45.core.pdf#page=159)
+
+{{collapsible-card-end}}
