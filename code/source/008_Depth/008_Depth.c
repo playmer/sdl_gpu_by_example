@@ -128,17 +128,34 @@ float4x4 OrthographicProjectionLHZO(float aLeft, float aRight, float aBottom, fl
   return toReturn;
 }
 
-float4x4 PerspectiveProjectionLHZO(float aFov, float aAspectRatio, float aNear, float aFar) {
+float4x4 PerspectiveProjectionLHZO(float aFovY, float aAspectRatio, float aNear, float aFar) {
   float4x4 toReturn;
   SDL_zero(toReturn);
 
-  const float tanHalfFovy = SDL_tan(aFov / 2.0f);
+  const float focalLength = 1.0f / SDL_tan(aFovY * .5f);
+  const float k = aFar / (aFar - aNear);
 
-  toReturn.columns[0][0] = 1.0f / (aAspectRatio * tanHalfFovy);
-  toReturn.columns[1][1] = 1.0f / (tanHalfFovy);
-  toReturn.columns[2][2] = aFar / (aFar - aNear);
+  toReturn.columns[0][0] = focalLength / aAspectRatio;
+  toReturn.columns[1][1] = focalLength;
+  toReturn.columns[2][2] = k;
   toReturn.columns[2][3] = 1.0f;
-  toReturn.columns[3][2] = -(aFar * aNear) / (aFar - aNear);
+  toReturn.columns[3][2] = -aNear * k;
+
+  return toReturn;
+}
+
+float4x4 PerspectiveProjectionLHOZ(float aFovY, float aAspectRatio, float aNear, float aFar) {
+  float4x4 toReturn;
+  SDL_zero(toReturn);
+
+  const float focalLength = 1.0f / SDL_tan(aFovY * .5f);
+  const float k = aNear / (aNear - aFar);
+
+  toReturn.columns[0][0] = focalLength / aAspectRatio;
+  toReturn.columns[1][1] = focalLength;
+  toReturn.columns[2][2] = k;
+  toReturn.columns[2][3] = 1.0f;
+  toReturn.columns[3][2] = -aFar * k;
 
   return toReturn;
 }
@@ -409,7 +426,7 @@ CubeContext CreateCubeContext(SDL_GPUTextureFormat aDepthFormat) {
   graphicsPipelineCreateInfo.depth_stencil_state.enable_depth_write = true;
 
   graphicsPipelineCreateInfo.vertex_shader = CreateShader(
-    "Cube.vert",
+    "Depth.vert",
     SDL_GPU_SHADERSTAGE_VERTEX,
     0,
     2,
@@ -420,7 +437,7 @@ CubeContext CreateCubeContext(SDL_GPUTextureFormat aDepthFormat) {
   SDL_assert(graphicsPipelineCreateInfo.vertex_shader);
 
   graphicsPipelineCreateInfo.fragment_shader = CreateShader(
-    "Cube.frag",
+    "Depth.frag",
     SDL_GPU_SHADERSTAGE_FRAGMENT,
     1,
     0,
@@ -552,10 +569,10 @@ int main(int argc, char** argv)
     int w = 0, h = 0;
     SDL_GetWindowSizeInPixels(gContext.mWindow, &w, &h);
 
-    gContext.WorldToNDC = PerspectiveProjectionLHZO(
+    gContext.WorldToNDC = PerspectiveProjectionLHZO (
       45.0f * SDL_PI_F / 180.0f,
       (float)w / (float)h,
-      20.0f, 60.0f
+      0.1f, 100.0f
     );
       
     if (key_map[SDL_SCANCODE_D])        cubeContext.mUbo[0].mPosition.x += speed * dt * 1.0f;
@@ -572,8 +589,8 @@ int main(int argc, char** argv)
     if (key_map[SDL_SCANCODE_DELETE])   cubeContext.mUbo[0].mRotation.x -= speed * dt * 1.0f;
     if (key_map[SDL_SCANCODE_HOME])     cubeContext.mUbo[0].mRotation.y += speed * dt * 1.0f;
     if (key_map[SDL_SCANCODE_END])      cubeContext.mUbo[0].mRotation.y -= speed * dt * 1.0f;
-    if (key_map[SDL_SCANCODE_PAGEUP])   cubeContext.mUbo[0].mRotation.y += speed * dt * 1.0f;
-    if (key_map[SDL_SCANCODE_PAGEDOWN]) cubeContext.mUbo[0].mRotation.y -= speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_PAGEUP])   cubeContext.mUbo[0].mRotation.z += speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_PAGEDOWN]) cubeContext.mUbo[0].mRotation.z -= speed * dt * 1.0f;
 
     SDL_GPUCommandBuffer* commandBuffer = SDL_AcquireGPUCommandBuffer(gContext.mDevice);
     if (!commandBuffer)

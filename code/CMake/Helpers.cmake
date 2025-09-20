@@ -28,9 +28,9 @@ macro(find_and_compile_shaders aShaderCrossExecutable aTarget aShaderDirectory a
         set(dxilShader ${aOutputDirectory}/${shaderFilename}${shaderExtension}.dxil)
             
         add_custom_command(OUTPUT ${spirvShader} ${mslShader} ${dxilShader}
-            COMMAND ${aShaderCrossExecutable} ARGS ${shader} --source HLSL --dest SPIRV --stage ${shaderStage} --output ${spirvShader}
-            COMMAND ${aShaderCrossExecutable} ARGS ${shader} --source HLSL --dest MSL --stage ${shaderStage} --output ${mslShader}
-            COMMAND ${aShaderCrossExecutable} ARGS ${shader} --source HLSL --dest DXIL --stage ${shaderStage} --output ${dxilShader}
+            COMMAND ${aShaderCrossExecutable} ARGS ${shader} -g --source HLSL --dest SPIRV --stage ${shaderStage} --output ${spirvShader}
+            COMMAND ${aShaderCrossExecutable} ARGS ${shader} -g --source HLSL --dest MSL --stage ${shaderStage} --output ${mslShader}
+            COMMAND ${aShaderCrossExecutable} ARGS ${shader} -g --source HLSL --dest DXIL --stage ${shaderStage} --output ${dxilShader}
             DEPENDS ${shader})
         list(APPEND CompiledShaderFiles ${spirvShader} ${mslShader} ${dxilShader})
     endforeach(shader)
