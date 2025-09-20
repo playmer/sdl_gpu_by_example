@@ -160,6 +160,25 @@ float4x4 PerspectiveProjectionLHOZ(float aFovY, float aAspectRatio, float aNear,
   return toReturn;
 }
 
+float4x4 InfinitePerspectiveProjectionLHOZ(float aFovY, float aAspectRatio, float aNear) {
+  float4x4 toReturn;
+  SDL_zero(toReturn);
+
+  const float focalLength = 1.0f / SDL_tan(aFovY * .5f);
+
+  // For ease of use we're hardcoding the epsilon to what's recommended in Foundations of Game Engine
+  // Development: Rendering, which is 2^(-20).
+  const float epsilon = SDL_powf(2, -20);
+
+  toReturn.columns[0][0] = focalLength / aAspectRatio;
+  toReturn.columns[1][1] = focalLength;
+  toReturn.columns[2][2] = epsilon;
+  toReturn.columns[2][3] = 1.0f;
+  toReturn.columns[3][2] = aNear/(1.0f - epsilon);
+
+  return toReturn;
+}
+
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Shared GPU Code
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -420,7 +439,7 @@ CubeContext CreateCubeContext(SDL_GPUTextureFormat aDepthFormat) {
   graphicsPipelineCreateInfo.rasterizer_state.cull_mode = SDL_GPU_CULLMODE_BACK;
 
   // Remember to come back to this later in the tutorial, don't show it off immediately.
-  graphicsPipelineCreateInfo.depth_stencil_state.compare_op = SDL_GPU_COMPAREOP_LESS_OR_EQUAL;
+  graphicsPipelineCreateInfo.depth_stencil_state.compare_op = SDL_GPU_COMPAREOP_GREATER_OR_EQUAL;
 
   graphicsPipelineCreateInfo.depth_stencil_state.enable_depth_test = true;
   graphicsPipelineCreateInfo.depth_stencil_state.enable_depth_write = true;
@@ -569,10 +588,10 @@ int main(int argc, char** argv)
     int w = 0, h = 0;
     SDL_GetWindowSizeInPixels(gContext.mWindow, &w, &h);
 
-    gContext.WorldToNDC = PerspectiveProjectionLHZO (
+    gContext.WorldToNDC = InfinitePerspectiveProjectionLHOZ(
       45.0f * SDL_PI_F / 180.0f,
       (float)w / (float)h,
-      0.1f, 100.0f
+      0.1f
     );
       
     if (key_map[SDL_SCANCODE_D])        cubeContext.mUbo[0].mPosition.x += speed * dt * 1.0f;
@@ -635,8 +654,8 @@ int main(int argc, char** argv)
     SDL_zero(depthStencilTargetInfo);
 
     depthStencilTargetInfo.texture = depthTexture;
-    depthStencilTargetInfo.clear_depth = 1.f;
-    depthStencilTargetInfo.clear_stencil = 1.f;
+    depthStencilTargetInfo.clear_depth = 0.f;
+    depthStencilTargetInfo.clear_stencil = 0.f;
     depthStencilTargetInfo.load_op = SDL_GPU_LOADOP_CLEAR;
     depthStencilTargetInfo.store_op = SDL_GPU_STOREOP_DONT_CARE;
     depthStencilTargetInfo.stencil_load_op = SDL_GPU_LOADOP_CLEAR;
