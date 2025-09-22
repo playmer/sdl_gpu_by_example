@@ -248,18 +248,26 @@ float4 Float4_Normalize(float4 aValue) {
 float4 Float4x4_Float4_Multiply(const float4x4* aLeft, const float4 aRight)
 {
   float4 toReturn;
-  toReturn.x = 
+  toReturn.x =
     (aLeft->data[0][0] * aRight.x) +
     (aLeft->data[1][0] * aRight.y) +
-    (aLeft->data[2][0] * aRight.z);
+    (aLeft->data[2][0] * aRight.z) +
+    (aLeft->data[3][0] * aRight.w);
   toReturn.y =
     (aLeft->data[0][1] * aRight.x) +
     (aLeft->data[1][1] * aRight.y) +
-    (aLeft->data[2][1] * aRight.z);
+    (aLeft->data[2][1] * aRight.z) +
+    (aLeft->data[3][1] * aRight.w);
   toReturn.z =
     (aLeft->data[0][2] * aRight.x) +
     (aLeft->data[1][2] * aRight.y) +
-    (aLeft->data[2][2] * aRight.z);
+    (aLeft->data[2][2] * aRight.z) +
+    (aLeft->data[3][2] * aRight.w);
+  toReturn.w =
+    (aLeft->data[0][3] * aRight.x) +
+    (aLeft->data[1][3] * aRight.y) +
+    (aLeft->data[2][3] * aRight.z) +
+    (aLeft->data[3][3] * aRight.w);
 
   return toReturn;
 }
