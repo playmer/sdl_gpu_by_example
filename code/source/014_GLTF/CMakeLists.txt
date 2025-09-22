@@ -7,6 +7,8 @@ endif()
 
 add_executable(014_GLTF)
 
+target_compile_definitions(014_GLTF PRIVATE TARGET_NAME="014_GLTF")
+
 target_sources(014_GLTF
 PRIVATE
     014_GLTF.c

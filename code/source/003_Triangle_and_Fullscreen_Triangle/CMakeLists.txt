@@ -7,6 +7,8 @@ endif()
 
 add_executable(003_Triangle_and_Fullscreen_Triangle)
 
+target_compile_definitions(003_Triangle_and_Fullscreen_Triangle PRIVATE TARGET_NAME="003_Triangle_and_Fullscreen_Triangle")
+
 target_sources(003_Triangle_and_Fullscreen_Triangle
 PRIVATE
     003_Triangle_and_Fullscreen_Triangle.c

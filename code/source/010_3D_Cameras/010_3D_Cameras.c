@@ -32,6 +32,32 @@ typedef struct float4x4 {
   };
 } float4x4;
 
+typedef struct Transform {
+  float4 mPosition;
+  float4 mScale;
+  float4 mRotation;
+} Transform;
+
+Transform GetDefaultTransform()
+{
+  Transform toReturn;
+
+  toReturn.mPosition.x = 0.f;
+  toReturn.mPosition.y = 0.f;
+  toReturn.mPosition.z = 0.f;
+  toReturn.mPosition.w = 0.f;
+  toReturn.mScale.x = 1.f;
+  toReturn.mScale.y = 1.f;
+  toReturn.mScale.z = 1.f;
+  toReturn.mScale.w = 1.f;
+  toReturn.mRotation.x = 0.f;
+  toReturn.mRotation.y = 0.f;
+  toReturn.mRotation.z = 0.f;
+  toReturn.mRotation.w = 0.f;
+
+  return toReturn;
+}
+
 //////////////////////////////////////////////////////
 // Downcasts
 
@@ -438,10 +464,10 @@ float4x4 RotationMatrix(float4 aPosition) {
   return Float4x4_Multiply(&zRotation, &xyRotation);
 }
 
-float4x4 CreateModelMatrix(float4 aPosition, float4 aScale, float4 aRotation) {
-  float4x4 translation = TranslationMatrix(aPosition);
-  float4x4 rotation = RotationMatrix(aRotation);
-  float4x4 scale = ScaleMatrix(aScale);
+float4x4 CreateModelMatrix(const Transform* aTransform) {
+  float4x4 translation = TranslationMatrix(aTransform->mPosition);
+  float4x4 rotation = RotationMatrix(aTransform->mRotation);
+  float4x4 scale = ScaleMatrix(aTransform->mScale);
 
   float4x4 scale_rotation = Float4x4_Multiply(&rotation, &scale);
 
@@ -602,7 +628,7 @@ SDL_GPUShader* CreateShader(
   SDL_PropertiesID aProperties)
 {
   char shader_path[4096];
-  SDL_snprintf(shader_path, SDL_arraysize(shader_path), "Assets/Shaders/%s.%s", aShaderFilename, gContext.mChosenBackendFormatExtension);
+  SDL_snprintf(shader_path, SDL_arraysize(shader_path), "Assets/Shaders/%s/%s.%s", TARGET_NAME, aShaderFilename, gContext.mChosenBackendFormatExtension);
 
   size_t fileSize = 0;
   void* fileData = SDL_LoadFile(shader_path, &fileSize);
@@ -816,19 +842,13 @@ SDL_GPUBuffer* CreateAndUploadBuffer(const void* aData, size_t aSize, SDL_GPUBuf
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Technique Code
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-typedef struct CubeUbo {
-  float4 mPosition;
-  float4 mScale;
-  float4 mRotation;
-} CubeUbo;
-
 typedef struct CubeContext {
   SDL_GPUGraphicsPipeline* mPipeline;
   SDL_GPUTexture* mTexture;
   SDL_GPUSampler* mSampler;
   SDL_GPUBuffer* mVertexBuffer;
   SDL_GPUBuffer* mIndexBuffer;
-  CubeUbo mUbo[2];
+  Transform mUbo[2];
 } CubeContext;
 
 CubeContext CreateCubeContext(SDL_GPUTextureFormat aDepthFormat) {
@@ -876,13 +896,13 @@ CubeContext CreateCubeContext(SDL_GPUTextureFormat aDepthFormat) {
 
 
   // Remember to come back to this later in the tutorial, don't show it off immediately.
-  graphicsPipelineCreateInfo.depth_stencil_state.compare_op = SDL_GPU_COMPAREOP_LESS_OR_EQUAL;
+  graphicsPipelineCreateInfo.depth_stencil_state.compare_op = SDL_GPU_COMPAREOP_GREATER_OR_EQUAL;
 
   graphicsPipelineCreateInfo.depth_stencil_state.enable_depth_test = true;
   graphicsPipelineCreateInfo.depth_stencil_state.enable_depth_write = true;
 
   graphicsPipelineCreateInfo.vertex_shader = CreateShader(
-    "Cube.vert",
+    "VertexAndIndexBuffer.vert",
     SDL_GPU_SHADERSTAGE_VERTEX,
     0,
     2,
@@ -893,7 +913,7 @@ CubeContext CreateCubeContext(SDL_GPUTextureFormat aDepthFormat) {
   SDL_assert(graphicsPipelineCreateInfo.vertex_shader);
 
   graphicsPipelineCreateInfo.fragment_shader = CreateShader(
-    "Cube.frag",
+    "VertexAndIndexBuffer.frag",
     SDL_GPU_SHADERSTAGE_FRAGMENT,
     1,
     0,
@@ -997,7 +1017,7 @@ void DrawCubeContext(CubeContext* aPipeline, SDL_GPUCommandBuffer* aCommandBuffe
 {
   SDL_BindGPUGraphicsPipeline(aRenderPass, aPipeline->mPipeline);
 
-  float4x4 model = CreateModelMatrix(aPipeline->mUbo[0].mPosition, aPipeline->mUbo[0].mScale, aPipeline->mUbo[0].mRotation);
+  float4x4 model = CreateModelMatrix(&aPipeline->mUbo[0]);
 
   SDL_PushGPUVertexUniformData(aCommandBuffer, 0, &model, sizeof(model));
   SDL_PushGPUVertexUniformData(aCommandBuffer, 1, &gContext.WorldToNDC, sizeof(gContext.WorldToNDC));
@@ -1028,7 +1048,7 @@ void DrawCubeContext(CubeContext* aPipeline, SDL_GPUCommandBuffer* aCommandBuffe
   SDL_DrawGPUPrimitives(aRenderPass, 6 /* 6 per face */ * 6 /* 6 sides of our cube */, 1, 0, 0);
 
   // Draw the second cube, make sure to recalculate the model matrix for it and reupload it.
-  model = CreateModelMatrix(aPipeline->mUbo[1].mPosition, aPipeline->mUbo[1].mScale, aPipeline->mUbo[1].mRotation);
+  model = CreateModelMatrix(&aPipeline->mUbo[1]);
   SDL_PushGPUVertexUniformData(aCommandBuffer, 0, &model, sizeof(model));
   SDL_DrawGPUPrimitives(aRenderPass, 6 /* 6 per face */ * 6 /* 6 sides of our cube */, 1, 0, 0);
 }
@@ -1049,7 +1069,7 @@ int main(int argc, char** argv)
   (void)argv;
   SDL_assert(SDL_Init(SDL_INIT_VIDEO));
 
-  SDL_Window* window = SDL_CreateWindow("SDL GPU Example", 1280, 720, 0);
+  SDL_Window* window = SDL_CreateWindow(TARGET_NAME, 1280, 720, 0);
   SDL_assert(window);
 
   CreateGpuContext(window);
@@ -1060,6 +1080,7 @@ int main(int argc, char** argv)
   SDL_GPUTextureFormat depthFormat = GetSupportedDepthFormat();
 
   CubeContext cubeContext = CreateCubeContext(depthFormat);
+  Transform cameraTransform = GetDefaultTransform();
 
   const float speed = 5.f;
   Uint64 last_frame_ticks_so_far = SDL_GetTicksNS();
@@ -1090,10 +1111,16 @@ int main(int argc, char** argv)
       20.0f, 60.0f
     );
 
-    if (key_map[SDL_SCANCODE_D])        cubeContext.mUbo[0].mPosition.x += speed * dt * 1.0f;
-    if (key_map[SDL_SCANCODE_A])        cubeContext.mUbo[0].mPosition.x -= speed * dt * 1.0f;
-    if (key_map[SDL_SCANCODE_W])        cubeContext.mUbo[0].mPosition.y += speed * dt * 1.0f;
-    if (key_map[SDL_SCANCODE_S])        cubeContext.mUbo[0].mPosition.y -= speed * dt * 1.0f;
+
+    if (key_map[SDL_SCANCODE_D])        cameraTransform.mPosition.x += speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_A])        cameraTransform.mPosition.x -= speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_W])        cameraTransform.mPosition.y += speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_S])        cameraTransform.mPosition.y -= speed * dt * 1.0f;
+
+    if (key_map[SDL_SCANCODE_RIGHT])    cubeContext.mUbo[0].mPosition.x += speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_LEFT])     cubeContext.mUbo[0].mPosition.x -= speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_UP])       cubeContext.mUbo[0].mPosition.y += speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_DOWN])     cubeContext.mUbo[0].mPosition.y -= speed * dt * 1.0f;
     if (key_map[SDL_SCANCODE_E])        cubeContext.mUbo[0].mPosition.z += speed * dt * 1.0f;
     if (key_map[SDL_SCANCODE_Q])        cubeContext.mUbo[0].mPosition.z -= speed * dt * 1.0f;
     if (key_map[SDL_SCANCODE_R])        cubeContext.mUbo[0].mScale.x += speed * dt * 1.0f;
@@ -1104,8 +1131,8 @@ int main(int argc, char** argv)
     if (key_map[SDL_SCANCODE_DELETE])   cubeContext.mUbo[0].mRotation.x -= speed * dt * 1.0f;
     if (key_map[SDL_SCANCODE_HOME])     cubeContext.mUbo[0].mRotation.y += speed * dt * 1.0f;
     if (key_map[SDL_SCANCODE_END])      cubeContext.mUbo[0].mRotation.y -= speed * dt * 1.0f;
-    if (key_map[SDL_SCANCODE_PAGEUP])   cubeContext.mUbo[0].mRotation.y += speed * dt * 1.0f;
-    if (key_map[SDL_SCANCODE_PAGEDOWN]) cubeContext.mUbo[0].mRotation.y -= speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_PAGEUP])   cubeContext.mUbo[0].mRotation.z += speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_PAGEDOWN]) cubeContext.mUbo[0].mRotation.z -= speed * dt * 1.0f;
 
     SDL_GPUCommandBuffer* commandBuffer = SDL_AcquireGPUCommandBuffer(gContext.mDevice);
     if (!commandBuffer)
@@ -1150,8 +1177,8 @@ int main(int argc, char** argv)
     SDL_zero(depthStencilTargetInfo);
 
     depthStencilTargetInfo.texture = depthTexture;
-    depthStencilTargetInfo.clear_depth = 1.f;
-    depthStencilTargetInfo.clear_stencil = 1.f;
+    depthStencilTargetInfo.clear_depth = 0.f;
+    depthStencilTargetInfo.clear_stencil = 0.f;
     depthStencilTargetInfo.load_op = SDL_GPU_LOADOP_CLEAR;
     depthStencilTargetInfo.store_op = SDL_GPU_STOREOP_DONT_CARE;
     depthStencilTargetInfo.stencil_load_op = SDL_GPU_LOADOP_CLEAR;

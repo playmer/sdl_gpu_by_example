@@ -7,6 +7,8 @@ endif()
 
 add_executable(006_The_Object_to_NDC_Pipeline)
 
+target_compile_definitions(006_The_Object_to_NDC_Pipeline PRIVATE TARGET_NAME="006_The_Object_to_NDC_Pipeline")
+
 target_sources(006_The_Object_to_NDC_Pipeline
 PRIVATE
     006_The_Object_to_NDC_Pipeline.c

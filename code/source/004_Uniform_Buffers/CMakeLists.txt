@@ -7,6 +7,8 @@ endif()
 
 add_executable(004_Uniform_Buffers)
 
+target_compile_definitions(004_Uniform_Buffers PRIVATE TARGET_NAME="004_Uniform_Buffers")
+
 target_sources(004_Uniform_Buffers
 PRIVATE
     004_Uniform_Buffers.c

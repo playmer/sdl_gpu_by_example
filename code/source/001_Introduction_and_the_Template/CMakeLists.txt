@@ -9,6 +9,10 @@ endif()
 # but for now we'll just declare this. (There are also library targets, which is what SDL is.)
 add_executable(001_Introduction_and_the_Template)
 
+# This allows us to set a #define for our C files to access, we're just using it to make a string
+# with the name of this target.
+target_compile_definitions(001_Introduction_and_the_Template PRIVATE TARGET_NAME="001_Introduction_and_the_Template")
+
 # Target sources allows us to add source files to our target. When writing an executable, you'll
 # need one of these to contain the definition of `main`.
 #

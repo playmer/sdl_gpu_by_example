@@ -1,6 +1,6 @@
 # Please don't ask how to understand this yet...I'll get around to documenting it line by line.
 macro(find_and_compile_shaders aShaderCrossExecutable aTarget aShaderDirectory aOutputDirectory)
-    file(MAKE_DIRECTORY ${aOutputDirectory})
+    file(MAKE_DIRECTORY ${aOutputDirectory}/${aTarget})
     file(GLOB ShadersSources 
         CONFIGURE_DEPENDS
         "${aShaderDirectory}/*.comp.hlsl"
@@ -23,9 +23,9 @@ macro(find_and_compile_shaders aShaderCrossExecutable aTarget aShaderDirectory a
             set(shaderStage fragment)
         endif()
         
-        set(spirvShader ${aOutputDirectory}/${shaderFilename}${shaderExtension}.spv)
-        set(mslShader ${aOutputDirectory}/${shaderFilename}${shaderExtension}.msl)
-        set(dxilShader ${aOutputDirectory}/${shaderFilename}${shaderExtension}.dxil)
+        set(spirvShader ${aOutputDirectory}/${aTarget}/${shaderFilename}${shaderExtension}.spv)
+        set(mslShader ${aOutputDirectory}/${aTarget}/${shaderFilename}${shaderExtension}.msl)
+        set(dxilShader ${aOutputDirectory}/${aTarget}/${shaderFilename}${shaderExtension}.dxil)
             
         add_custom_command(OUTPUT ${spirvShader} ${mslShader} ${dxilShader}
             COMMAND ${aShaderCrossExecutable} ARGS ${shader} -g --source HLSL --dest SPIRV --stage ${shaderStage} --output ${spirvShader}

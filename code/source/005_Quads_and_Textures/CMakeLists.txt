@@ -7,6 +7,8 @@ endif()
 
 add_executable(005_Quads_and_Textures)
 
+target_compile_definitions(005_Quads_and_Textures PRIVATE TARGET_NAME="005_Quads_and_Textures")
+
 target_sources(005_Quads_and_Textures
 PRIVATE
     005_Quads_and_Textures.c

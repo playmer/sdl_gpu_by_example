@@ -7,6 +7,8 @@ endif()
 
 add_executable(008_Depth)
 
+target_compile_definitions(008_Depth PRIVATE TARGET_NAME="008_Depth")
+
 target_sources(008_Depth
 PRIVATE
     008_Depth.c

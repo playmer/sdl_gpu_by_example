@@ -7,6 +7,8 @@ endif()
 
 add_executable(002_Window_and_Clearing)
 
+target_compile_definitions(002_Window_and_Clearing PRIVATE TARGET_NAME="002_Window_and_Clearing")
+
 target_sources(002_Window_and_Clearing
 PRIVATE
     002_Window_and_Clearing.c

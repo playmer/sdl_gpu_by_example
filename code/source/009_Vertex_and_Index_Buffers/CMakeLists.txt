@@ -7,6 +7,8 @@ endif()
 
 add_executable(009_Vertex_and_Index_Buffers)
 
+target_compile_definitions(009_Vertex_and_Index_Buffers PRIVATE TARGET_NAME="009_Vertex_and_Index_Buffers")
+
 target_sources(009_Vertex_and_Index_Buffers
 PRIVATE
     009_Vertex_and_Index_Buffers.c

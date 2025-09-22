@@ -7,6 +7,8 @@ endif()
 
 add_executable(010_3D_Cameras)
 
+target_compile_definitions(010_3D_Cameras PRIVATE TARGET_NAME="010_3D_Cameras")
+
 target_sources(010_3D_Cameras
 PRIVATE
     010_3D_Cameras.c

@@ -7,6 +7,8 @@ endif()
 
 add_executable(007_The_Cube_and_Math)
 
+target_compile_definitions(007_The_Cube_and_Math PRIVATE TARGET_NAME="002_Window_and_Clearing")
+
 target_sources(007_The_Cube_and_Math
 PRIVATE
     007_The_Cube_and_Math.c

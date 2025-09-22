@@ -74,7 +74,7 @@ int main(int argc, char** argv)
   (void)argv;
   SDL_assert(SDL_Init(SDL_INIT_VIDEO));
 
-  SDL_Window* window = SDL_CreateWindow("002-Window_and_Clearing", 1280, 720, 0);
+  SDL_Window* window = SDL_CreateWindow(TARGET_NAME, 1280, 720, 0);
   SDL_assert(window);
 
   CreateGpuContext(window);
