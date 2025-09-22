@@ -308,21 +308,53 @@ float4x4 Float4x4_Multiply(const float4x4* aLeft, const float4x4* aRight)
 
 float4x4 Float4x4_Inverse(const float4x4* aValue)
 {
-  float4x4 toReturn;
-  SDL_zero(toReturn);
-
-  const float4 a = { aValue->data[0][0], aValue->data[0][1], aValue->data[0][2], aValue->data[0][3] };
-  const float4 b = { aValue->data[1][0], aValue->data[1][1], aValue->data[1][2], aValue->data[1][3] };
-  const float4 c = { aValue->data[2][0], aValue->data[2][1], aValue->data[2][2], aValue->data[2][3] };
-  const float4 d = { aValue->data[3][0], aValue->data[3][1], aValue->data[3][2], aValue->data[3][3] };
+  const float3 a = Float4_XYZ(aValue->columns[0]);
+  const float3 b = Float4_XYZ(aValue->columns[1]);
+  const float3 c = Float4_XYZ(aValue->columns[2]);
+  const float3 d = Float4_XYZ(aValue->columns[3]);
 
   const float x = a.x;
   const float y = b.y;
   const float z = c.z;
-  const float w = d.w;
+  const float w = aValue->data[3][3];
 
-  const float3 s = Float4_Cross(a, b);
-  const float3 t = Float4_Cross(c, d);
+  const float3 s = Float3_Cross(a, b);
+  const float3 t = Float3_Cross(c, d);
+  const float3 u = Float3_Add(Float3_Scalar_Multiply(a, y), Float3_Scalar_Multiply(b, x));
+  const float3 v = Float3_Subtract(Float3_Scalar_Multiply(c, w), Float3_Scalar_Multiply(d, z));
+
+  const float determinant_inverse = 1.0f / (Float3_Dot(s, v) + Float3_Dot(t, u));
+
+  const float3 s_prime = Float3_Scalar_Multiply(s, determinant_inverse);
+  const float3 t_prime = Float3_Scalar_Multiply(t, determinant_inverse);
+  const float3 u_prime = Float3_Scalar_Multiply(u, determinant_inverse);
+  const float3 v_prime = Float3_Scalar_Multiply(v, determinant_inverse);
+
+  const float3 row0 =      Float3_Add(Float3_Cross(      b, v_prime), Float3_Scalar_Multiply(t_prime, y));
+  const float3 row1 = Float3_Subtract(Float3_Cross(v_prime,       a), Float3_Scalar_Multiply(t_prime, x));
+  const float3 row2 =      Float3_Add(Float3_Cross(      d, u_prime), Float3_Scalar_Multiply(s_prime, w));
+  const float3 row3 = Float3_Subtract(Float3_Cross(u_prime,       c), Float3_Scalar_Multiply(s_prime, z));
+
+  float4x4 toReturn;
+  toReturn.data[0][0] = row0.x;
+  toReturn.data[0][1] = row1.x;
+  toReturn.data[0][2] = row2.x;
+  toReturn.data[0][3] = row3.x;
+
+  toReturn.data[1][0] = row0.y;
+  toReturn.data[1][1] = row1.y;
+  toReturn.data[1][2] = row2.y;
+  toReturn.data[1][3] = row3.y;
+
+  toReturn.data[2][0] = row0.z;
+  toReturn.data[2][1] = row1.z;
+  toReturn.data[2][2] = row2.z;
+  toReturn.data[2][3] = row3.z;
+
+  toReturn.data[3][0] = -Float3_Dot(b, t_prime);
+  toReturn.data[3][1] =  Float3_Dot(a, t_prime);;
+  toReturn.data[3][2] = -Float3_Dot(d, s_prime);;
+  toReturn.data[3][3] =  Float3_Dot(c, s_prime);;
 
   return toReturn;
 }
