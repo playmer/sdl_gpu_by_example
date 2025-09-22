@@ -605,7 +605,6 @@ fn get_toc_from_content_html(title: &String, html: &String) -> Option<Value> {
         children: Vec::new()
     });
 
-
     let document: Html = Html::parse_document(&html);
     let h1_selector = Selector::parse("h1, h2, h3, h4, h5, h6").unwrap();
     let mut last_level = 1;
@@ -782,6 +781,7 @@ fn process_content() -> Vec<(PathBuf, String)> {
     let inserts = get_inserts();
 
     for content in contents {
+        println!("Processing {} content", content.file_name);
         let template_path = template_dir.join(content.front_matter["template"].as_str().unwrap());
         let template_html = std::fs::read_to_string(&template_path).unwrap();
         let current_content_context = get_specific_content_context(&handlebars, &template_context, &inserts, &content);

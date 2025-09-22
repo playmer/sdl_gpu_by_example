@@ -29,7 +29,3 @@ That would then get multiplied against some matrix we computed for this _instanc
 
 
 So this Matrix is intended to transform from Object Space to World Space, but it turns out, that we can reverse that as well. If we have an Object in World Space, we can use the inverse of this Model Matrix
-
-
-
-##
