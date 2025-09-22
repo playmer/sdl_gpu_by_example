@@ -32,12 +32,33 @@ float4x4 Float4x4_Multiply(const float4x4* aLeft, const float4x4* aRight)
 {
   float4x4 toReturn;
   SDL_zero(toReturn);
-  
-  for (size_t j = 0; j < 4; ++j) // Column
-    for (size_t i = 0; i < 4; ++i) // Row
-      for (size_t n = 0; n < 4; ++n) // Iterative Muls
-        toReturn.data[j][i] += aLeft->data[n][i] * aRight->data[j][n];
 
+  for (size_t i = 0; i < 4; ++i)
+  {
+    toReturn.data[i][0] =
+      aLeft->data[0][0] * aRight->data[i][0] +
+      aLeft->data[1][0] * aRight->data[i][1] +
+      aLeft->data[2][0] * aRight->data[i][2] +
+      aLeft->data[3][0] * aRight->data[i][3];
+
+    toReturn.data[i][1] =
+      aLeft->data[0][1] * aRight->data[i][0] +
+      aLeft->data[1][1] * aRight->data[i][1] +
+      aLeft->data[2][1] * aRight->data[i][2] +
+      aLeft->data[3][1] * aRight->data[i][3];
+
+    toReturn.data[i][2] =
+      aLeft->data[0][2] * aRight->data[i][0] +
+      aLeft->data[1][2] * aRight->data[i][1] +
+      aLeft->data[2][2] * aRight->data[i][2] +
+      aLeft->data[3][2] * aRight->data[i][3];
+
+    toReturn.data[i][3] =
+      aLeft->data[0][3] * aRight->data[i][0] +
+      aLeft->data[1][3] * aRight->data[i][1] +
+      aLeft->data[2][3] * aRight->data[i][2] +
+      aLeft->data[3][3] * aRight->data[i][3];
+  }
   return toReturn;
 }
 
