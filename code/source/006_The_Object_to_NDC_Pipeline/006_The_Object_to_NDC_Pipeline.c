@@ -14,7 +14,7 @@ namespace cpp_test {
 // MATH
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 typedef struct float4 {
-  float x,y,z,w;
+  float x, y, z, w;
 } float4;
 
 typedef struct float4x4 {
@@ -24,7 +24,11 @@ typedef struct float4x4 {
   };
 } float4x4;
 
-float4x4 float4x4_multiply(const float4x4* aLeft, const float4x4* aRight)
+
+//////////////////////////////////////////////////////
+// Matrix Operations
+
+float4x4 Float4x4_Multiply(const float4x4* aLeft, const float4x4* aRight)
 {
   float4x4 toReturn;
   SDL_zero(toReturn);
