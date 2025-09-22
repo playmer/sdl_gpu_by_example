@@ -52,6 +52,13 @@ macro(find_and_compile_shaders aShaderCrossExecutable aTarget aShaderDirectory a
     endforeach(shader)
 endmacro()
 
+macro(test_example_as_cpp_if_toplevel aTarget)
+    if (NOT PROJECT_IS_TOP_LEVEL)
+        configure_file(${CMAKE_CURRENT_SOURCE_DIR}/${aTarget}.c ${CMAKE_CURRENT_BINARY_DIR}/${aTarget}.cpp)
+        target_sources(${aTarget} PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/${aTarget}.cpp)
+    endif()
+endmacro()
+
 macro(list_directories result)
     message(STATUS "List Dir: ${CMAKE_CURRENT_LIST_DIR}")
     #file(GLOB children LIST_DIRECTORIES true RELATIVE CONFIGURE_DEPENDS ${CMAKE_CURRENT_LIST_DIR})

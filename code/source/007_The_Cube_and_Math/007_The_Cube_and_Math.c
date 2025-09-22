@@ -1,23 +1,271 @@
 #include <SDL3/SDL.h>
-#include <SDL3/SDL_main.h>
 #include <SDL3/SDL_stdinc.h>
+
+// This is for testing to ensure the code works in both C and C++,
+// this entire preprocessor block should just be the #include
+// in your own code.
+#ifndef __cplusplus
+#include <SDL3/SDL_main.h>
+#else
+namespace cpp_test {
+#endif
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // MATH
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+typedef struct float2 {
+  float x, y;
+} float2;
+
+typedef struct float3 {
+  float x, y, z;
+} float3;
+
 typedef struct float4 {
-  float x,y,z,w;
+  float x, y, z, w;
 } float4;
 
 typedef struct float4x4 {
   float columns[4][4];
 } float4x4;
 
+//////////////////////////////////////////////////////
+// Downcasts
+
+float2 Float3_XY(float3 aValue) {
+  float2 toReturn = { aValue.x, aValue.y };
+  return toReturn;
+}
+
+float2 Float4_XY(float4 aValue) {
+  float2 toReturn = { aValue.x, aValue.y };
+  return toReturn;
+}
+
+float3 Float4_XYZ(float4 aValue) {
+  float3 toReturn = { aValue.x, aValue.y, aValue.z };
+  return toReturn;
+}
+
+//////////////////////////////////////////////////////
+// Subtraction
+
+float2 Float2_Subtract(float2 aLeft, float2 aRight) {
+  float2 toReturn = { aLeft.x - aRight.x, aLeft.y - aRight.y };
+  return toReturn;
+}
+
+float3 Float3_Subtract(float3 aLeft, float3 aRight) {
+  float3 toReturn = { aLeft.x - aRight.x, aLeft.y - aRight.y, aLeft.z - aRight.z };
+  return toReturn;
+}
+
+float4 Float4_Subtract(float4 aLeft, float4 aRight) {
+  float4 toReturn = { aLeft.x - aRight.x, aLeft.y - aRight.y, aLeft.z - aRight.z, aLeft.w - aRight.w };
+  return toReturn;
+}
+
+//////////////////////////////////////////////////////
+// Addition
+
+float2 Float2_Add(float2 aLeft, float2 aRight) {
+  float2 toReturn = { aLeft.x + aRight.x, aLeft.y + aRight.y };
+  return toReturn;
+}
+
+float3 Float3_Add(float3 aLeft, float3 aRight) {
+  float3 toReturn = { aLeft.x + aRight.x, aLeft.y + aRight.y, aLeft.z + aRight.z };
+  return toReturn;
+}
+
+float4 Float4_Add(float4 aLeft, float4 aRight) {
+  float4 toReturn = { aLeft.x + aRight.x, aLeft.y + aRight.y, aLeft.z + aRight.z, aLeft.w + aRight.w };
+  return toReturn;
+}
+
+//////////////////////////////////////////////////////
+// Scalar Addition
+
+float2 Float2_Scalar_Add(float2 aLeft, float aRight) {
+  float2 toReturn = { aLeft.x + aRight, aLeft.y + aRight };
+  return toReturn;
+}
+
+float3 Float3_Scalar_Add(float3 aLeft, float aRight) {
+  float3 toReturn = { aLeft.x + aRight, aLeft.y + aRight, aLeft.z + aRight };
+  return toReturn;
+}
+
+float4 Float4_Scalar_Add(float4 aLeft, float aRight) {
+  float4 toReturn = { aLeft.x + aRight, aLeft.y + aRight, aLeft.z + aRight, aLeft.w + aRight };
+  return toReturn;
+}
+
+//////////////////////////////////////////////////////
+// Scalar Multiplication
+
+float2 Float2_Scalar_Multiply(float2 aLeft, float aRight) {
+  float2 toReturn = { aLeft.x * aRight, aLeft.y * aRight };
+  return toReturn;
+}
+
+float3 Float3_Scalar_Multiply(float3 aLeft, float aRight) {
+  float3 toReturn = { aLeft.x * aRight, aLeft.y * aRight, aLeft.z * aRight };
+  return toReturn;
+}
+
+float4 Float4_Scalar_Multiply(float4 aLeft, float aRight) {
+  float4 toReturn = { aLeft.x * aRight, aLeft.y * aRight, aLeft.z * aRight, aLeft.w * aRight };
+  return toReturn;
+}
+
+//////////////////////////////////////////////////////
+// Scalar Multiplication
+
+float2 Float2_Scalar_Division(float2 aLeft, float aRight) {
+  float2 toReturn = { aLeft.x / aRight, aLeft.y / aRight };
+  return toReturn;
+}
+
+float3 Float3_Scalar_Division(float3 aLeft, float aRight) {
+  float3 toReturn = { aLeft.x / aRight, aLeft.y / aRight, aLeft.z / aRight };
+  return toReturn;
+}
+
+float4 Float4_Scalar_Division(float4 aLeft, float aRight) {
+  float4 toReturn = { aLeft.x / aRight, aLeft.y / aRight, aLeft.z / aRight, aLeft.w / aRight };
+  return toReturn;
+}
+
+//////////////////////////////////////////////////////
+// Dot Product
+
+float Float2_Dot(float2 aLeft, float2 aRight) {
+  return
+    (aLeft.x * aRight.x) +
+    (aLeft.y * aRight.y);
+}
+
+float Float3_Dot(float3 aLeft, float3 aRight) {
+  return
+    (aLeft.x * aRight.x) +
+    (aLeft.y * aRight.y) +
+    (aLeft.z * aRight.z);
+}
+
+float Float4_Dot(float4 aLeft, float4 aRight) {
+  return
+    (aLeft.x * aRight.x) +
+    (aLeft.y * aRight.y) +
+    (aLeft.z * aRight.z) +
+    (aLeft.w * aRight.w);
+}
+
+//////////////////////////////////////////////////////
+// Cross Product
+
+float3 Float3_Cross(float3 aLeft, float3 aRight) {
+  float3 toReturn = {
+    (aLeft.y * aRight.z) - (aLeft.z * aRight.y),
+    (aLeft.z * aRight.x) - (aLeft.x * aRight.z),
+    (aLeft.x * aRight.y) - (aLeft.y * aRight.x)
+  };
+
+  return toReturn;
+}
+
+// Convience function that ignores the 4th component, assuming it was irrelevant.
+float3 Float4_Cross(float4 aLeft, float4 aRight) {
+  float3 toReturn = {
+    (aLeft.y * aRight.z) - (aLeft.z * aRight.y),
+    (aLeft.z * aRight.x) - (aLeft.x * aRight.z),
+    (aLeft.x * aRight.y) - (aLeft.y * aRight.x)
+  };
+
+  return toReturn;
+}
+
+//////////////////////////////////////////////////////
+// Magnitude
+
+float Float2_Magnitude(float2 aValue) {
+  return SDL_sqrt(Float2_Dot(aValue, aValue));
+}
+
+float Float3_Magnitude(float3 aValue) {
+  return SDL_sqrt(Float3_Dot(aValue, aValue));
+}
+
+float Float4_Magnitude(float4 aValue) {
+  return SDL_sqrt(Float4_Dot(aValue, aValue));
+}
+
+//////////////////////////////////////////////////////
+// Normalization
+
+float2 Float2_Normalize(float2 aValue) {
+  float magnitude = Float2_Magnitude(aValue);
+
+  float2 toReturn = {
+    aValue.x / magnitude,
+    aValue.y / magnitude
+  };
+
+  return toReturn;
+}
+
+float3 Float3_Normalize(float3 aValue) {
+  float magnitude = Float3_Magnitude(aValue);
+
+  float3 toReturn = {
+    aValue.x / magnitude,
+    aValue.y / magnitude,
+    aValue.z / magnitude
+  };
+
+  return toReturn;
+}
+
+float4 Float4_Normalize(float4 aValue) {
+  float magnitude = Float4_Magnitude(aValue);
+
+  float4 toReturn = {
+    aValue.x / magnitude,
+    aValue.y / magnitude,
+    aValue.z / magnitude,
+    aValue.w / magnitude
+  };
+
+  return toReturn;
+}
+
+//////////////////////////////////////////////////////
+// Matrix Operations
+
+float4 Float4x4_Float4_Multiply(const float4x4* aLeft, const float4 aRight)
+{
+  float4 toReturn;
+  toReturn.x =
+    (aLeft->columns[0][0] * aRight.x) +
+    (aLeft->columns[1][0] * aRight.y) +
+    (aLeft->columns[2][0] * aRight.z);
+  toReturn.y =
+    (aLeft->columns[0][1] * aRight.x) +
+    (aLeft->columns[1][1] * aRight.y) +
+    (aLeft->columns[2][1] * aRight.z);
+  toReturn.z =
+    (aLeft->columns[0][2] * aRight.x) +
+    (aLeft->columns[1][2] * aRight.y) +
+    (aLeft->columns[2][2] * aRight.z);
+
+  return toReturn;
+}
+
 float4x4 Float4x4_Multiply(const float4x4* aLeft, const float4x4* aRight)
 {
   float4x4 toReturn;
   SDL_zero(toReturn);
-  
+
   for (size_t j = 0; j < 4; ++j) // Column
     for (size_t i = 0; i < 4; ++i) // Row
       for (size_t n = 0; n < 4; ++n) // Iterative Muls
@@ -25,6 +273,10 @@ float4x4 Float4x4_Multiply(const float4x4* aLeft, const float4x4* aRight)
 
   return toReturn;
 }
+
+
+////////////////////////////////////////////////////////////
+/// Core Matrices
 
 float4x4 IdentityMatrix() {
   float4x4 toReturn;
@@ -128,17 +380,18 @@ float4x4 OrthographicProjectionLHZO(float aLeft, float aRight, float aBottom, fl
   return toReturn;
 }
 
-float4x4 PerspectiveProjectionLHZO(float aFov, float aAspectRatio, float aNear, float aFar) {
+float4x4 PerspectiveProjectionLHZO(float aFovY, float aAspectRatio, float aNear, float aFar) {
   float4x4 toReturn;
   SDL_zero(toReturn);
 
-  const float tanHalfFovy = SDL_tan(aFov / 2.0f);
+  const float focalLength = 1.0f / SDL_tan(aFovY * .5f);
+  const float k = aFar / (aFar - aNear);
 
-  toReturn.columns[0][0] = 1.0f / (aAspectRatio * tanHalfFovy);
-  toReturn.columns[1][1] = 1.0f / (tanHalfFovy);
-  toReturn.columns[2][2] = aFar / (aFar - aNear);
+  toReturn.columns[0][0] = focalLength / aAspectRatio;
+  toReturn.columns[1][1] = focalLength;
+  toReturn.columns[2][2] = k;
   toReturn.columns[2][3] = 1.0f;
-  toReturn.columns[3][2] = -(aFar * aNear) / (aFar - aNear);
+  toReturn.columns[3][2] = -aNear * k;
 
   return toReturn;
 }
@@ -229,7 +482,7 @@ SDL_GPUShader* CreateShader(
 
   shaderCreateInfo.entrypoint = gContext.mShaderEntryPoint;
   shaderCreateInfo.format = gContext.mChosenBackendFormat;
-  shaderCreateInfo.code = fileData;
+  shaderCreateInfo.code = (Uint8*)fileData;
   shaderCreateInfo.code_size = fileSize;
   shaderCreateInfo.stage = aShaderStage;
   shaderCreateInfo.num_samplers = aSamplerCount;
@@ -297,7 +550,7 @@ SDL_GPUTexture* CreateAndUploadTexture(SDL_GPUCopyPass* aCopyPass, const char* a
   }
 
   SDL_GPUTransferBuffer* transferBuffer = SDL_CreateGPUTransferBuffer(gContext.mDevice, &transferCreateInfo);
-  uint8_t *transferPtr = SDL_MapGPUTransferBuffer(gContext.mDevice, transferBuffer, false);
+  void* transferPtr = SDL_MapGPUTransferBuffer(gContext.mDevice, transferBuffer, false);
   memcpy(transferPtr, surface->pixels, transferCreateInfo.size);
   SDL_UnmapGPUTransferBuffer(gContext.mDevice, transferBuffer);
 
@@ -398,34 +651,34 @@ CubeContext CreateCubeContext() {
 
   SDL_assert(SDL_SetStringProperty(gContext.mProperties, SDL_PROP_GPU_SHADER_CREATE_NAME_STRING, "CubeContext"));
 
-  CubeContext pipeline;
-  pipeline.mPipeline = SDL_CreateGPUGraphicsPipeline(gContext.mDevice, &graphicsPipelineCreateInfo);
-  pipeline.mTexture = CreateAndUploadTexture(NULL, "sample");
+  CubeContext context;
+  context.mPipeline = SDL_CreateGPUGraphicsPipeline(gContext.mDevice, &graphicsPipelineCreateInfo);
+  context.mTexture = CreateAndUploadTexture(NULL, "sample");
 
   SDL_GPUSamplerCreateInfo samplerCreateInfo;
   SDL_zero(samplerCreateInfo);
   samplerCreateInfo.address_mode_u = SDL_GPU_SAMPLERADDRESSMODE_REPEAT;
   samplerCreateInfo.address_mode_v = SDL_GPU_SAMPLERADDRESSMODE_REPEAT;
-  pipeline.mSampler = SDL_CreateGPUSampler(gContext.mDevice, &samplerCreateInfo);
-  SDL_assert(pipeline.mPipeline);
+  context.mSampler = SDL_CreateGPUSampler(gContext.mDevice, &samplerCreateInfo);
+  SDL_assert(context.mPipeline);
 
-  pipeline.mUbo.mPosition.x =  0.f;
-  pipeline.mUbo.mPosition.y = -1.f;
-  pipeline.mUbo.mPosition.z =  5.f;
-  pipeline.mUbo.mPosition.w =  0.f;
-  pipeline.mUbo.mScale.x = 0.5f;
-  pipeline.mUbo.mScale.y = 0.5f;
-  pipeline.mUbo.mScale.z = 0.5f;
-  pipeline.mUbo.mScale.w = 0.5f;
-  pipeline.mUbo.mRotation.x = 0.f;
-  pipeline.mUbo.mRotation.y = 0.f;
-  pipeline.mUbo.mRotation.z = 0.f;
-  pipeline.mUbo.mRotation.w = 0.f;
+  context.mUbo.mPosition.x =  0.f;
+  context.mUbo.mPosition.y = -1.f;
+  context.mUbo.mPosition.z =  5.f;
+  context.mUbo.mPosition.w =  0.f;
+  context.mUbo.mScale.x = 0.5f;
+  context.mUbo.mScale.y = 0.5f;
+  context.mUbo.mScale.z = 0.5f;
+  context.mUbo.mScale.w = 0.5f;
+  context.mUbo.mRotation.x = 0.f;
+  context.mUbo.mRotation.y = 0.f;
+  context.mUbo.mRotation.z = 0.f;
+  context.mUbo.mRotation.w = 0.f;
 
   SDL_ReleaseGPUShader(gContext.mDevice, graphicsPipelineCreateInfo.vertex_shader);
   SDL_ReleaseGPUShader(gContext.mDevice, graphicsPipelineCreateInfo.fragment_shader);
 
-  return pipeline;
+  return context;
 }
 
 void DrawCubeContext(CubeContext* aPipeline, SDL_GPUCommandBuffer* aCommandBuffer, SDL_GPURenderPass* aRenderPass)
@@ -562,3 +815,7 @@ int main(int argc, char** argv)
   SDL_Quit();
   return 0;
 }
+
+#ifdef __cplusplus
+} // end cpp_test
+#endif

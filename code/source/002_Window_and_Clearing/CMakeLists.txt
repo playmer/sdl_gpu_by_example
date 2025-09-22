@@ -20,3 +20,5 @@ get_target_property(targetSources 002_Window_and_Clearing SOURCES)
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${targetSources})
 
 set_property(TARGET 002_Window_and_Clearing PROPERTY VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}")
+
+test_example_as_cpp_if_toplevel(002_Window_and_Clearing)

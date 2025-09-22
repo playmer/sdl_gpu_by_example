@@ -62,3 +62,5 @@ source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${targetSources})
 set_property(TARGET 001_Introduction_and_the_Template PROPERTY VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}")
 
 set_vs_startup_project_if_toplevel(001_Introduction_and_the_Template)
+
+test_example_as_cpp_if_toplevel(001_Introduction_and_the_Template)

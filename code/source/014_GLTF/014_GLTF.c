@@ -236,7 +236,7 @@ SDL_GPUShader* CreateShader(
 
   shaderCreateInfo.entrypoint = gContext.mShaderEntryPoint;
   shaderCreateInfo.format = gContext.mChosenBackendFormat;
-  shaderCreateInfo.code = fileData;
+  shaderCreateInfo.code = (Uint8*)fileData;
   shaderCreateInfo.code_size = fileSize;
   shaderCreateInfo.stage = aShaderStage;
   shaderCreateInfo.num_samplers = aSamplerCount;
@@ -304,7 +304,7 @@ SDL_GPUTexture* CreateAndUploadTexture(SDL_GPUCopyPass* aCopyPass, const char* a
   }
 
   SDL_GPUTransferBuffer* transferBuffer = SDL_CreateGPUTransferBuffer(gContext.mDevice, &transferCreateInfo);
-  uint8_t* transferPtr = SDL_MapGPUTransferBuffer(gContext.mDevice, transferBuffer, false);
+  void* transferPtr = SDL_MapGPUTransferBuffer(gContext.mDevice, transferBuffer, false);
   memcpy(transferPtr, surface->pixels, transferCreateInfo.size);
   SDL_UnmapGPUTransferBuffer(gContext.mDevice, transferBuffer);
 

@@ -1,7 +1,13 @@
-#include <stdlib.h>
-
 #include <SDL3/SDL.h>
+
+// This is for testing to ensure the code works in both C and C++,
+// this entire preprocessor block should just be the #include
+// in your own code.
+#ifndef __cplusplus
 #include <SDL3/SDL_main.h>
+#else
+namespace cpp_test {
+#endif
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Shared GPU Code
@@ -79,35 +85,35 @@ int main(int argc, char** argv)
   while (running) {
     SDL_Event event;
     while (SDL_PollEvent(&event)) {
-        switch (event.common.type) {
-          case SDL_EVENT_KEY_UP:
-            if (shown) {
-              SDL_HideWindow(window);
-            } 
-            else {
-              SDL_ShowWindow(window);
-            }
+      switch (event.common.type) {
+        case SDL_EVENT_KEY_UP:
+          if (shown) {
+            SDL_HideWindow(window);
+          } 
+          else {
+            SDL_ShowWindow(window);
+          }
 
-            shown = !shown;
-            break;
-          case SDL_EVENT_QUIT:
-            running = false;
-            break;
-        }
+          shown = !shown;
+          break;
+        case SDL_EVENT_QUIT:
+          running = false;
+          break;
+      }
     }
 
     SDL_GPUCommandBuffer* commandBuffer = SDL_AcquireGPUCommandBuffer(gContext.mDevice);
     if (!commandBuffer)
     {
-        SDL_Log("AcquireGPUCommandBuffer failed: %s", SDL_GetError());
-        continue;
+      SDL_Log("AcquireGPUCommandBuffer failed: %s", SDL_GetError());
+      continue;
     }
 
     SDL_GPUTexture* swapchainTexture;
     if (!SDL_WaitAndAcquireGPUSwapchainTexture(commandBuffer, gContext.mWindow, &swapchainTexture, NULL, NULL))
     {
-        SDL_Log("WaitAndAcquireGPUSwapchainTexture failed: %s", SDL_GetError());
-        continue;
+      SDL_Log("WaitAndAcquireGPUSwapchainTexture failed: %s", SDL_GetError());
+      continue;
     }
 
     SDL_GPUColorTargetInfo colorTargetInfo;
@@ -122,10 +128,10 @@ int main(int argc, char** argv)
     colorTargetInfo.clear_color.a = 1.0f;
 
     SDL_GPURenderPass* renderPass = SDL_BeginGPURenderPass(
-        commandBuffer,
-        &colorTargetInfo,
-        1,
-        NULL
+      commandBuffer,
+      &colorTargetInfo,
+      1,
+      NULL
     );
 
     SDL_EndGPURenderPass(renderPass);
@@ -137,3 +143,7 @@ int main(int argc, char** argv)
   SDL_Quit();
   return 0;
 }
+
+#ifdef __cplusplus
+} // end cpp_test
+#endif

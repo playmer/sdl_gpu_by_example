@@ -1,6 +1,14 @@
 #include <SDL3/SDL.h>
-#include <SDL3/SDL_main.h>
 #include <SDL3/SDL_stdinc.h>
+
+// This is for testing to ensure the code works in both C and C++,
+// this entire preprocessor block should just be the #include
+// in your own code.
+#ifndef __cplusplus
+#include <SDL3/SDL_main.h>
+#else
+namespace cpp_test {
+#endif
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Shared GPU Code
@@ -87,7 +95,7 @@ SDL_GPUShader* CreateShader(
 
   shaderCreateInfo.entrypoint = gContext.mShaderEntryPoint;
   shaderCreateInfo.format = gContext.mChosenBackendFormat;
-  shaderCreateInfo.code = fileData;
+  shaderCreateInfo.code = (Uint8*)fileData;
   shaderCreateInfo.code_size = fileSize;
   shaderCreateInfo.stage = aShaderStage;
   shaderCreateInfo.num_samplers = aSamplerCount;
@@ -353,3 +361,7 @@ int main(int argc, char** argv)
   SDL_Quit();
   return 0;
 }
+
+#ifdef __cplusplus
+} // end cpp_test
+#endif

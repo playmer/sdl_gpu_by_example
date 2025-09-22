@@ -1,6 +1,14 @@
 #include <SDL3/SDL.h>
-#include <SDL3/SDL_main.h>
 #include <SDL3/SDL_stdinc.h>
+
+// This is for testing to ensure the code works in both C and C++,
+// this entire preprocessor block should just be the #include
+// in your own code.
+#ifndef __cplusplus
+#include <SDL3/SDL_main.h>
+#else
+namespace cpp_test {
+#endif
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // MATH
@@ -25,17 +33,17 @@ typedef struct float4x4 {
 // Downcasts
 
 float2 Float3_XY(float3 aValue) {
-  float2 toReturn = {aValue.x, aValue.y};
+  float2 toReturn = { aValue.x, aValue.y };
   return toReturn;
 }
 
 float2 Float4_XY(float4 aValue) {
-  float2 toReturn = {aValue.x, aValue.y};
+  float2 toReturn = { aValue.x, aValue.y };
   return toReturn;
 }
 
 float3 Float4_XYZ(float4 aValue) {
-  float3 toReturn = {aValue.x, aValue.y, aValue.z};
+  float3 toReturn = { aValue.x, aValue.y, aValue.z };
   return toReturn;
 }
 
@@ -43,17 +51,17 @@ float3 Float4_XYZ(float4 aValue) {
 // Subtraction
 
 float2 Float2_Subtract(float2 aLeft, float2 aRight) {
-  float2 toReturn = {aLeft.x - aRight.x, aLeft.y - aRight.y};
+  float2 toReturn = { aLeft.x - aRight.x, aLeft.y - aRight.y };
   return toReturn;
 }
 
 float3 Float3_Subtract(float3 aLeft, float3 aRight) {
-  float3 toReturn = {aLeft.x - aRight.x, aLeft.y - aRight.y, aLeft.z - aRight.z};
+  float3 toReturn = { aLeft.x - aRight.x, aLeft.y - aRight.y, aLeft.z - aRight.z };
   return toReturn;
 }
 
 float4 Float4_Subtract(float4 aLeft, float4 aRight) {
-  float4 toReturn = {aLeft.x - aRight.x, aLeft.y - aRight.y, aLeft.z - aRight.z, aLeft.w - aRight.w};
+  float4 toReturn = { aLeft.x - aRight.x, aLeft.y - aRight.y, aLeft.z - aRight.z, aLeft.w - aRight.w };
   return toReturn;
 }
 
@@ -61,17 +69,17 @@ float4 Float4_Subtract(float4 aLeft, float4 aRight) {
 // Addition
 
 float2 Float2_Add(float2 aLeft, float2 aRight) {
-  float2 toReturn = {aLeft.x + aRight.x, aLeft.y + aRight.y};
+  float2 toReturn = { aLeft.x + aRight.x, aLeft.y + aRight.y };
   return toReturn;
 }
 
 float3 Float3_Add(float3 aLeft, float3 aRight) {
-  float3 toReturn = {aLeft.x + aRight.x, aLeft.y + aRight.y, aLeft.z + aRight.z};
+  float3 toReturn = { aLeft.x + aRight.x, aLeft.y + aRight.y, aLeft.z + aRight.z };
   return toReturn;
 }
 
 float4 Float4_Add(float4 aLeft, float4 aRight) {
-  float4 toReturn = {aLeft.x + aRight.x, aLeft.y + aRight.y, aLeft.z + aRight.z, aLeft.w + aRight.w};
+  float4 toReturn = { aLeft.x + aRight.x, aLeft.y + aRight.y, aLeft.z + aRight.z, aLeft.w + aRight.w };
   return toReturn;
 }
 
@@ -79,17 +87,17 @@ float4 Float4_Add(float4 aLeft, float4 aRight) {
 // Scalar Addition
 
 float2 Float2_Scalar_Add(float2 aLeft, float aRight) {
-  float2 toReturn = {aLeft.x + aRight, aLeft.y + aRight};
+  float2 toReturn = { aLeft.x + aRight, aLeft.y + aRight };
   return toReturn;
 }
 
 float3 Float3_Scalar_Add(float3 aLeft, float aRight) {
-  float3 toReturn = {aLeft.x + aRight, aLeft.y + aRight, aLeft.z + aRight};
+  float3 toReturn = { aLeft.x + aRight, aLeft.y + aRight, aLeft.z + aRight };
   return toReturn;
 }
 
 float4 Float4_Scalar_Add(float4 aLeft, float aRight) {
-  float4 toReturn = {aLeft.x + aRight, aLeft.y + aRight, aLeft.z + aRight, aLeft.w + aRight};
+  float4 toReturn = { aLeft.x + aRight, aLeft.y + aRight, aLeft.z + aRight, aLeft.w + aRight };
   return toReturn;
 }
 
@@ -97,17 +105,17 @@ float4 Float4_Scalar_Add(float4 aLeft, float aRight) {
 // Scalar Multiplication
 
 float2 Float2_Scalar_Multiply(float2 aLeft, float aRight) {
-  float2 toReturn = {aLeft.x * aRight, aLeft.y * aRight};
+  float2 toReturn = { aLeft.x * aRight, aLeft.y * aRight };
   return toReturn;
 }
 
 float3 Float3_Scalar_Multiply(float3 aLeft, float aRight) {
-  float3 toReturn = {aLeft.x * aRight, aLeft.y * aRight, aLeft.z * aRight};
+  float3 toReturn = { aLeft.x * aRight, aLeft.y * aRight, aLeft.z * aRight };
   return toReturn;
 }
 
 float4 Float4_Scalar_Multiply(float4 aLeft, float aRight) {
-  float4 toReturn = {aLeft.x * aRight, aLeft.y * aRight, aLeft.z * aRight, aLeft.w * aRight};
+  float4 toReturn = { aLeft.x * aRight, aLeft.y * aRight, aLeft.z * aRight, aLeft.w * aRight };
   return toReturn;
 }
 
@@ -115,17 +123,17 @@ float4 Float4_Scalar_Multiply(float4 aLeft, float aRight) {
 // Scalar Multiplication
 
 float2 Float2_Scalar_Division(float2 aLeft, float aRight) {
-  float2 toReturn = {aLeft.x / aRight, aLeft.y / aRight};
+  float2 toReturn = { aLeft.x / aRight, aLeft.y / aRight };
   return toReturn;
 }
 
 float3 Float3_Scalar_Division(float3 aLeft, float aRight) {
-  float3 toReturn = {aLeft.x / aRight, aLeft.y / aRight, aLeft.z / aRight};
+  float3 toReturn = { aLeft.x / aRight, aLeft.y / aRight, aLeft.z / aRight };
   return toReturn;
 }
 
 float4 Float4_Scalar_Division(float4 aLeft, float aRight) {
-  float4 toReturn = {aLeft.x / aRight, aLeft.y / aRight, aLeft.z / aRight, aLeft.w / aRight};
+  float4 toReturn = { aLeft.x / aRight, aLeft.y / aRight, aLeft.z / aRight, aLeft.w / aRight };
   return toReturn;
 }
 
@@ -266,6 +274,27 @@ float4x4 Float4x4_Multiply(const float4x4* aLeft, const float4x4* aRight)
   return toReturn;
 }
 
+float4x4 Float4x4_Inverse(const float4x4* aValue)
+{
+  float4x4 toReturn;
+  SDL_zero(toReturn);
+
+  const float4 a = { aValue->columns[0][0], aValue->columns[0][1], aValue->columns[0][2], aValue->columns[0][3] };
+  const float4 b = { aValue->columns[1][0], aValue->columns[1][1], aValue->columns[1][2], aValue->columns[1][3] };
+  const float4 c = { aValue->columns[2][0], aValue->columns[2][1], aValue->columns[2][2], aValue->columns[2][3] };
+  const float4 d = { aValue->columns[3][0], aValue->columns[3][1], aValue->columns[3][2], aValue->columns[3][3] };
+
+  const float x = a.x;
+  const float y = b.y;
+  const float z = c.z;
+  const float w = d.w;
+
+  const float3 s = Float4_Cross(a, b);
+  const float3 t = Float4_Cross(c, d);
+
+  return toReturn;
+}
+
 
 ////////////////////////////////////////////////////////////
 /// Core Matrices
@@ -373,8 +402,6 @@ float4x4 LookAtLH(float3 aEye, float3 aCenter, float3 aUp) {
   return toReturn;
 }
 
-////////////////////////////////////////////////////////////
-/// Projections
 
 float4x4 OrthographicProjectionLHZO(float aLeft, float aRight, float aBottom, float aTop, float aNear, float aFar) {
   float4x4 toReturn;
@@ -393,17 +420,53 @@ float4x4 OrthographicProjectionLHZO(float aLeft, float aRight, float aBottom, fl
   return toReturn;
 }
 
-float4x4 PerspectiveProjectionLHZO(float aFov, float aAspectRatio, float aNear, float aFar) {
+float4x4 PerspectiveProjectionLHZO(float aFovY, float aAspectRatio, float aNear, float aFar) {
   float4x4 toReturn;
   SDL_zero(toReturn);
 
-  const float tanHalfFovy = SDL_tan(aFov / 2.0f);
+  const float focalLength = 1.0f / SDL_tan(aFovY * .5f);
+  const float k = aFar / (aFar - aNear);
 
-  toReturn.columns[0][0] = 1.0f / (aAspectRatio * tanHalfFovy);
-  toReturn.columns[1][1] = 1.0f / (tanHalfFovy);
-  toReturn.columns[2][2] = aFar / (aFar - aNear);
+  toReturn.columns[0][0] = focalLength / aAspectRatio;
+  toReturn.columns[1][1] = focalLength;
+  toReturn.columns[2][2] = k;
   toReturn.columns[2][3] = 1.0f;
-  toReturn.columns[3][2] = -(aFar * aNear) / (aFar - aNear);
+  toReturn.columns[3][2] = -aNear * k;
+
+  return toReturn;
+}
+
+float4x4 PerspectiveProjectionLHOZ(float aFovY, float aAspectRatio, float aNear, float aFar) {
+  float4x4 toReturn;
+  SDL_zero(toReturn);
+
+  const float focalLength = 1.0f / SDL_tan(aFovY * .5f);
+  const float k = aNear / (aNear - aFar);
+
+  toReturn.columns[0][0] = focalLength / aAspectRatio;
+  toReturn.columns[1][1] = focalLength;
+  toReturn.columns[2][2] = k;
+  toReturn.columns[2][3] = 1.0f;
+  toReturn.columns[3][2] = -aFar * k;
+
+  return toReturn;
+}
+
+float4x4 InfinitePerspectiveProjectionLHOZ(float aFovY, float aAspectRatio, float aNear) {
+  float4x4 toReturn;
+  SDL_zero(toReturn);
+
+  const float focalLength = 1.0f / SDL_tan(aFovY * .5f);
+
+  // For ease of use we're hardcoding the epsilon to what's recommended in Foundations of Game Engine
+  // Development: Rendering, which is 2^(-20).
+  const float epsilon = SDL_powf(2, -20);
+
+  toReturn.columns[0][0] = focalLength / aAspectRatio;
+  toReturn.columns[1][1] = focalLength;
+  toReturn.columns[2][2] = epsilon;
+  toReturn.columns[2][3] = 1.0f;
+  toReturn.columns[3][2] = aNear/(1.0f - epsilon);
 
   return toReturn;
 }
@@ -494,7 +557,7 @@ SDL_GPUShader* CreateShader(
 
   shaderCreateInfo.entrypoint = gContext.mShaderEntryPoint;
   shaderCreateInfo.format = gContext.mChosenBackendFormat;
-  shaderCreateInfo.code = fileData;
+  shaderCreateInfo.code = (Uint8*)fileData;
   shaderCreateInfo.code_size = fileSize;
   shaderCreateInfo.stage = aShaderStage;
   shaderCreateInfo.num_samplers = aSamplerCount;
@@ -562,7 +625,7 @@ SDL_GPUTexture* CreateAndUploadTexture(SDL_GPUCopyPass* aCopyPass, const char* a
   }
 
   SDL_GPUTransferBuffer* transferBuffer = SDL_CreateGPUTransferBuffer(gContext.mDevice, &transferCreateInfo);
-  uint8_t* transferPtr = SDL_MapGPUTransferBuffer(gContext.mDevice, transferBuffer, false);
+  void* transferPtr = SDL_MapGPUTransferBuffer(gContext.mDevice, transferBuffer, false);
   memcpy(transferPtr, surface->pixels, transferCreateInfo.size);
   SDL_UnmapGPUTransferBuffer(gContext.mDevice, transferBuffer);
 
@@ -1051,3 +1114,7 @@ int main(int argc, char** argv)
   SDL_Quit();
   return 0;
 }
+
+#ifdef __cplusplus
+} // end cpp_test
+#endif
