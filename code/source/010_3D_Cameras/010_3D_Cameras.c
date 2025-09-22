@@ -844,7 +844,6 @@ SDL_GPUBuffer* CreateAndUploadBuffer(const void* aData, size_t aSize, SDL_GPUBuf
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 typedef struct CubeContext {
   SDL_GPUGraphicsPipeline* mPipeline;
-  SDL_GPUTexture* mTexture;
   SDL_GPUSampler* mSampler;
   SDL_GPUBuffer* mVertexBuffer;
   SDL_GPUBuffer* mIndexBuffer;
@@ -905,7 +904,7 @@ CubeContext CreateCubeContext(SDL_GPUTextureFormat aDepthFormat) {
     "VertexAndIndexBuffer.vert",
     SDL_GPU_SHADERSTAGE_VERTEX,
     0,
-    2,
+    3,
     0,
     0,
     SDL_PROPERTY_TYPE_INVALID
@@ -915,7 +914,7 @@ CubeContext CreateCubeContext(SDL_GPUTextureFormat aDepthFormat) {
   graphicsPipelineCreateInfo.fragment_shader = CreateShader(
     "VertexAndIndexBuffer.frag",
     SDL_GPU_SHADERSTAGE_FRAGMENT,
-    1,
+    0,
     0,
     0,
     0,
@@ -927,7 +926,6 @@ CubeContext CreateCubeContext(SDL_GPUTextureFormat aDepthFormat) {
 
   CubeContext context;
   context.mPipeline = SDL_CreateGPUGraphicsPipeline(gContext.mDevice, &graphicsPipelineCreateInfo);
-  context.mTexture = CreateAndUploadTexture(NULL, "sample");
 
   SDL_GPUSamplerCreateInfo samplerCreateInfo;
   SDL_zero(samplerCreateInfo);
@@ -978,7 +976,7 @@ CubeContext CreateCubeContext(SDL_GPUTextureFormat aDepthFormat) {
       5, 7, 3,
     };
 
-    context.mIndexBuffer = CreateAndUploadBuffer(&cVertexIndicies, sizeof(cVertexIndicies), SDL_GPU_BUFFERUSAGE_VERTEX);
+    context.mIndexBuffer = CreateAndUploadBuffer(&cVertexIndicies, sizeof(cVertexIndicies), SDL_GPU_BUFFERUSAGE_INDEX);
   }
 
   context.mUbo[0].mPosition.x = 0.f;
@@ -1019,16 +1017,8 @@ void DrawCubeContext(CubeContext* aPipeline, SDL_GPUCommandBuffer* aCommandBuffe
 
   float4x4 model = CreateModelMatrix(&aPipeline->mUbo[0]);
 
-  SDL_PushGPUVertexUniformData(aCommandBuffer, 0, &model, sizeof(model));
-  SDL_PushGPUVertexUniformData(aCommandBuffer, 1, &gContext.WorldToNDC, sizeof(gContext.WorldToNDC));
-
-  {
-    SDL_GPUTextureSamplerBinding textureBinding;
-    SDL_zero(textureBinding);
-    textureBinding.texture = aPipeline->mTexture;
-    textureBinding.sampler = aPipeline->mSampler;
-    SDL_BindGPUFragmentSamplers(aRenderPass, 0, &textureBinding, 1);
-  }
+  SDL_PushGPUVertexUniformData(aCommandBuffer, 1, &model, sizeof(model));
+  SDL_PushGPUVertexUniformData(aCommandBuffer, 2, &gContext.WorldToNDC, sizeof(gContext.WorldToNDC));
 
   {
     SDL_GPUBufferBinding binding;
@@ -1045,12 +1035,12 @@ void DrawCubeContext(CubeContext* aPipeline, SDL_GPUCommandBuffer* aCommandBuffe
   }
 
   // Draw the first cube
-  SDL_DrawGPUPrimitives(aRenderPass, 6 /* 6 per face */ * 6 /* 6 sides of our cube */, 1, 0, 0);
+  SDL_DrawGPUIndexedPrimitives(aRenderPass, 36, 1, 0, 0, 0);
 
   // Draw the second cube, make sure to recalculate the model matrix for it and reupload it.
   model = CreateModelMatrix(&aPipeline->mUbo[1]);
-  SDL_PushGPUVertexUniformData(aCommandBuffer, 0, &model, sizeof(model));
-  SDL_DrawGPUPrimitives(aRenderPass, 6 /* 6 per face */ * 6 /* 6 sides of our cube */, 1, 0, 0);
+  SDL_PushGPUVertexUniformData(aCommandBuffer, 1, &model, sizeof(model));
+  SDL_DrawGPUIndexedPrimitives(aRenderPass, 36, 1, 0, 0, 0);
 }
 
 void DestroyCubeContext(CubeContext* aPipeline)
@@ -1081,6 +1071,9 @@ int main(int argc, char** argv)
 
   CubeContext cubeContext = CreateCubeContext(depthFormat);
   Transform cameraTransform = GetDefaultTransform();
+  //cameraTransform.mScale.x = 1.0f;
+  //cameraTransform.mScale.y = 1.0f;
+  //cameraTransform.mScale.z = 1.0f;
 
   const float speed = 5.f;
   Uint64 last_frame_ticks_so_far = SDL_GetTicksNS();
@@ -1105,17 +1098,17 @@ int main(int argc, char** argv)
     int w = 0, h = 0;
     SDL_GetWindowSizeInPixels(gContext.mWindow, &w, &h);
 
-    gContext.WorldToNDC = PerspectiveProjectionLHZO(
+    gContext.WorldToNDC = InfinitePerspectiveProjectionLHOZ(
       45.0f * SDL_PI_F / 180.0f,
       (float)w / (float)h,
-      20.0f, 60.0f
+      0.1f
     );
 
 
     if (key_map[SDL_SCANCODE_D])        cameraTransform.mPosition.x += speed * dt * 1.0f;
     if (key_map[SDL_SCANCODE_A])        cameraTransform.mPosition.x -= speed * dt * 1.0f;
-    if (key_map[SDL_SCANCODE_W])        cameraTransform.mPosition.y += speed * dt * 1.0f;
-    if (key_map[SDL_SCANCODE_S])        cameraTransform.mPosition.y -= speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_W])        cameraTransform.mPosition.z += speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_S])        cameraTransform.mPosition.z -= speed * dt * 1.0f;
 
     if (key_map[SDL_SCANCODE_RIGHT])    cubeContext.mUbo[0].mPosition.x += speed * dt * 1.0f;
     if (key_map[SDL_SCANCODE_LEFT])     cubeContext.mUbo[0].mPosition.x -= speed * dt * 1.0f;
@@ -1191,6 +1184,11 @@ int main(int argc, char** argv)
       1,
       &depthStencilTargetInfo
     );
+
+    float4x4 modelMatrix = CreateModelMatrix(&cameraTransform);
+    float4x4 viewMatrix = Float4x4_Inverse(&modelMatrix);
+
+    SDL_PushGPUVertexUniformData(commandBuffer, 0, &viewMatrix, sizeof(viewMatrix));
 
     DrawCubeContext(&cubeContext, commandBuffer, renderPass);
 

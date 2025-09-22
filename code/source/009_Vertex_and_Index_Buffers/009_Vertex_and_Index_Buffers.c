@@ -752,7 +752,6 @@ typedef struct CubeUbo {
 
 typedef struct CubeContext {
   SDL_GPUGraphicsPipeline* mPipeline;
-  SDL_GPUTexture* mTexture;
   SDL_GPUSampler* mSampler;
   SDL_GPUBuffer* mVertexBuffer;
   SDL_GPUBuffer* mIndexBuffer;
@@ -823,7 +822,7 @@ CubeContext CreateCubeContext(SDL_GPUTextureFormat aDepthFormat) {
   graphicsPipelineCreateInfo.fragment_shader = CreateShader(
     "VertexAndIndexBuffer.frag",
     SDL_GPU_SHADERSTAGE_FRAGMENT,
-    1,
+    0,
     0,
     0,
     0,
@@ -835,7 +834,6 @@ CubeContext CreateCubeContext(SDL_GPUTextureFormat aDepthFormat) {
 
   CubeContext context;
   context.mPipeline = SDL_CreateGPUGraphicsPipeline(gContext.mDevice, &graphicsPipelineCreateInfo);
-  context.mTexture = CreateAndUploadTexture(NULL, "sample");
 
   SDL_GPUSamplerCreateInfo samplerCreateInfo;
   SDL_zero(samplerCreateInfo);
@@ -886,7 +884,7 @@ CubeContext CreateCubeContext(SDL_GPUTextureFormat aDepthFormat) {
       5, 7, 3,
     };
 
-    context.mIndexBuffer = CreateAndUploadBuffer(&cVertexIndicies, sizeof(cVertexIndicies), SDL_GPU_BUFFERUSAGE_VERTEX);
+    context.mIndexBuffer = CreateAndUploadBuffer(&cVertexIndicies, sizeof(cVertexIndicies), SDL_GPU_BUFFERUSAGE_INDEX);
   }
 
   context.mUbo[0].mPosition.x = 0.f;
@@ -931,14 +929,6 @@ void DrawCubeContext(CubeContext* aPipeline, SDL_GPUCommandBuffer* aCommandBuffe
   SDL_PushGPUVertexUniformData(aCommandBuffer, 1, &gContext.WorldToNDC, sizeof(gContext.WorldToNDC));
 
   {
-    SDL_GPUTextureSamplerBinding textureBinding;
-    SDL_zero(textureBinding);
-    textureBinding.texture = aPipeline->mTexture;
-    textureBinding.sampler = aPipeline->mSampler;
-    SDL_BindGPUFragmentSamplers(aRenderPass, 0, &textureBinding, 1);
-  }
-
-  {
     SDL_GPUBufferBinding binding;
     binding.buffer = aPipeline->mVertexBuffer;
     binding.offset = 0;
@@ -953,12 +943,12 @@ void DrawCubeContext(CubeContext* aPipeline, SDL_GPUCommandBuffer* aCommandBuffe
   }
 
   // Draw the first cube
-  SDL_DrawGPUPrimitives(aRenderPass, 6 /* 6 per face */ * 6 /* 6 sides of our cube */, 1, 0, 0);
+  SDL_DrawGPUIndexedPrimitives(aRenderPass, 36, 1, 0, 0, 0);
 
   // Draw the second cube, make sure to recalculate the model matrix for it and reupload it.
   model = CreateModelMatrix(aPipeline->mUbo[1].mPosition, aPipeline->mUbo[1].mScale, aPipeline->mUbo[1].mRotation);
   SDL_PushGPUVertexUniformData(aCommandBuffer, 0, &model, sizeof(model));
-  SDL_DrawGPUPrimitives(aRenderPass, 6 /* 6 per face */ * 6 /* 6 sides of our cube */, 1, 0, 0);
+  SDL_DrawGPUIndexedPrimitives(aRenderPass, 36, 1, 0, 0, 0);
 }
 
 void DestroyCubeContext(CubeContext* aPipeline)
