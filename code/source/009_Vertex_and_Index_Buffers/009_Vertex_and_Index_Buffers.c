@@ -26,7 +26,10 @@ typedef struct float4 {
 } float4;
 
 typedef struct float4x4 {
-  float columns[4][4];
+  union {
+    float4 columns[4];
+    float data[4][4];
+  };
 } float4x4;
 
 //////////////////////////////////////////////////////
@@ -246,17 +249,17 @@ float4 Float4x4_Float4_Multiply(const float4x4* aLeft, const float4 aRight)
 {
   float4 toReturn;
   toReturn.x =
-    (aLeft->columns[0][0] * aRight.x) +
-    (aLeft->columns[1][0] * aRight.y) +
-    (aLeft->columns[2][0] * aRight.z);
+    (aLeft->data[0][0] * aRight.x) +
+    (aLeft->data[1][0] * aRight.y) +
+    (aLeft->data[2][0] * aRight.z);
   toReturn.y =
-    (aLeft->columns[0][1] * aRight.x) +
-    (aLeft->columns[1][1] * aRight.y) +
-    (aLeft->columns[2][1] * aRight.z);
+    (aLeft->data[0][1] * aRight.x) +
+    (aLeft->data[1][1] * aRight.y) +
+    (aLeft->data[2][1] * aRight.z);
   toReturn.z =
-    (aLeft->columns[0][2] * aRight.x) +
-    (aLeft->columns[1][2] * aRight.y) +
-    (aLeft->columns[2][2] * aRight.z);
+    (aLeft->data[0][2] * aRight.x) +
+    (aLeft->data[1][2] * aRight.y) +
+    (aLeft->data[2][2] * aRight.z);
 
   return toReturn;
 }
@@ -269,7 +272,7 @@ float4x4 Float4x4_Multiply(const float4x4* aLeft, const float4x4* aRight)
   for (size_t j = 0; j < 4; ++j) // Column
     for (size_t i = 0; i < 4; ++i) // Row
       for (size_t n = 0; n < 4; ++n) // Iterative Muls
-        toReturn.columns[j][i] += aLeft->columns[n][i] * aRight->columns[j][n];
+        toReturn.data[j][i] += aLeft->data[n][i] * aRight->data[j][n];
 
   return toReturn;
 }
@@ -282,10 +285,10 @@ float4x4 IdentityMatrix() {
   float4x4 toReturn;
   SDL_zero(toReturn);
 
-  toReturn.columns[0][0] = 1.0f;
-  toReturn.columns[1][1] = 1.0f;
-  toReturn.columns[2][2] = 1.0f;
-  toReturn.columns[3][3] = 1.0f;
+  toReturn.data[0][0] = 1.0f;
+  toReturn.data[1][1] = 1.0f;
+  toReturn.data[2][2] = 1.0f;
+  toReturn.data[3][3] = 1.0f;
 
   return toReturn;
 }
@@ -293,9 +296,9 @@ float4x4 IdentityMatrix() {
 float4x4 TranslationMatrix(float4 aPosition) {
   float4x4 toReturn = IdentityMatrix();
 
-  toReturn.columns[3][0] = aPosition.x;
-  toReturn.columns[3][1] = aPosition.y;
-  toReturn.columns[3][2] = aPosition.z;
+  toReturn.data[3][0] = aPosition.x;
+  toReturn.data[3][1] = aPosition.y;
+  toReturn.data[3][2] = aPosition.z;
 
   return toReturn;
 }
@@ -303,9 +306,9 @@ float4x4 TranslationMatrix(float4 aPosition) {
 float4x4 ScaleMatrix(float4 aScale) {
   float4x4 toReturn = IdentityMatrix();
 
-  toReturn.columns[0][0] = aScale.x;
-  toReturn.columns[1][1] = aScale.y;
-  toReturn.columns[2][2] = aScale.z;
+  toReturn.data[0][0] = aScale.x;
+  toReturn.data[1][1] = aScale.y;
+  toReturn.data[2][2] = aScale.z;
 
   return toReturn;
 }
@@ -313,10 +316,10 @@ float4x4 ScaleMatrix(float4 aScale) {
 float4x4 RotationMatrixX(float aAngle) {
   float4x4 toReturn = IdentityMatrix();
 
-  toReturn.columns[1][1] = SDL_cosf(aAngle);
-  toReturn.columns[1][2] = SDL_sinf(aAngle);
-  toReturn.columns[2][1] = -SDL_sinf(aAngle);
-  toReturn.columns[2][2] = SDL_cosf(aAngle);
+  toReturn.data[1][1] = SDL_cosf(aAngle);
+  toReturn.data[1][2] = SDL_sinf(aAngle);
+  toReturn.data[2][1] = -SDL_sinf(aAngle);
+  toReturn.data[2][2] = SDL_cosf(aAngle);
 
   return toReturn;
 }
@@ -324,10 +327,10 @@ float4x4 RotationMatrixX(float aAngle) {
 float4x4 RotationMatrixY(float aAngle) {
   float4x4 toReturn = IdentityMatrix();
 
-  toReturn.columns[0][0] = SDL_cosf(aAngle);
-  toReturn.columns[0][2] = -SDL_sinf(aAngle);
-  toReturn.columns[2][0] = SDL_sinf(aAngle);
-  toReturn.columns[2][2] = SDL_cosf(aAngle);
+  toReturn.data[0][0] = SDL_cosf(aAngle);
+  toReturn.data[0][2] = -SDL_sinf(aAngle);
+  toReturn.data[2][0] = SDL_sinf(aAngle);
+  toReturn.data[2][2] = SDL_cosf(aAngle);
 
   return toReturn;
 }
@@ -335,10 +338,10 @@ float4x4 RotationMatrixY(float aAngle) {
 float4x4 RotationMatrixZ(float aAngle) {
   float4x4 toReturn = IdentityMatrix();
 
-  toReturn.columns[0][0] = SDL_cosf(aAngle);
-  toReturn.columns[0][1] = SDL_sinf(aAngle);
-  toReturn.columns[1][0] = -SDL_sinf(aAngle);
-  toReturn.columns[1][1] = SDL_cosf(aAngle);
+  toReturn.data[0][0] = SDL_cosf(aAngle);
+  toReturn.data[0][1] = SDL_sinf(aAngle);
+  toReturn.data[1][0] = -SDL_sinf(aAngle);
+  toReturn.data[1][1] = SDL_cosf(aAngle);
 
   return toReturn;
 }
@@ -367,15 +370,15 @@ float4x4 OrthographicProjectionLHZO(float aLeft, float aRight, float aBottom, fl
   float4x4 toReturn;
   SDL_zero(toReturn);
 
-  toReturn.columns[0][0] = 2.0f / (aRight - aLeft);
-  toReturn.columns[1][1] = 2.0f / (aTop - aBottom);
-  toReturn.columns[2][2] = 1.0f / (aFar - aNear);
+  toReturn.data[0][0] = 2.0f / (aRight - aLeft);
+  toReturn.data[1][1] = 2.0f / (aTop - aBottom);
+  toReturn.data[2][2] = 1.0f / (aFar - aNear);
 
-  toReturn.columns[3][0] = -(aRight + aLeft) / (aRight - aLeft);
-  toReturn.columns[3][1] = -(aTop + aBottom) / (aTop - aBottom);
-  toReturn.columns[3][2] = -aNear / (aFar - aNear);
+  toReturn.data[3][0] = -(aRight + aLeft) / (aRight - aLeft);
+  toReturn.data[3][1] = -(aTop + aBottom) / (aTop - aBottom);
+  toReturn.data[3][2] = -aNear / (aFar - aNear);
 
-  toReturn.columns[3][3] = 1.0f;
+  toReturn.data[3][3] = 1.0f;
 
   return toReturn;
 }
@@ -387,11 +390,11 @@ float4x4 PerspectiveProjectionLHZO(float aFovY, float aAspectRatio, float aNear,
   const float focalLength = 1.0f / SDL_tan(aFovY * .5f);
   const float k = aFar / (aFar - aNear);
 
-  toReturn.columns[0][0] = focalLength / aAspectRatio;
-  toReturn.columns[1][1] = focalLength;
-  toReturn.columns[2][2] = k;
-  toReturn.columns[2][3] = 1.0f;
-  toReturn.columns[3][2] = -aNear * k;
+  toReturn.data[0][0] = focalLength / aAspectRatio;
+  toReturn.data[1][1] = focalLength;
+  toReturn.data[2][2] = k;
+  toReturn.data[2][3] = 1.0f;
+  toReturn.data[3][2] = -aNear * k;
 
   return toReturn;
 }
@@ -403,11 +406,11 @@ float4x4 PerspectiveProjectionLHOZ(float aFovY, float aAspectRatio, float aNear,
   const float focalLength = 1.0f / SDL_tan(aFovY * .5f);
   const float k = aNear / (aNear - aFar);
 
-  toReturn.columns[0][0] = focalLength / aAspectRatio;
-  toReturn.columns[1][1] = focalLength;
-  toReturn.columns[2][2] = k;
-  toReturn.columns[2][3] = 1.0f;
-  toReturn.columns[3][2] = -aFar * k;
+  toReturn.data[0][0] = focalLength / aAspectRatio;
+  toReturn.data[1][1] = focalLength;
+  toReturn.data[2][2] = k;
+  toReturn.data[2][3] = 1.0f;
+  toReturn.data[3][2] = -aFar * k;
 
   return toReturn;
 }
@@ -422,11 +425,11 @@ float4x4 InfinitePerspectiveProjectionLHOZ(float aFovY, float aAspectRatio, floa
   // Development: Rendering, which is 2^(-20).
   const float epsilon = SDL_powf(2, -20);
 
-  toReturn.columns[0][0] = focalLength / aAspectRatio;
-  toReturn.columns[1][1] = focalLength;
-  toReturn.columns[2][2] = epsilon;
-  toReturn.columns[2][3] = 1.0f;
-  toReturn.columns[3][2] = aNear/(1.0f - epsilon);
+  toReturn.data[0][0] = focalLength / aAspectRatio;
+  toReturn.data[1][1] = focalLength;
+  toReturn.data[2][2] = epsilon;
+  toReturn.data[2][3] = 1.0f;
+  toReturn.data[3][2] = aNear/(1.0f - epsilon);
 
   return toReturn;
 }

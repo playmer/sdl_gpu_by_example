@@ -18,7 +18,10 @@ typedef struct float4 {
 } float4;
 
 typedef struct float4x4 {
-  float columns[4][4];
+  union {
+    float4 columns[4];
+    float data[4][4];
+  };
 } float4x4;
 
 float4x4 float4x4_multiply(const float4x4* aLeft, const float4x4* aRight)
@@ -29,7 +32,7 @@ float4x4 float4x4_multiply(const float4x4* aLeft, const float4x4* aRight)
   for (size_t j = 0; j < 4; ++j) // Column
     for (size_t i = 0; i < 4; ++i) // Row
       for (size_t n = 0; n < 4; ++n) // Iterative Muls
-        toReturn.columns[j][i] += aLeft->columns[n][i] * aRight->columns[j][n];
+        toReturn.data[j][i] += aLeft->data[n][i] * aRight->data[j][n];
 
   return toReturn;
 }
@@ -38,15 +41,15 @@ float4x4 OrthographicProjectionLHZO(float aLeft, float aRight, float aBottom, fl
   float4x4 toReturn;
   SDL_zero(toReturn);
 
-  toReturn.columns[0][0] = 2.0f / (aRight - aLeft);
-  toReturn.columns[1][1] = 2.0f / (aTop - aBottom);
-  toReturn.columns[2][2] = 1.0f / (aFar - aNear);
+  toReturn.data[0][0] = 2.0f / (aRight - aLeft);
+  toReturn.data[1][1] = 2.0f / (aTop - aBottom);
+  toReturn.data[2][2] = 1.0f / (aFar - aNear);
 
-  toReturn.columns[3][0] = -(aRight + aLeft) / (aRight - aLeft);
-  toReturn.columns[3][1] = -(aTop + aBottom) / (aTop - aBottom);
-  toReturn.columns[3][2] = -aNear / (aFar - aNear);
+  toReturn.data[3][0] = -(aRight + aLeft) / (aRight - aLeft);
+  toReturn.data[3][1] = -(aTop + aBottom) / (aTop - aBottom);
+  toReturn.data[3][2] = -aNear / (aFar - aNear);
 
-  toReturn.columns[3][3] = 1.0f;
+  toReturn.data[3][3] = 1.0f;
 
   return toReturn;
 }
