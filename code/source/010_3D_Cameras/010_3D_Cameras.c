@@ -1092,6 +1092,33 @@ void DestroyCubeContext(CubeContext* aPipeline)
   SDL_zero(*aPipeline);
 }
 
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Camera Movements
+void FlybyCamera(Transform* aCamera, const bool* aKeyMap, float2 aFrameMouseMove, float aSpeed, float aDt)
+{
+  if (SDL_BUTTON_LMASK & SDL_GetMouseState(NULL, NULL)) {
+    aCamera->mRotation.x += aFrameMouseMove.y * aSpeed * aDt * .05f;
+    aCamera->mRotation.y += aFrameMouseMove.x * aSpeed * aDt * .05f;
+  }
+
+  Orientation orientation = GetOrientation(aCamera);
+
+  float3 movementDirection = { 0.f, 0.f, 0.f };
+
+  if (aKeyMap[SDL_SCANCODE_D]) movementDirection = Float3_Add(movementDirection, orientation.mRight);
+  if (aKeyMap[SDL_SCANCODE_A]) movementDirection = Float3_Subtract(movementDirection, orientation.mRight);
+  if (aKeyMap[SDL_SCANCODE_W]) movementDirection = Float3_Add(movementDirection, orientation.mForward);
+  if (aKeyMap[SDL_SCANCODE_S]) movementDirection = Float3_Subtract(movementDirection, orientation.mForward);
+  if (aKeyMap[SDL_SCANCODE_SPACE]) movementDirection = Float3_Add(movementDirection, orientation.mUp);
+  if (aKeyMap[SDL_SCANCODE_LSHIFT]) movementDirection = Float3_Subtract(movementDirection, orientation.mUp);
+
+  aCamera->mPosition = Float4_From3(Float3_Add(
+    Float3_Scalar_Multiply(movementDirection, aSpeed * aDt),
+    Float4_XYZ(aCamera->mPosition)),
+    0.0f
+  );
+}
+
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Main
@@ -1158,23 +1185,6 @@ int main(int argc, char** argv)
       0.1f
     );
 
-
-    if (SDL_BUTTON_LMASK & SDL_GetMouseState(NULL, NULL)) {
-      cameraTransform.mRotation.x += mouseMove.y * speed * dt * .05f;
-      cameraTransform.mRotation.y += mouseMove.x * speed * dt * .05f;
-    }
-
-    Orientation orientation = GetOrientation(&cameraTransform);
-
-    //orientation.
-
-    float3 movementDirection = { 0.f, 0.f, 0.f };
-
-    if (key_map[SDL_SCANCODE_D]) movementDirection = Float3_Add(movementDirection, orientation.mRight);
-    if (key_map[SDL_SCANCODE_A]) movementDirection = Float3_Subtract(movementDirection, orientation.mRight);
-    if (key_map[SDL_SCANCODE_W]) movementDirection = Float3_Add(movementDirection, orientation.mForward);
-    if (key_map[SDL_SCANCODE_S]) movementDirection = Float3_Subtract(movementDirection, orientation.mForward);
-
     if (key_map[SDL_SCANCODE_RIGHT])    cubeContext.mUbo[0].mPosition.x += speed * dt * 1.0f;
     if (key_map[SDL_SCANCODE_LEFT])     cubeContext.mUbo[0].mPosition.x -= speed * dt * 1.0f;
     if (key_map[SDL_SCANCODE_UP])       cubeContext.mUbo[0].mPosition.y += speed * dt * 1.0f;
@@ -1192,12 +1202,7 @@ int main(int argc, char** argv)
     if (key_map[SDL_SCANCODE_PAGEUP])   cubeContext.mUbo[0].mRotation.z += speed * dt * 1.0f;
     if (key_map[SDL_SCANCODE_PAGEDOWN]) cubeContext.mUbo[0].mRotation.z -= speed * dt * 1.0f;
 
-
-    cameraTransform.mPosition = Float4_From3(Float3_Add(
-        Float3_Scalar_Multiply(movementDirection, speed * dt),
-        Float4_XYZ(cameraTransform.mPosition)),
-      0.0f
-    );
+    FlybyCamera(&cameraTransform, key_map, mouseMove, speed, dt);
 
     SDL_GPUCommandBuffer* commandBuffer = SDL_AcquireGPUCommandBuffer(gContext.mDevice);
     if (!commandBuffer)
