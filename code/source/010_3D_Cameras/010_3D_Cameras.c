@@ -38,6 +38,12 @@ typedef struct Transform {
   float4 mRotation;
 } Transform;
 
+typedef struct Orientation {
+  float3 mForward;
+  float3 mRight;
+  float3 mUp;
+} Orientation;
+
 Transform GetDefaultTransform()
 {
   Transform toReturn;
@@ -54,6 +60,14 @@ Transform GetDefaultTransform()
   toReturn.mRotation.y = 0.f;
   toReturn.mRotation.z = 0.f;
   toReturn.mRotation.w = 0.f;
+
+  return toReturn;
+}
+
+float4 Float4_From3(float3 aFloat3, float aW) {
+  float4 toReturn = {
+    aFloat3.x, aFloat3.y, aFloat3.z, aW,
+  };
 
   return toReturn;
 }
@@ -476,6 +490,31 @@ float4x4 CreateModelMatrix(const Transform* aTransform) {
   float4x4 scale_rotation = Float4x4_Multiply(&rotation, &scale);
 
   return Float4x4_Multiply(&translation, &scale_rotation);
+}
+
+
+Orientation GetOrientation(const Transform* aTransform) {
+  float4 forward = {
+    0.f, 0.f, 1.0f, 1.0f
+  };
+
+  float4 right = {
+    1.f, 0.f, 0.0f, 1.0f
+  };
+
+  float4 up = {
+    0.f, 1.f, 0.0f, 1.0f
+  };
+
+  float4x4 rotation = RotationMatrix(aTransform->mRotation);
+
+  Orientation toReturn = {
+    Float4_XYZ(Float4x4_Float4_Multiply(&rotation, forward)),
+    Float4_XYZ(Float4x4_Float4_Multiply(&rotation, right)),
+    Float4_XYZ(Float4x4_Float4_Multiply(&rotation, up))
+  };
+
+  return toReturn;
 }
 
 ////////////////////////////////////////////////////////////
@@ -1086,7 +1125,12 @@ int main(int argc, char** argv)
   const bool* key_map = SDL_GetKeyboardState(&keys);
   bool running = true;
 
+  float2 mouseMove;
+
   while (running) {
+    mouseMove.x = 0.f;
+    mouseMove.y = 0.f;
+
     Uint64 current_frame_ticks_so_far = SDL_GetTicksNS();
     float dt = (current_frame_ticks_so_far - last_frame_ticks_so_far) / 1000000000.f;
     last_frame_ticks_so_far = current_frame_ticks_so_far;
@@ -1094,10 +1138,15 @@ int main(int argc, char** argv)
     SDL_Event event;
     while (SDL_PollEvent(&event)) {
       switch (event.common.type) {
-      case SDL_EVENT_QUIT:
-        running = false;
-        break;
+        case SDL_EVENT_QUIT:
+          running = false;
+          break;
+        case SDL_EVENT_MOUSE_MOTION:
+          mouseMove.x = event.motion.xrel;
+          mouseMove.y = event.motion.yrel;
+          break;
       }
+
     }
 
     int w = 0, h = 0;
@@ -1110,10 +1159,21 @@ int main(int argc, char** argv)
     );
 
 
-    if (key_map[SDL_SCANCODE_D])        cameraTransform.mPosition.x += speed * dt * 1.0f;
-    if (key_map[SDL_SCANCODE_A])        cameraTransform.mPosition.x -= speed * dt * 1.0f;
-    if (key_map[SDL_SCANCODE_W])        cameraTransform.mPosition.z += speed * dt * 1.0f;
-    if (key_map[SDL_SCANCODE_S])        cameraTransform.mPosition.z -= speed * dt * 1.0f;
+    if (SDL_BUTTON_LMASK & SDL_GetMouseState(NULL, NULL)) {
+      cameraTransform.mRotation.x += mouseMove.y * speed * dt * .05f;
+      cameraTransform.mRotation.y += mouseMove.x * speed * dt * .05f;
+    }
+
+    Orientation orientation = GetOrientation(&cameraTransform);
+
+    //orientation.
+
+    float3 movementDirection = { 0.f, 0.f, 0.f };
+
+    if (key_map[SDL_SCANCODE_D]) movementDirection = Float3_Add(movementDirection, orientation.mRight);
+    if (key_map[SDL_SCANCODE_A]) movementDirection = Float3_Subtract(movementDirection, orientation.mRight);
+    if (key_map[SDL_SCANCODE_W]) movementDirection = Float3_Add(movementDirection, orientation.mForward);
+    if (key_map[SDL_SCANCODE_S]) movementDirection = Float3_Subtract(movementDirection, orientation.mForward);
 
     if (key_map[SDL_SCANCODE_RIGHT])    cubeContext.mUbo[0].mPosition.x += speed * dt * 1.0f;
     if (key_map[SDL_SCANCODE_LEFT])     cubeContext.mUbo[0].mPosition.x -= speed * dt * 1.0f;
@@ -1131,6 +1191,13 @@ int main(int argc, char** argv)
     if (key_map[SDL_SCANCODE_END])      cubeContext.mUbo[0].mRotation.y -= speed * dt * 1.0f;
     if (key_map[SDL_SCANCODE_PAGEUP])   cubeContext.mUbo[0].mRotation.z += speed * dt * 1.0f;
     if (key_map[SDL_SCANCODE_PAGEDOWN]) cubeContext.mUbo[0].mRotation.z -= speed * dt * 1.0f;
+
+
+    cameraTransform.mPosition = Float4_From3(Float3_Add(
+        Float3_Scalar_Multiply(movementDirection, speed * dt),
+        Float4_XYZ(cameraTransform.mPosition)),
+      0.0f
+    );
 
     SDL_GPUCommandBuffer* commandBuffer = SDL_AcquireGPUCommandBuffer(gContext.mDevice);
     if (!commandBuffer)
