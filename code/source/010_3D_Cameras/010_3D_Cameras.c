@@ -339,9 +339,9 @@ float4x4 Float4x4_Inverse(const float4x4* aValue)
   const float3 c = Float4_XYZ(aValue->columns[2]);
   const float3 d = Float4_XYZ(aValue->columns[3]);
 
-  const float x = a.x;
-  const float y = b.y;
-  const float z = c.z;
+  const float x = aValue->data[0][3];
+  const float y = aValue->data[1][3];
+  const float z = aValue->data[2][3];
   const float w = aValue->data[3][3];
 
   const float3 s = Float3_Cross(a, b);
@@ -412,11 +412,13 @@ float4x4 TranslationMatrix(float4 aPosition) {
 }
 
 float4x4 ScaleMatrix(float4 aScale) {
-  float4x4 toReturn = IdentityMatrix();
+  float4x4 toReturn;
+  SDL_zero(toReturn);
 
   toReturn.data[0][0] = aScale.x;
   toReturn.data[1][1] = aScale.y;
   toReturn.data[2][2] = aScale.z;
+  toReturn.data[3][3] = 1.0f;
 
   return toReturn;
 }
@@ -465,7 +467,9 @@ float4x4 RotationMatrix(float4 aPosition) {
 }
 
 float4x4 CreateModelMatrix(const Transform* aTransform) {
+  float4x4 toReturn = IdentityMatrix();
   float4x4 translation = TranslationMatrix(aTransform->mPosition);
+
   float4x4 rotation = RotationMatrix(aTransform->mRotation);
   float4x4 scale = ScaleMatrix(aTransform->mScale);
 
@@ -881,7 +885,7 @@ CubeContext CreateCubeContext(SDL_GPUTextureFormat aDepthFormat) {
   attributes[1].location = 1;
   attributes[1].buffer_slot = 0;
   attributes[1].format = SDL_GPU_VERTEXELEMENTFORMAT_FLOAT3;
-  attributes[1].offset = 0;
+  attributes[1].offset = sizeof(float3);
 
   graphicsPipelineCreateInfo.vertex_input_state.vertex_attributes = attributes;
 
@@ -979,7 +983,7 @@ CubeContext CreateCubeContext(SDL_GPUTextureFormat aDepthFormat) {
     context.mIndexBuffer = CreateAndUploadBuffer(&cVertexIndicies, sizeof(cVertexIndicies), SDL_GPU_BUFFERUSAGE_INDEX);
   }
 
-  context.mUbo[0].mPosition.x = 0.f;
+  context.mUbo[0].mPosition.x = 2.f;
   context.mUbo[0].mPosition.y = -1.f;
   context.mUbo[0].mPosition.z = 5.f;
   context.mUbo[0].mPosition.w = 0.f;
@@ -1071,6 +1075,7 @@ int main(int argc, char** argv)
 
   CubeContext cubeContext = CreateCubeContext(depthFormat);
   Transform cameraTransform = GetDefaultTransform();
+  cameraTransform.mPosition.z = -1.0f;
   //cameraTransform.mScale.x = 1.0f;
   //cameraTransform.mScale.y = 1.0f;
   //cameraTransform.mScale.z = 1.0f;

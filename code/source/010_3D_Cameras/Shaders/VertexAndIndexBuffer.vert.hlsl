@@ -29,6 +29,7 @@ Output main(Input input)
 {
   Output output;
   output.Position = mul(CameraToNDC, mul(WorldToCamera, mul(ObjectToWorld, float4(input.Position, 1.0f))));
+  //output.Position = mul(CameraToNDC, mul(ObjectToWorld, float4(input.Position, 1.0f)));
   output.Color = input.Color;
   return output;
 }

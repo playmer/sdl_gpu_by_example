@@ -789,7 +789,7 @@ CubeContext CreateCubeContext(SDL_GPUTextureFormat aDepthFormat) {
   attributes[1].location = 1;
   attributes[1].buffer_slot = 0;
   attributes[1].format = SDL_GPU_VERTEXELEMENTFORMAT_FLOAT3;
-  attributes[1].offset = 0;
+  attributes[1].offset = sizeof(float3);
 
   graphicsPipelineCreateInfo.vertex_input_state.vertex_attributes = attributes;
 
