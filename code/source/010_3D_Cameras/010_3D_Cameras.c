@@ -1096,14 +1096,14 @@ void DestroyCubeContext(CubeContext* aPipeline)
 // Camera Movements
 void FlybyCamera(Transform* aCamera, const bool* aKeyMap, float2 aFrameMouseMove, float aSpeed, float aDt)
 {
-  if (SDL_BUTTON_LMASK & SDL_GetMouseState(NULL, NULL)) {
+  Orientation orientation = GetOrientation(aCamera);
+  float3 movementDirection = { 0.f, 0.f, 0.f };
+  SDL_MouseButtonFlags mouseFlags = SDL_GetMouseState(NULL, NULL);
+
+  if (SDL_BUTTON_LMASK & mouseFlags) {
     aCamera->mRotation.x += aFrameMouseMove.y * aSpeed * aDt * .05f;
     aCamera->mRotation.y += aFrameMouseMove.x * aSpeed * aDt * .05f;
   }
-
-  Orientation orientation = GetOrientation(aCamera);
-
-  float3 movementDirection = { 0.f, 0.f, 0.f };
 
   if (aKeyMap[SDL_SCANCODE_D]) movementDirection = Float3_Add(movementDirection, orientation.mRight);
   if (aKeyMap[SDL_SCANCODE_A]) movementDirection = Float3_Subtract(movementDirection, orientation.mRight);
@@ -1112,6 +1112,12 @@ void FlybyCamera(Transform* aCamera, const bool* aKeyMap, float2 aFrameMouseMove
   if (aKeyMap[SDL_SCANCODE_SPACE]) movementDirection = Float3_Add(movementDirection, orientation.mUp);
   if (aKeyMap[SDL_SCANCODE_LSHIFT]) movementDirection = Float3_Subtract(movementDirection, orientation.mUp);
 
+  if (SDL_BUTTON_MMASK & mouseFlags) {
+
+    movementDirection = Float3_Add(movementDirection, Float3_Scalar_Multiply(orientation.mRight, aFrameMouseMove.x * -.1f));
+    movementDirection = Float3_Add(movementDirection, Float3_Scalar_Multiply(orientation.mUp, aFrameMouseMove.y * .1f));
+  }
+  
   aCamera->mPosition = Float4_From3(Float3_Add(
     Float3_Scalar_Multiply(movementDirection, aSpeed * aDt),
     Float4_XYZ(aCamera->mPosition)),
@@ -1203,6 +1209,7 @@ int main(int argc, char** argv)
     if (key_map[SDL_SCANCODE_PAGEDOWN]) cubeContext.mUbo[0].mRotation.z -= speed * dt * 1.0f;
 
     FlybyCamera(&cameraTransform, key_map, mouseMove, speed, dt);
+
 
     SDL_GPUCommandBuffer* commandBuffer = SDL_AcquireGPUCommandBuffer(gContext.mDevice);
     if (!commandBuffer)

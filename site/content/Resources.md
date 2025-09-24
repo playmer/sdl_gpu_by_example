@@ -10,7 +10,7 @@ template: post_template.html
 
  - Eric Lengyels Books:
    - [Foundations of Game Engine Development, Volume 1: Mathematics](https://www.amazon.com/dp/0985811749)
-   - [Foundations of Game Engine Development, Volume 1: Rendering](https://www.amazon.com/dp/0985811757)
+   - [Foundations of Game Engine Development, Volume 2: Rendering](https://www.amazon.com/dp/0985811757)
    - [Projective Geometric Algebra Illuminated](https://www.amazon.com/dp/B0CXY8C72T)
 
 ### Graphics
