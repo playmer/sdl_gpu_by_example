@@ -12,7 +12,7 @@ static const float3 cColors[3] = {
 
 struct Output
 {
-  float3 Color : TEXCOORD1;
+  float3 Color : TEXCOORD0;
   float4 Position : SV_Position;
 };
 

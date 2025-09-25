@@ -11,7 +11,7 @@ That said, this is a text heavy one, we need to get into a bit of the high level
 
 Lets start adding to the previous example
 
-## The Triangle Context
+## The Triangle Context <a name="the_triangle_context" id="the_triangle_context"></a>
 
 Thankfully, drawing a triangle is relatively simple, so we can try to take things one step at a time. And the first is to encapsulate everything needed to draw one:
 
@@ -23,7 +23,7 @@ typedef struct TriangleContext {
 
 We actually only need a pipeline to draw a triangle, but as we proceed, we'll need much more than that, so we're going to structure this as if we were doing something more complex. 
 
-Now you'lre probably wondering about what this pipeline thing is, so lets go over it.
+Before we discuss creating one, we should go over what a pipeline is and how it fits into the rendering puzzle.
 
 ## Shaders and Pipelines <a name="shaders_pipelines" id="shaders_pipelines"></a>
 
@@ -100,6 +100,8 @@ We'll go into _much_ greater detail on the Vertex pipeline, Vertex shaders, and 
 
 ## The Vertex Shader <a name="vertex_shader" id="vertex_shader"></a>
 
+Now that we've discussed the theory, let's get back to the code a bit, but before we can make a pipeline, we'll need to write both a Vertex and Pixel shader. We'll create a couple of files [`Triangle.vert.hlsl` and `Triangle.frag.hlsl`] to start working on, starting with the Vertex shader.
+
 To display a triangle, we must produce geometry. For very simple shapes like Triangle, and even cubes, we can get away with storing this data within the shader itself. And it's helpful to learn this how to do this because this isn't unlike how you might pull geometry out of a storage buffer. Or for 2D you may store the transformations and UV info for sprites into a storage buffer but produce geometry like we will here.
 
 Our first set of geometry will be a triangle that looks roughly like this:
@@ -107,15 +109,15 @@ Our first set of geometry will be a triangle that looks roughly like this:
 ```
 
 (-1, 1)                       (1, 1)
-    +---------------------------+
-    |             0  (0, 1)     |
-    |           /   \           |
-    |         /       \         |
-    |       /           \       |
-    |     /               \     |
-    |   /                   \   |
-    | /                       \ |
-    2---------------------------1
+    +--------------0--------------+
+    |             / \ (0, 1)      |
+    |           /     \           |
+    |         /         \         |
+    |       /             \       |
+    |     /                 \     |
+    |   /                     \   |
+    | /                         \ |
+    2-----------------------------1
 (-1, -1)                     (1, -1)
   
 ```
@@ -140,11 +142,15 @@ static const float3 cColors[3] = {
 };
 ```
 
+Now we've discussed that Vertex Shaders have to output geometry, we do this through returning a value from our `main` function which we'll be writing in a moment. That said, we do not need to return just a single value. Vertex Shaders can also output data for Pixel Shaders to use. In general these values will be interpolated based on the values of the vertices output by this function based on the position of the pixel within the triangle those vertices make up. We'll discuss this in a bit more detail during the FullScreen Triangle section below.
+
+So, to return multiple values, you can create a struct, but we need to inform the shader which field means what. The method by which we do this are called "Semantics" in HLSL. 
+
 ```hlsl
 struct Output
 {
-  float3 Color : TEXCOORD1;
   float4 Position : SV_Position;
+  float3 Color : TEXCOORD0;
 };
 ```
 
@@ -163,13 +169,13 @@ Output main(uint id : SV_VertexID)
 
 ## Pixels (and Fragments) <a name="pixels" id="pixels"></a>
 
-### The Fullscreen Triangle
+### The Fullscreen Triangle <a name="fullscreen_triangle" id="fullscreen_triangle"></a>
 
 Now lets do something a little more practical, or at least on the borders of practical. You can copy and paste the TriangleContext you made above, and just create some new shaders to use with this FullScreenContext.
 
 FullScreen triangles might be used for all sorts of things, but fundamentally they're generally there for when you just want a canvas to paint on in th Pixel Shader. We'll be doing something pretty basic here, but we'll revisit it much later. We're covering it now so that you can see that sometimes, you really do need to render a single triangle, but what's special is what's within it.
 
-#### The Vertex Shader
+#### The Vertex Shader  <a name="fullscreen_triangle_vertex_shader" id="fullscreen_triangle_vertex_shader"></a>
 
 We know from our work above that we don't actually need geometry from the CPU to output something in the vertex stage, as long as we know which vertex we're outputting. We also know that we can interpolate values between the vertices of the triangle. Thus, a fullscreen triangle is the minimum triangle that fills the entirety of the screen (NDC space) while giving us an interpolated value between (0, 0) and (1, 1) within the screen. That interpolated value is how we'll know where we are when we're inside the pixel shader, and will allow you to do some fun things, although my demonstration will be a simple checkerboard effect.
 

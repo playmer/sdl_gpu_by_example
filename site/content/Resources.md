@@ -6,13 +6,6 @@ template: post_template.html
 
 ## Additional Resources
 
-### Mathematics
-
- - Eric Lengyels Books:
-   - [Foundations of Game Engine Development, Volume 1: Mathematics](https://www.amazon.com/dp/0985811749)
-   - [Foundations of Game Engine Development, Volume 2: Rendering](https://www.amazon.com/dp/0985811757)
-   - [Projective Geometric Algebra Illuminated](https://www.amazon.com/dp/B0CXY8C72T)
-
 ### Graphics
 
  - [SDL_GPU Documentation](https://wiki.libsdl.org/SDL3/CategoryGPU) 
@@ -23,6 +16,13 @@ template: post_template.html
     - Written by Evan Hemsley, this article explains the GPU API concept called cycling. We'll get there eventually, but this is written from the source, highly recommended! 
  - [SDL GPU API Concepts: Sprite Batcher](https://moonside.games/posts/sdl-gpu-sprite-batcher/)
     - Written by Evan Hemsley as his answer to folks who want shaders but are coming from the [SDL_Renderer](https://wiki.libsdl.org/SDL3/CategoryRender). Fantastic article on the design of a simple sprite batcher to solve the main things people use the built-in renderer for. We'll try to build up to examples like this, but we likely won't speak about the design of a pipeline at this length.
+
+### Mathematics
+
+ - Eric Lengyels Books:
+   - [Foundations of Game Engine Development, Volume 1: Mathematics](https://www.amazon.com/dp/0985811749)
+   - [Foundations of Game Engine Development, Volume 2: Rendering](https://www.amazon.com/dp/0985811757)
+   - [Projective Geometric Algebra Illuminated](https://www.amazon.com/dp/B0CXY8C72T)
 
 ## Get help:
  - [SDL Discord](https://discord.gg/BwpFGBWsv8)

@@ -485,7 +485,7 @@ fn get_specific_content_context(handlebars: &Handlebars<'_>, template_context: &
 
     map.insert("inserts".to_string(), {
         let mut temp_map = map.clone();
-        let mut temp_current_context = current_content.clone();
+        let temp_current_context = current_content.clone();
         temp_map.insert("current_content".to_string(), temp_current_context.into());
         
         let context_for_inserts: Value = map.clone().into();
@@ -500,7 +500,7 @@ fn get_specific_content_context(handlebars: &Handlebars<'_>, template_context: &
 
     map.insert("current_content".to_string(), {
         let mut temp_map = map.clone();
-        let mut temp_current_context = current_content.clone();
+        let temp_current_context = current_content.clone();
         temp_map.insert("current_content".to_string(), temp_current_context.into());
 
         // We now have everything we might need to re-render the markdown into HTML
