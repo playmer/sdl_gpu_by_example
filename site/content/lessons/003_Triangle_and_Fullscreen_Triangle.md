@@ -144,7 +144,7 @@ static const float3 cColors[3] = {
 
 Now we've discussed that Vertex Shaders have to output geometry, we do this through returning a value from our `main` function which we'll be writing in a moment. That said, we do not need to return just a single value. Vertex Shaders can also output data for Pixel Shaders to use. In general these values will be interpolated based on the values of the vertices output by this function based on the position of the pixel within the triangle those vertices make up. We'll discuss this in a bit more detail during the FullScreen Triangle section below.
 
-So, to return multiple values, you can create a struct, but we need to inform the shader which field means what. The method by which we do this are called "Semantics" in HLSL. 
+So, to return multiple values, you create a struct that contains those values. The shader needs to know which field means what and the method by which we do this are called "Semantics" in HLSL. 
 
 ```hlsl
 struct Output
@@ -153,6 +153,9 @@ struct Output
   float3 Color : TEXCOORD0;
 };
 ```
+Here we're telling our shader compiler that we're outputting the vertex position through the required built-in `SV_Position` semantic. Similarly we're going to want to output the color we've assigned to this vertex and send it along to the Fragment shader. We do this via `TEXCOORD0`. Now it should be noted that all non-built-in input/output variables will use this semantic with an incrementing `n` in `TEXCOORDn`, so `TEXCOORD0`, `TEXCOORD1` and so on. The `n`s being unique to the input or output struct they're in. This is essentially just a quirk of the shader compiler we're using as it makes it easier for them to transpile our shaders to the other shader languages, but it should be noted that even natively in DX12, the other semantic names are equally unneeded, they're more for the programmer.
+
+Now let's take a look at our main function, it's fairly simple.
 
 ```hlsl
 Output main(uint id : SV_VertexID)
@@ -165,6 +168,8 @@ Output main(uint id : SV_VertexID)
   return output;
 }
 ```
+
+Right off the bat we see two interesting things, the return value is using our `Output` struct, and we're taking a paramter and it's marked with a built-in semantic. When we mark inputs with semantics, this means that we're asking the shader runtime to let us use that built-in variable. In this case `SV_VertexID` represents the ID of the vertex we're currently processing in this shader. Remember that the Vertex Shader will run for every vertex you request to draw. 
 
 
 ## Pixels (and Fragments) <a name="pixels" id="pixels"></a>
