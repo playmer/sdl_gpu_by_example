@@ -79,23 +79,12 @@ int main(int argc, char** argv)
 
   CreateGpuContext(window);
 
-  bool shown = true;
   bool running = true;
 
   while (running) {
     SDL_Event event;
     while (SDL_PollEvent(&event)) {
       switch (event.common.type) {
-        case SDL_EVENT_KEY_UP:
-          if (shown) {
-            SDL_HideWindow(window);
-          } 
-          else {
-            SDL_ShowWindow(window);
-          }
-
-          shown = !shown;
-          break;
         case SDL_EVENT_QUIT:
           running = false;
           break;

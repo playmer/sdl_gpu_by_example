@@ -27,6 +27,8 @@ use walkdir::WalkDir;
 use yaml_rust::{Yaml, YamlLoader};
 use zip::write::SimpleFileOptions;
 
+pub mod diff;
+
 static CODE_DIR: &str =  "../../code";
 static CODE_SOURCE_DIR: &str =  "../../code/source";
 static CODE_ASSET_DIR: &str =  "../../code/Assets";
@@ -796,38 +798,42 @@ fn process_content() -> Vec<(PathBuf, String)> {
     return rendered_html;
 }
 
+
 fn main() {
-    let output_dir = Path::new(OUTPUT_DIR);
-    write_site_to_folder();
-    process_content();
+    diff::diff_and_highlight();
 
-    let args: Vec<String> = env::args().collect();
 
-    if !args.contains(&"--no-serve".to_owned())
-    {
-        let gh_output_dir = Path::new("output_github");
-        let destination = gh_output_dir.join("sdl_gpu_by_example");
+    // let output_dir = Path::new(OUTPUT_DIR);
+    // write_site_to_folder();
+    // process_content();
 
-        // Delete existing output    
-        if fs::exists(&gh_output_dir).unwrap()
-        {
-            fs::remove_dir_all(&gh_output_dir).unwrap();
-        }
+    // let args: Vec<String> = env::args().collect();
+
+    // if !args.contains(&"--no-serve".to_owned())
+    // {
+    //     let gh_output_dir = Path::new("output_github");
+    //     let destination = gh_output_dir.join("sdl_gpu_by_example");
+
+    //     // Delete existing output    
+    //     if fs::exists(&gh_output_dir).unwrap()
+    //     {
+    //         fs::remove_dir_all(&gh_output_dir).unwrap();
+    //     }
         
-        fs::create_dir_all(&destination).unwrap();
+    //     fs::create_dir_all(&destination).unwrap();
 
-        for file_source in get_files(&output_dir) {
-            let file_destination = destination.join(&file_source);
-            fs::create_dir_all(file_destination.parent().unwrap()).unwrap();
-            fs::copy(output_dir.join(&file_source), &file_destination).unwrap();
-        }
+    //     for file_source in get_files(&output_dir) {
+    //         let file_destination = destination.join(&file_source);
+    //         fs::create_dir_all(file_destination.parent().unwrap()).unwrap();
+    //         fs::copy(output_dir.join(&file_source), &file_destination).unwrap();
+    //     }
 
-        println!("Link to site: http://127.0.0.1:4040/sdl_gpu_by_example/");
+    //     println!("Link to site: http://127.0.0.1:4040/sdl_gpu_by_example/");
 
-        // Should run the bottom command to host the site.
-        let _ = Command::new("http-serve-folder")
-            .args([gh_output_dir])
-            .status()
-            .expect("failed to execute process");
-    }
+    //     // Should run the bottom command to host the site.
+    //     let _ = Command::new("http-serve-folder")
+    //         .args([gh_output_dir])
+    //         .status()
+    //         .expect("failed to execute process");
+    // }
 }

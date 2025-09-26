@@ -766,9 +766,9 @@ CubeContext CreateCubeContext(SDL_GPUTextureFormat aDepthFormat) {
   SDL_GPUGraphicsPipelineCreateInfo graphicsPipelineCreateInfo;
   SDL_zero(graphicsPipelineCreateInfo);
 
-  graphicsPipelineCreateInfo.target_info.num_color_targets = 1;
-  graphicsPipelineCreateInfo.target_info.color_target_descriptions = &colorTargetDescription;
-  graphicsPipelineCreateInfo.target_info.depth_stencil_format = aDepthFormat;
+  graphicsPipelineCreateInfo.target_info.num_color_targets = 1;                                  /*setting num_color_targets */
+  graphicsPipelineCreateInfo.target_info.color_target_descriptions = &colorTargetDescription;    /*setting color_target_descriptions */
+  graphicsPipelineCreateInfo.target_info.depth_stencil_format = aDepthFormat;                    /*setting depth_stencil_format */
   graphicsPipelineCreateInfo.target_info.has_depth_stencil_target = true;
   graphicsPipelineCreateInfo.primitive_type = SDL_GPU_PRIMITIVETYPE_TRIANGLELIST;
   graphicsPipelineCreateInfo.rasterizer_state.front_face = SDL_GPU_FRONTFACE_CLOCKWISE;
@@ -789,7 +789,7 @@ CubeContext CreateCubeContext(SDL_GPUTextureFormat aDepthFormat) {
   attributes[1].location = 1;
   attributes[1].buffer_slot = 0;
   attributes[1].format = SDL_GPU_VERTEXELEMENTFORMAT_FLOAT3;
-  attributes[1].offset = sizeof(float3);
+  attributes[1].offset = sizeof();
 
   graphicsPipelineCreateInfo.vertex_input_state.vertex_attributes = attributes;
 
