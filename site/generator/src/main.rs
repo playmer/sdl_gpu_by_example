@@ -16,12 +16,7 @@ use extract_frontmatter::config::Splitter;
 use extract_frontmatter::Extractor;
 use handlebars::Handlebars;
 
-use markdown::CompileOptions;
-use markdown::Options;
-use markdown;
 use natural_sort_rs::NaturalSort;
-use scraper::ElementRef;
-use scraper::{Html, Selector};
 use serde_json::Value;
 use walkdir::WalkDir;
 use yaml_rust::{Yaml, YamlLoader};
@@ -45,7 +40,7 @@ static NO_ESCAPE: &str =  "<!-- NO_ESCAPE -->";
 static COLLAPSIBLE_CARD_START_TEMPLATE: &str = 
 "<p class=\"d-inline-flex gap-1\">
   <button class=\"btn btn-primary\" type=\"button\" data-bs-toggle=\"collapse\" data-bs-target=\"#var\" aria-expanded=\"false\" aria-controls=\"var\">
-    Expand: Covered in this Section
+    Expand: CARD_START_TEMPLATE_TEXT
   </button>
 </p>
 <div class=\"collapse\" id=\"var\">
@@ -75,7 +70,7 @@ struct CollapsibleCardStartHelper
 impl handlebars::HelperDef for CollapsibleCardStartHelper {
   fn call<'reg: 'rc, 'rc>(
     &self,
-    _h: &handlebars::Helper,
+    h: &handlebars::Helper,
     _: &Handlebars,
     _: &handlebars::Context,
     _rc: &mut handlebars::RenderContext,
@@ -85,8 +80,13 @@ impl handlebars::HelperDef for CollapsibleCardStartHelper {
     *i += 1;
 
     let i = i.to_string();
+    
+    let card_text = h.param(0).unwrap().value().as_str().unwrap();
+    let card_start_html = COLLAPSIBLE_CARD_START_TEMPLATE
+        .replace("var", &i.to_string())
+        .replace("CARD_START_TEMPLATE_TEXT", card_text);
 
-    out.write(&COLLAPSIBLE_CARD_START_TEMPLATE.replace("var", &i.to_string())).unwrap();
+    out.write(&card_start_html).unwrap();
     Ok(())
   }
 }
@@ -467,15 +467,7 @@ fn get_template_context(content: &Vec<Content>) -> serde_json::Map<String, Value
 fn get_specific_content_context(handlebars: &Handlebars<'_>, template_context: &serde_json::Map<String, Value>, inserts: &Vec<(String, String)>, content: &Content) -> Value {
     let mut map: serde_json::Map<String, Value> = template_context.clone();
     let mut current_content = get_content_info(&content);
-    
-    let markdown_options = Options {
-            compile: CompileOptions {
-            allow_dangerous_html: true,
-            ..CompileOptions::default()
-        },
-        ..Options::gfm()
-    };
-    
+        
     let content_title = content.front_matter["title"].as_str().unwrap().to_string();
 
     let (current_content, inserts) = {
@@ -555,75 +547,6 @@ fn get_inserts() -> Vec<(String, String)> {
 
     return inserts;
 }
-
-
-// static COVERED_IN_SECTION_BLOCKQUOTE_START: &str =  "<blockquote>";
-// static COVERED_IN_SECTION_BLOCKQUOTE_START_TEMPLATE: &str = 
-// "<p class=\"d-inline-flex gap-1\">
-//   <button class=\"btn btn-primary\" type=\"button\" data-bs-toggle=\"collapse\" data-bs-target=\"#collapseExample\" aria-expanded=\"false\" aria-controls=\"collapseExample\">
-//     Expand: Covered in this Section
-//   </button>
-// </p>
-// <div class=\"collapse\" id=\"collapseExample\">
-// <div class=\"card card-body\">";
-
-// static COVERED_IN_SECTION_BLOCKQUOTE_END: &str =  "<blockquote>";
-// static COVERED_IN_SECTION_BLOCKQUOTE_END_TEMPLATE: &str = 
-// "</div>
-// </div>";
-
-// fn process_content_html(html: String) -> String
-// {
-//     let mut current_html = html;
-
-
-//     // Do blockquote cleanup
-//     {
-//         let mut last_html = current_html.clone();
-
-//         let mut i = 0;
-        
-//         let current_tag = format!("collapseExample_{i}");
-
-//         current_html = last_html.clone()
-//             .replacen(
-//                 &COVERED_IN_SECTION_BLOCKQUOTE_START, 
-//                 &COVERED_IN_SECTION_BLOCKQUOTE_START_TEMPLATE.replace("collapseExample", &current_tag), 
-//                 1)
-//             .replacen(
-//                 &COVERED_IN_SECTION_BLOCKQUOTE_END, 
-//                 &COVERED_IN_SECTION_BLOCKQUOTE_END_TEMPLATE, 
-//                 1);
-
-//         while current_html.len() > last_html.len() {
-//             last_html = current_html.clone();
-//             i += 1;
-//             let current_tag = format!("collapseExample_{i}");
-
-//             current_html = last_html.clone()
-//                 .replacen(
-//                     &COVERED_IN_SECTION_BLOCKQUOTE_START, 
-//                     &COVERED_IN_SECTION_BLOCKQUOTE_START_TEMPLATE.replace("collapseExample", &current_tag), 
-//                     1)
-//                 .replacen(
-//                     &COVERED_IN_SECTION_BLOCKQUOTE_END, 
-//                     &COVERED_IN_SECTION_BLOCKQUOTE_END_TEMPLATE, 
-//                     1);
-//         }
-//     }
-
-//     return current_html;
-// }
-
-
-//struct CollapsibleCardStartHelper
-
-//fn card_start_helper(
-//fn card_end_helper(
-//fn image_helper(
-
-
-
 
 fn process_content() -> Vec<(PathBuf, String)> {
     let output_dir = Path::new(OUTPUT_DIR);

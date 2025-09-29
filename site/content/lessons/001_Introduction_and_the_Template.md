@@ -129,8 +129,7 @@ Now, this isn't a tutorial on SDL itself, but I'll try to briefly cover things a
 
 Now that we've covered the basics, lets get us a Window and an Event loop.
 
-{{collapsible-card}}
-### Covered in this Section
+{{collapsible-card "Covered in this Section"}}
 - [`SDL_Init`](https://wiki.libsdl.org/SDL3/SDL_Init)
   - Generally the first think you call in an SDL using application. This initializes the subsystems you require of SDL. Not technically required, as SDL will lazily initialize subsystems when you call functions that require them, but it's recommended you call it, as things like events won't come in from some subsystems if they're not initialized.
 - [`SDL_Quit`](https://wiki.libsdl.org/SDL3/SDL_Quit)

@@ -18,8 +18,7 @@ We're going to start off with the example from the previous chapter, as we can d
 We've not discussed it before in this tutorial, but you may have heard about structs containing "padding" between fields for alignment reasons. When you're just writing in one language, this mostly isn't something you need to concern yourself with, unless you're trying to optimize your layouts. When you're transferring data between languages, or in this case, between languages _and_ processors, you need to ensure both sides agree on the layout of structs and their padding.
 
 
-
-{{collapsible-card}}
+{{collapsible-card "Covered in this Section"}}
 
 [OpenGL Specification](https://registry.khronos.org/OpenGL/specs/gl/glspec45.core.pdf#page=159)
 

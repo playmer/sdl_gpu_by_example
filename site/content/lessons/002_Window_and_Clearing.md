@@ -69,8 +69,7 @@ So as mentioned, we have a bool that we can modify to exit the frame loop, and w
 
 Now, finally, we can discuss the GPU API.
 
-{{collapsible-card}}
-### Covered in this Section
+{{collapsible-card "Covered in this Section"}}
 - [`SDL_CreateWindow`](https://wiki.libsdl.org/SDL3/SDL_CreateWindow)
   - One of the most common functions when you use SDL, along with SDL_Init, it's probably closest to the function that "every" SDL application calls. There's a fair bit of flexibility in Window creation, and we won't cover most of it as it's not particularly relevant to rendering.
 - [`SDL_CreateWindowWithProperties`](https://wiki.libsdl.org/SDL3/SDL_CreateWindowWithProperties)
@@ -170,8 +169,7 @@ So now we have a GpuContext struct we can pass around, it holds all of the stuff
 
 In terms of the functionality that we just added, as mentioned above, we've created an SDL properties object. This is a way to tell SDL about extra functionality we want. Often this is backend/platform specific information, but sometimes it's simply for extended initialization, as more can be added as needed, and it won't break SDLs API guarentees.
 
-{{collapsible-card}}
-#### Covered in this Section
+{{collapsible-card "Covered in this Section"}}
 - [`SDL_CreateGPUDevice`](https://wiki.libsdl.org/SDL3/SDL_CreateGPUDevice)
   - This is another one of those "every SDL_GPU application will need to call this" functions. It does all of the GPU initialization for us. It selects an API, selects a GPU, sets up validation layers, and more. I covered above what the args are for this, they're pretty simple. So I'd also recommend taking a look at the ['properties you can pass in to that version of the function.'](https://wiki.libsdl.org/SDL3/SDL_CreateGPUDeviceWithProperties) There's of course the args that we can set in the normal function, but also preferences for the type of GPU to select, and a few backend specific properties. The Vulkan ones in particular are helpful by giving up some features for a _drastic_ increase in Android support.
   - I wanted to cover creating some small abstractions and objects for management early. I think it's important to have these primitives to help write our applications, and I don't want to write tutorials that pretend to do everything in `main`. That said, I'll try to ensure they always stick to one file! (Plus the shader files.)
@@ -265,9 +263,7 @@ As you may notice from the parameters of [`SDL_BeginGPURenderPass`](https://wiki
 
 After that, it's really just about ending the render pass with [`SDL_EndGPURenderPass`](https://wiki.libsdl.org/SDL3/SDL_EndGPURenderPass) and submitting the command buffer with [`SDL_SubmitGPUCommandBuffer`](https://wiki.libsdl.org/SDL3/SDL_SubmitGPUCommandBuffer) to the GPU so that our commands are run.
 
-
-{{collapsible-card}}
-### Covered in this Section
+{{collapsible-card "Covered in this Section"}}
 - [`SDL_AcquireGPUCommandBuffer`](https://wiki.libsdl.org/SDL3/SDL_AcquireGPUCommandBuffer)
   - A common thing we hear about in Graphics is about doing things on other threads, such as recording command buffers. In practice, this isn't really all that slow, or at least the recording part isn't, perhaps walking your scene might be but that's an architectural issue. That said, I won't say there's no uses of threads here. In my experience, it can be very useful to do mid-frame uploads when you do things like load assets. The upload itself usually isn't the slow part, but it can be easier to do the upload on another thread if you're already doing the unpacking on another thread. We might look into these strategies in a later chapter if I can find a compelling use case that doesn't take a lot of non-GPU work.
 - [`SDL_SubmitGPUCommandBuffer`](https://wiki.libsdl.org/SDL3/SDL_SubmitGPUCommandBuffer)

@@ -2,7 +2,6 @@ use std::path::Path;
 
 use pulldown_cmark::CodeBlockKind;
 use pulldown_cmark::CowStr;
-use pulldown_cmark::HeadingLevel;
 use pulldown_cmark::TagEnd;
 use similar::{ChangeTag, TextDiff};
 use serde_json::Value;
@@ -40,28 +39,20 @@ use syntect::html::append_highlighted_html_for_styled_line;
 use syntect::html::highlighted_html_for_string;
 use syntect::html::start_highlighted_html_snippet;
 use syntect::html::IncludeBackground;
-use syntect::parsing::Regex;
 use syntect::parsing::SyntaxReference;
 use syntect::parsing::SyntaxSet;
 
-use pulldown_cmark::html;
 use pulldown_cmark::Event;
 use pulldown_cmark::Options;
 use pulldown_cmark::Parser;
 use pulldown_cmark::Tag;
-use syntect::util::LinesWithEndings;
 use syntect::Error;
 
-use std::borrow::Cow;
-use std::io;
-use std::io::Read;
 
-fn diff(old_content: &Path, new_content: &Path) -> (Vec<ChangeTag>, String, String)
+fn diff(old_content: &Path, new_content: &Path) -> (Vec<ChangeTag>, String)
 {
     let old_content = std::fs::read_to_string(old_content).unwrap();
     let new_content = std::fs::read_to_string(new_content).unwrap();
-
-    let mut diffed_html = String::new();
 
     let mut changes : Vec<ChangeTag> = Vec::new();
     let mut full_content = String::with_capacity(old_content.len() + new_content.len());
@@ -73,53 +64,15 @@ fn diff(old_content: &Path, new_content: &Path) -> (Vec<ChangeTag>, String, Stri
 
         let line = change.as_str().unwrap();
         full_content.push_str(line);
-
-        match change.tag() {
-            ChangeTag::Delete => diffed_html.push_str(&format!("<span class=\"delete\">{}</span>", line)),
-            ChangeTag::Insert => diffed_html.push_str(&format!("<span class=\"insert\">{}</span>", line)),
-            ChangeTag::Equal => diffed_html.push_str(&format!("{}", line)),
-        };
     }
 
-    return (changes, full_content, diffed_html);
+    return (changes, full_content);
 }
 
-fn highlighted_html_for_string_local(
-    s: &str,
-    ss: &SyntaxSet,
-    syntax: &SyntaxReference,
-    theme: &Theme,
-) -> Result<String, Error> {
-    let mut highlighter = HighlightLines::new(syntax, theme);
-    let (mut output, bg) = start_highlighted_html_snippet(theme);
-
-    //for line in LinesWithEndings::from(s) {
-    for line in s.lines() {
-        let regions = highlighter.highlight_line(line, ss)?;
-        append_highlighted_html_for_styled_line(
-            &regions[..],
-            IncludeBackground::IfDifferent(bg),
-            &mut output,
-        )?;
-        output.push('\n');
-    }
-    output.push_str("</pre>\n");
-    Ok(output)
-}
-
-pub fn diff_and_highlight()
+pub fn diff_and_highlight(source: &Path, dest: &Path)
 {
-    // Setup for pulldown_cmark to read (only) from stdin
-    // let opts = Options::empty();
-    // let mut input = String::new();
-    // io::stdin().read_to_string(&mut input).unwrap();
-    // let mut s = String::with_capacity(&input.len() * 3 / 2);
-    // let p = Parser::new_ext(&input, opts);
-    
-    let source = "E:/Repos/sdl_gpu_by_example/code/source/003_Triangle_and_Fullscreen_Triangle/003_Triangle_and_Fullscreen_Triangle.c";
-    let dest = "E:/Repos/sdl_gpu_by_example/code/source/004_Uniform_Buffers/004_Uniform_Buffers.c";
-
-    
+    //let source = "E:/Repos/sdl_gpu_by_example/code/source/003_Triangle_and_Fullscreen_Triangle/003_Triangle_and_Fullscreen_Triangle.c";
+    //let dest = "E:/Repos/sdl_gpu_by_example/code/source/004_Uniform_Buffers/004_Uniform_Buffers.c";
 
     // Setup for syntect to highlight (specifically) Rust code
     let default_syntax_set = SyntaxSet::load_defaults_newlines();
@@ -127,9 +80,8 @@ pub fn diff_and_highlight()
     let syntax = default_syntax_set.find_syntax_by_extension("c").unwrap();
     let theme = &default_theme_set.themes["base16-ocean.dark"];
 
-    let (changes, full_content, diffed_html) = diff(Path::new(source), Path::new(dest));
+    let (changes, full_content) = diff(source, dest);
     
-    //let html = highlighted_html_for_string_local(&full_content, &default_syntax_set, &syntax, &theme).unwrap();
     let html = highlighted_html_for_string(&full_content, &default_syntax_set, &syntax, &theme).unwrap();
     let html = html.replace("\n</span>", "</span>\n");
     let html_lines : Vec<&str> = html.lines().collect();
@@ -313,7 +265,7 @@ impl TocGenerator {
             let header_id;
 
             if let Some(maybe_text_event) = parser.next() {
-                match (&maybe_text_event) {
+                match &maybe_text_event {
                     Event::Text(text) => {
                         header_id = TocGenerator::string_to_id(text);
                         header_text = text.to_string();
