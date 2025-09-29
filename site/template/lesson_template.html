@@ -27,11 +27,12 @@
             
             <hr>
             {{current_content.rendered_html}}
-
             
-            {{collapsible-card "See the diff from the previous chapter."}}
-
-            {{collapsible-card-end}}
+            {{#if this.lesson_diff}}
+              {{collapsible-card "See the diff from the previous chapter."}}
+              {{this.lesson_diff}}
+              {{collapsible-card-end}}
+            {{/if}}
             
             <a href="/sdl_gpu_by_example/assets/code/{{current_content.file_name_no_ext}}.zip"><p>Download the source for this example here.</p>
             

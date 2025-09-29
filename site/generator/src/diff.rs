@@ -39,6 +39,7 @@ use pulldown_cmark::Tag;
 
 fn diff(old_content: &Path, new_content: &Path) -> (Vec<ChangeTag>, String)
 {
+    println!("wooooooooo {}, {}", &old_content.display(), &new_content.display());
     let old_content = std::fs::read_to_string(old_content).unwrap();
     let new_content = std::fs::read_to_string(new_content).unwrap();
 
@@ -57,16 +58,16 @@ fn diff(old_content: &Path, new_content: &Path) -> (Vec<ChangeTag>, String)
     (changes, full_content)
 }
 
-pub fn diff_and_highlight(source: &Path, dest: &Path)
-{
-    //let source = "E:/Repos/sdl_gpu_by_example/code/source/003_Triangle_and_Fullscreen_Triangle/003_Triangle_and_Fullscreen_Triangle.c";
-    //let dest = "E:/Repos/sdl_gpu_by_example/code/source/004_Uniform_Buffers/004_Uniform_Buffers.c";
+pub fn diff_and_highlight(source: &Path, dest: &Path) -> String {
+    if !std::fs::exists(source).unwrap() || !std::fs::exists(dest).unwrap() {
+        return String::new();
+    }
 
     // Setup for syntect to highlight (specifically) Rust code
     let default_syntax_set = SyntaxSet::load_defaults_newlines();
     let default_theme_set = ThemeSet::load_defaults();
     let syntax = default_syntax_set.find_syntax_by_extension("c").unwrap();
-    let theme = &default_theme_set.themes["base16-ocean.dark"];
+    let theme = &default_theme_set.themes["InspiredGitHub"];
 
     let (changes, full_content) = diff(source, dest);
     
@@ -77,21 +78,7 @@ pub fn diff_and_highlight(source: &Path, dest: &Path)
     let mut highlighted_html = String::with_capacity(html.len() * 2);
 
 
-    highlighted_html.push_str(
-        r#"<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>HTML Diff</title>
-    <style>
-        .delete { background-color: #ffcccc; text-decoration: line-through; }
-        .insert { background-color: #ccffcc; }
-    </style>
-</head>
-<body>
-    <h1>Diff for: "#,
-    );
+    highlighted_html.push_str("<!-- NO_ESCAPE -->\n");
 
     
     highlighted_html.push_str(html_lines[0]);
@@ -103,9 +90,8 @@ pub fn diff_and_highlight(source: &Path, dest: &Path)
         };
     }
     highlighted_html.push_str(html_lines[html_lines.len() - 1]);
-    highlighted_html.push_str("</pre></body></html>");
     
-    print!("{}", highlighted_html);
+    return highlighted_html;
 }
 
 struct Highlighter {

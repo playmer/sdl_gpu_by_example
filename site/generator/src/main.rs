@@ -5,6 +5,7 @@ use std::fs::create_dir_all;
 use std::fs::File;
 use std::io::stdout;
 use std::io::{Read, Write};
+use std::ops::Index;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::sync::Arc;
@@ -368,7 +369,6 @@ struct Content {
     markdown: String,
 }
 
-
 fn get_content() -> Vec<Content> {
     let content_dir = Path::new(CONTENT_DIR);
 
@@ -464,7 +464,7 @@ fn get_template_context(content: &Vec<Content>) -> serde_json::Map<String, Value
     map
 }
 
-fn get_specific_content_context(handlebars: &Handlebars<'_>, template_context: &serde_json::Map<String, Value>, inserts: &Vec<(String, String)>, content: &Content) -> Value {
+fn get_specific_content_context(handlebars: &Handlebars<'_>, template_context: &serde_json::Map<String, Value>, inserts: &Vec<(String, String)>, content: &Content) -> serde_json::Map<String, Value> {
     let mut map: serde_json::Map<String, Value> = template_context.clone();
     let mut current_content = get_content_info(content);
         
@@ -522,7 +522,7 @@ fn get_specific_content_context(handlebars: &Handlebars<'_>, template_context: &
     map.insert("inserts".to_string(), inserts);
     map.insert("current_content".to_string(), current_content);
 
-    map.into()
+    map
 }
 
 
@@ -550,6 +550,7 @@ fn get_inserts() -> Vec<(String, String)> {
 
 fn process_content() -> Vec<(PathBuf, String)> {
     let output_dir = Path::new(OUTPUT_DIR);
+    let code_dir = Path::new(CODE_DIR).join("source");
 
     let template_dir = Path::new(TEMPLATE_DIR);
     let rendered_html: Vec<(PathBuf, String)> = Vec::new();
@@ -569,13 +570,41 @@ fn process_content() -> Vec<(PathBuf, String)> {
 
     let inserts = get_inserts();
 
-    for content in contents {
+    for i in 0..contents.len() {
+        let content = &contents[i];
+        let template = content.front_matter["template"].as_str().unwrap();
+        
+        let previous_content = if (i > 0) && (template == "lesson_template.html") {
+            Some(&contents[i - 1])
+        } else {
+            None
+        };
+
         println!("Processing {} content", content.file_name);
         stdout().flush().unwrap();
 
-        let template_path = template_dir.join(content.front_matter["template"].as_str().unwrap());
+        let template_path = template_dir.join(template);
         let template_html = std::fs::read_to_string(&template_path).unwrap();
-        let current_content_context = get_specific_content_context(&handlebars, &template_context, &inserts, &content);
+        let mut current_content_context = get_specific_content_context(&handlebars, &template_context, &inserts, &content);
+
+        // TODO: Probably should figure out a way to not hardcode this.
+        if let Some(previous_content) = previous_content {
+            let previous_template = previous_content.front_matter["template"].as_str().unwrap();
+            if previous_template == "lesson_template.html" {
+                let content_name = Path::new(&content.file_name).file_stem().unwrap();
+                let previous_content_name = Path::new(&previous_content.file_name).file_stem().unwrap();
+
+                let html = diff::diff_and_highlight(
+                    &code_dir.join(previous_content_name).join(format!("{}.c", previous_content_name.display())),
+                    &code_dir.join(content_name).join(format!("{}.c", content_name.display()))
+                );
+
+                current_content_context.insert("lesson_diff".to_string(), html.into());
+            }
+        }
+
+        let current_content_context: Value = current_content_context.into();
+
         let final_html = handlebars.render_template(&template_html, &current_content_context).unwrap();
 
         let final_file_path = output_dir.join(&content.file_path).with_extension("html");
