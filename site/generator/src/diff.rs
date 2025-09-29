@@ -17,17 +17,11 @@ pub fn generate_diff_html() {
     let diff = TextDiff::from_lines(&old_content, &new_content);
 
     for change in diff.iter_all_changes() {
-        let (class, text) = match change.tag() {
+        let (_, _) = match change.tag() {
             ChangeTag::Delete => ("delete", change.as_str()),
             ChangeTag::Insert => ("insert", change.as_str()),
             ChangeTag::Equal =>  ("      ", change.as_str()),
         };
-
-        if !class.is_empty() {
-            print!("--[{}]> {}", class, text.unwrap());
-        } else {
-            print!("--[{}]> {}", class, text.unwrap());
-        }
     }
 }
 
@@ -109,40 +103,9 @@ pub fn diff_and_highlight(source: &Path, dest: &Path)
         };
     }
     highlighted_html.push_str(html_lines[html_lines.len() - 1]);
-
-    //highlighted_html.push_str("\n\n\nblah\n\n\n");
-    //highlighted_html.push_str(&diffed_html);
-
     highlighted_html.push_str("</pre></body></html>");
-
     
     print!("{}", highlighted_html);
-    
-    //highlighted_html.push_str("end\n");
-    //println!("{}, {}", changes.len(), html_lines.len());
-    //for line in html_lines {
-    //    println!("{}", line);
-    //}
-
-
-    // let old_content = std::fs::read_to_string(Path::new(source)).unwrap();
-    // let new_content = std::fs::read_to_string(Path::new(dest)).unwrap();
-
-    // let diff = TextDiff::from_lines(&old_content, &new_content);
-
-    // for change in diff.iter_all_changes() {
-    //     let (class, text) = match change.tag() {
-    //         ChangeTag::Delete => ("delete", change.as_str()),
-    //         ChangeTag::Insert => ("insert", change.as_str()),
-    //         ChangeTag::Equal =>  ("      ", change.as_str()),
-    //     };
-
-    //     if !class.is_empty() {
-    //         print!("--[{}]> {}", class, text.unwrap());
-    //     } else {
-    //         print!("--[{}]> {}", class, text.unwrap());
-    //     }
-    // }
 }
 
 struct Highlighter {
@@ -226,16 +189,13 @@ struct TocGenerator {
 
 impl TocGenerator {
     fn new(title: String) -> TocGenerator {
-        let mut children_stack: Vec<TocItem> = Vec::new();
-        children_stack.push(TocItem { 
-            level: 1, 
-            text: title,
-            url: "#title".to_string(), 
-            children: Vec::new()
-        });
-
         TocGenerator {
-            children_stack,
+            children_stack: vec![ TocItem { 
+                level: 1, 
+                text: title,
+                url: "#title".to_string(), 
+                children: Vec::new()
+            }],
             last_level: 1
         }
     }

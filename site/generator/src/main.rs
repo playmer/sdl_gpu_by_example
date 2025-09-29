@@ -404,10 +404,10 @@ fn get_collections(content: &Vec<Content>) -> Value {
     for content_file in content {
         let collections = content_file.front_matter["collections"].as_vec();
 
-        let collections = if collections.is_none() {
-            continue;
+        let collections = if let Some(collections) = collections {
+            collections
         } else {
-            collections.unwrap()
+            continue
         };
 
         for collection in collections {

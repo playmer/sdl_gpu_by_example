@@ -190,7 +190,7 @@ In terms of the functionality that we just added, as mentioned above, we've crea
 
 ### Clearing the Screen
 
-#### A Command Buffer and the Swapchain Textureid="command_buffers_and_swapchains"></a>
+#### A Command Buffer and the Swapchain Texture
 We're near the finish line here. It's time to learn a bit about Command Buffers and the Swapchain Textures:
 
 ```c
