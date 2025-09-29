@@ -32,21 +32,15 @@ pub fn generate_diff_html() {
 }
 
 
-use syntect::easy::HighlightLines;
 use syntect::highlighting::Theme;
 use syntect::highlighting::ThemeSet;
-use syntect::html::append_highlighted_html_for_styled_line;
 use syntect::html::highlighted_html_for_string;
-use syntect::html::start_highlighted_html_snippet;
-use syntect::html::IncludeBackground;
-use syntect::parsing::SyntaxReference;
 use syntect::parsing::SyntaxSet;
 
 use pulldown_cmark::Event;
 use pulldown_cmark::Options;
 use pulldown_cmark::Parser;
 use pulldown_cmark::Tag;
-use syntect::Error;
 
 
 fn diff(old_content: &Path, new_content: &Path) -> (Vec<ChangeTag>, String)
@@ -365,7 +359,7 @@ pub fn parse_markdown_to_html(title: &str, content: &str) -> (String, Option<Val
 
     let mut html_output = String::new();
     let mut highlighter = Highlighter::new();
-    let mut tocGenerator = TocGenerator::new(title.to_string());
+    let mut toc_generator = TocGenerator::new(title.to_string());
 
     let mut parser: Parser<'_> = Parser::new_ext(content, options);
     let mut transformed_events: Vec<Event<'_>> = Vec::new();
@@ -373,7 +367,7 @@ pub fn parse_markdown_to_html(title: &str, content: &str) -> (String, Option<Val
     while let Some(event) = parser.next() {
         match event.clone() {
             Event::Start(Tag::Heading { level: _, id: _, classes: _, attrs: _ }) => {
-                tocGenerator.process_header(&mut transformed_events, &mut parser, event);
+                toc_generator.process_header(&mut transformed_events, &mut parser, event);
             }
             Event::Start(Tag::CodeBlock(kind)) => {
                 highlighter.highlight_code_block(&mut transformed_events, &mut parser, kind);
@@ -387,5 +381,5 @@ pub fn parse_markdown_to_html(title: &str, content: &str) -> (String, Option<Val
     // Now we send this new vector of events off to be transformed into HTML
     pulldown_cmark::html::push_html(&mut html_output, transformed_events.into_iter());
 
-    return (html_output, tocGenerator.get_toc_value());
+    return (html_output, toc_generator.get_toc_value());
 }
