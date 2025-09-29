@@ -13,7 +13,7 @@ Generally in 2D we like to work in a space not entirely dissimilar to the NDC on
 
 So in this chapter, lets revisit vertices, and discuss coordinate spaces and cameras.
 
-## Vertices, Exhaustively <a name="vertices" id="vertices"></a>
+## Vertices, Exhaustively
 
 As we've discussed, a lot of the GPU is dedicated to processing geometry, and while this is a bit tweakable, in general this means Triangles. Speaking to SDL_GPU, there's also Lines and Points, but we'll touch on that below. You might hear people referring to "Quads", if they're referring to real time rendering this refers to two triangles that form a rectangle. Or they're perhaps longing for GPUs to support quads, alas, we don't live in that world, sorry 3D Artists.
 

@@ -11,7 +11,7 @@ That said, this is a text heavy one, we need to get into a bit of the high level
 
 Lets start adding to the previous example
 
-## The Triangle Context <a name="the_triangle_context" id="the_triangle_context"></a>
+## The Triangle Context
 
 Thankfully, drawing a triangle is relatively simple, so we can try to take things one step at a time. And the first is to encapsulate everything needed to draw one:
 
@@ -25,7 +25,7 @@ We actually only need a pipeline to draw a triangle, but as we proceed, we'll ne
 
 Before we discuss creating one, we should go over what a pipeline is and how it fits into the rendering puzzle.
 
-## Shaders and Pipelines <a name="shaders_pipelines" id="shaders_pipelines"></a>
+## Shaders and Pipelines
 
 When we look at how we do real-time rendering today, it's essentially a combination of generally tweakable fixed stages and programmable stages. We got a taste of this fixed functionality when we set-up and executed a RenderPass in the previous chapter. We were able to clear the screen just by tweaking the initialization and target of the RenderPass, with no need to submit geometry to proceed through the rest of the stages.
 
@@ -54,7 +54,7 @@ Each Graphics API takes a different "native" shader input, Vulkan takes SPIR-V, 
 There's many languages specifically for shaders, and even general purpose programming languages that can be compiled to, but as stated in the intro, we'll be using HLSL as we have SDL_shadercross to use with well documented binding and set descriptions.
 
 
-## Vertices, Briefly <a name="vertices" id="vertices"></a>
+## Vertices, Briefly
 
 For this chapter, to not _completely_ overload on information, we're only thinking about triangles, which are each made up of three Vertices, essentially positions on a 2D plane for now, that will look like this in code:
 
@@ -98,7 +98,7 @@ We'll just be using static geometry within the shader, with no buffers. We'll ge
 
 We'll go into _much_ greater detail on the Vertex pipeline, Vertex shaders, and techniques that can be used with them in a chapter or two. Right now though, these are the minimum details you'll need to get going.
 
-## The Vertex Shader <a name="vertex_shader" id="vertex_shader"></a>
+## The Vertex Shader
 
 Now that we've discussed the theory, let's get back to the code a bit, but before we can make a pipeline, we'll need to write both a Vertex and Pixel shader. We'll create a couple of files [`Triangle.vert.hlsl` and `Triangle.frag.hlsl`] to start working on, starting with the Vertex shader.
 
@@ -172,15 +172,15 @@ Output main(uint id : SV_VertexID)
 Right off the bat we see two interesting things, the return value is using our `Output` struct, and we're taking a paramter and it's marked with a built-in semantic. When we mark inputs with semantics, this means that we're asking the shader runtime to let us use that built-in variable. In this case `SV_VertexID` represents the ID of the vertex we're currently processing in this shader. Remember that the Vertex Shader will run for every vertex you request to draw. 
 
 
-## Pixels (and Fragments) <a name="pixels" id="pixels"></a>
+## Pixels (and Fragments)
 
-### The Fullscreen Triangle <a name="fullscreen_triangle" id="fullscreen_triangle"></a>
+### The Fullscreen Triangle
 
 Now lets do something a little more practical, or at least on the borders of practical. You can copy and paste the TriangleContext you made above, and just create some new shaders to use with this FullScreenContext.
 
 FullScreen triangles might be used for all sorts of things, but fundamentally they're generally there for when you just want a canvas to paint on in th Pixel Shader. We'll be doing something pretty basic here, but we'll revisit it much later. We're covering it now so that you can see that sometimes, you really do need to render a single triangle, but what's special is what's within it.
 
-#### The Vertex Shader  <a name="fullscreen_triangle_vertex_shader" id="fullscreen_triangle_vertex_shader"></a>
+#### The Vertex Shader 
 
 We know from our work above that we don't actually need geometry from the CPU to output something in the vertex stage, as long as we know which vertex we're outputting. We also know that we can interpolate values between the vertices of the triangle. Thus, a fullscreen triangle is the minimum triangle that fills the entirety of the screen (NDC space) while giving us an interpolated value between (0, 0) and (1, 1) within the screen. That interpolated value is how we'll know where we are when we're inside the pixel shader, and will allow you to do some fun things, although my demonstration will be a simple checkerboard effect.
 

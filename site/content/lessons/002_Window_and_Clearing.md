@@ -7,9 +7,9 @@ collections: ["lessons"]
 
 Now that we've gotten the "make sure we can compile, link, and run an SDL program" step out of the way, we can start actually doing some work. We'll start by going over Window creation and setting up your event loop so we can receive events, like the one that tells you the program should end.
 
-## A Window and an Event Loop <a name="window_and_events" id="window_and_events"></a>
+## A Window and an Event Loop
 
-### A Window <a name="window" id="window"></a>
+### A Window
 
 The first thing we'll need to clear the window is the window. So let's look into how to get an `SDL_Window`. Thankfully SDL makes it pretty easy, we just need the title we'd like, the width and height, and some flags. We'll go with the name of this chapter, and 720p. We can ignore the flags for now, for the most part they're not relevant to SDL_GPU.
 
@@ -36,7 +36,7 @@ SDL_Window* window = SDL_CreateWindow("002-Window_and_Clearing", 1280, 720, 0);
 SDL_assert(window);
 ```
 
-### An Event Loop <a name="event_loop" id="event_loop"></a>
+### An Event Loop
 
 To briefly explain, for most Game-like applications, you're going to use a couple top-level loops:
  - Frame loop: In here, you do everything needed within the frame. Typically when you're quitting, you break out of this loop somehow. Typically by setting a bool to false/true.
@@ -87,9 +87,9 @@ Now, finally, we can discuss the GPU API.
   - __(Boring Technical Detail)__ For completeness sake, [`SDL_Event`](https://wiki.libsdl.org/SDL3/SDL_Event) also directly contains a `type` field you can inspect to know the type. That said, for incredibly boring and technical details, in C++ specifically using this field to know which union member to use is [undefined behavior](https://en.cppreference.com/w/cpp/language/ub.html). So I avoid doing so, even though in practice, every compiler I'm aware of treats this case as-if it were C and thus works as expected.
 {{collapsible-card-end}}
 
-## Devices, RenderPasses, and Clearing <a name="devices_renderpasses_clearing" id="devices_renderpasses_clearing"></a>
+## Devices, RenderPasses, and Clearing
 
-### Creating a Device <a name="device" id="device"></a>
+### Creating a Device
 Finally, we can do one of the first things you'll ever do in a Graphics API, create a Device and claim the Window.
 
 ```c
@@ -170,27 +170,29 @@ So now we have a GpuContext struct we can pass around, it holds all of the stuff
 
 In terms of the functionality that we just added, as mentioned above, we've created an SDL properties object. This is a way to tell SDL about extra functionality we want. Often this is backend/platform specific information, but sometimes it's simply for extended initialization, as more can be added as needed, and it won't break SDLs API guarentees.
 
-> #### Covered in this Section
-> - [`SDL_CreateGPUDevice`](https://wiki.libsdl.org/SDL3/SDL_CreateGPUDevice)
->   - This is another one of those "every SDL_GPU application will need to call this" functions. It does all of the GPU initialization for us. It selects an API, selects a GPU, sets up validation layers, and more. I covered above what the args are for this, they're pretty simple. So I'd also recommend taking a look at the ['properties you can pass in to that version of the function.'](https://wiki.libsdl.org/SDL3/SDL_CreateGPUDeviceWithProperties) There's of course the args that we can set in the normal function, but also preferences for the type of GPU to select, and a few backend specific properties. The Vulkan ones in particular are helpful by giving up some features for a _drastic_ increase in Android support.
->   - I wanted to cover creating some small abstractions and objects for management early. I think it's important to have these primitives to help write our applications, and I don't want to write tutorials that pretend to do everything in `main`. That said, I'll try to ensure they always stick to one file! (Plus the shader files.)
-> - [`SDL_DestroyGpuDevice`](https://wiki.libsdl.org/SDL3/SDL_DestroyGpuDevice)
->   - This will destroy all the GPU resources you've created, whatever SDL_GPU has created in the background, and free the device. It's not safe to use anything you've created with the GPU Device after you've called this.
-> - [`SDL_zero`](https://wiki.libsdl.org/SDL3/SDL_zero)
->   - This is a macro that lets us set a value to 0. This is really helpful when writing SDL_GPU code, the vast majority of functions take structs to configure them, and the majority of those have very reasonable default values if all their fields are set to 0. Since we're not using C designated initializer or some sort of template in C++, we use this macro to zero out these structs whenever we make one.
-> - [`SDL_ClaimWindowForGPUDevice`](https://wiki.libsdl.org/SDL3/SDL_ClaimWindowForGPUDevice)
->   - This pretty much does as it says on the tin. Generally speaking, it's a rule that only one graphics API can really own a Window at a time. Things can get a bit complicated with offscreen rendering, multiple APIs, and shared resources, but we're not anywhere near that yet, and may never be. 
-> - [`SDL_GetGPUShaderFormats`](https://wiki.libsdl.org/SDL3/SDL_GetGPUShaderFormats)
->   - Fundamentally all this is really doing for us is telling us, which shaders to pass in when we call ['SDL_CreateGPUShader'](https://wiki.libsdl.org/SDL3/SDL_CreateGPUShader) later on.
-> - [`SDL_CreateProperties`](https://wiki.libsdl.org/SDL3/SDL_CreateProperties)
->   - There are many reasons you might create a and use a properties object. Maybe you want to use it as a map of sorts. In this case, we're going to be passing this into functions and Create structs when creating GPU resources. Almost every GPU resource can be named, and this will be helpful when getting debug output from the Vulkan Validation layers, and the DX12 debug output.
->   - As for why we're creating it and storing it. I just feel it's wasteful to create one every time we make a GPU resource. We could run into trouble with this if we selectively set properties on say one ['SDL_CreateGPUTexture'](https://wiki.libsdl.org/SDL3/SDL_CreateGPUTexture) call and then leave them set for our next call into the same function. We'll avoid that when we write our wrapper functions by allowing us to pass in a custom Properties object as well.
-> - [`SDL_DestroyProperties`](https://wiki.libsdl.org/SDL3/SDL_DestroyProperties)
->   - This frees up all the resources SDL created internally to handle this Properties object. Don't try to use it again after calling this!
+{{collapsible-card}}
+#### Covered in this Section
+- [`SDL_CreateGPUDevice`](https://wiki.libsdl.org/SDL3/SDL_CreateGPUDevice)
+  - This is another one of those "every SDL_GPU application will need to call this" functions. It does all of the GPU initialization for us. It selects an API, selects a GPU, sets up validation layers, and more. I covered above what the args are for this, they're pretty simple. So I'd also recommend taking a look at the ['properties you can pass in to that version of the function.'](https://wiki.libsdl.org/SDL3/SDL_CreateGPUDeviceWithProperties) There's of course the args that we can set in the normal function, but also preferences for the type of GPU to select, and a few backend specific properties. The Vulkan ones in particular are helpful by giving up some features for a _drastic_ increase in Android support.
+  - I wanted to cover creating some small abstractions and objects for management early. I think it's important to have these primitives to help write our applications, and I don't want to write tutorials that pretend to do everything in `main`. That said, I'll try to ensure they always stick to one file! (Plus the shader files.)
+- [`SDL_DestroyGpuDevice`](https://wiki.libsdl.org/SDL3/SDL_DestroyGpuDevice)
+  - This will destroy all the GPU resources you've created, whatever SDL_GPU has created in the background, and free the device. It's not safe to use anything you've created with the GPU Device after you've called this.
+- [`SDL_zero`](https://wiki.libsdl.org/SDL3/SDL_zero)
+  - This is a macro that lets us set a value to 0. This is really helpful when writing SDL_GPU code, the vast majority of functions take structs to configure them, and the majority of those have very reasonable default values if all their fields are set to 0. Since we're not using C designated initializer or some sort of template in C++, we use this macro to zero out these structs whenever we make one.
+- [`SDL_ClaimWindowForGPUDevice`](https://wiki.libsdl.org/SDL3/SDL_ClaimWindowForGPUDevice)
+  - This pretty much does as it says on the tin. Generally speaking, it's a rule that only one graphics API can really own a Window at a time. Things can get a bit complicated with offscreen rendering, multiple APIs, and shared resources, but we're not anywhere near that yet, and may never be. 
+- [`SDL_GetGPUShaderFormats`](https://wiki.libsdl.org/SDL3/SDL_GetGPUShaderFormats)
+  - Fundamentally all this is really doing for us is telling us, which shaders to pass in when we call ['SDL_CreateGPUShader'](https://wiki.libsdl.org/SDL3/SDL_CreateGPUShader) later on.
+- [`SDL_CreateProperties`](https://wiki.libsdl.org/SDL3/SDL_CreateProperties)
+  - There are many reasons you might create a and use a properties object. Maybe you want to use it as a map of sorts. In this case, we're going to be passing this into functions and Create structs when creating GPU resources. Almost every GPU resource can be named, and this will be helpful when getting debug output from the Vulkan Validation layers, and the DX12 debug output.
+  - As for why we're creating it and storing it. I just feel it's wasteful to create one every time we make a GPU resource. We could run into trouble with this if we selectively set properties on say one ['SDL_CreateGPUTexture'](https://wiki.libsdl.org/SDL3/SDL_CreateGPUTexture) call and then leave them set for our next call into the same function. We'll avoid that when we write our wrapper functions by allowing us to pass in a custom Properties object as well.
+- [`SDL_DestroyProperties`](https://wiki.libsdl.org/SDL3/SDL_DestroyProperties)
+  - This frees up all the resources SDL created internally to handle this Properties object. Don't try to use it again after calling this!
+{{collapsible-card-end}}
 
-### Clearing the Screen <a name="clearing_the_screen" id="clearing_the_screen"></a>
+### Clearing the Screen
 
-#### A Command Buffer and the Swapchain Texture <a name="command_buffers_and_swapchains" id="command_buffers_and_swapchains"></a>
+#### A Command Buffer and the Swapchain Textureid="command_buffers_and_swapchains"></a>
 We're near the finish line here. It's time to learn a bit about Command Buffers and the Swapchain Textures:
 
 ```c
@@ -216,7 +218,7 @@ A command buffer is how we record commands to instruct the GPU what to do. This 
 Once you have a command buffer, we can request a Swapchain texture. As mentioned ealier, this is the texture that is tied to, and gets displayed on the Window. By default SDL_GPU allocates 3 of them, that said this can be changed, as well as how precisely we wait for them, and if we wait at all. We'll try to cover some of these at a later time, for now this is a fairly simple way to handle acquisitions and submissions. The extra parameters which we've passed `NULL` to are simply to aquire the width and height of the given texture. This will become useful later, but we don't need it for now.
 
 
-#### The Render Pass <a name="render_pass" id="render_pass"></a>
+#### The Render Pass
 
 Now we can finally finish out the chapter by doing one of the "simplest" graphics applications, clearing the screen. Or, more specifically, clearing the swapchain texture we aquired and then displaying that texture onto the screen.
 

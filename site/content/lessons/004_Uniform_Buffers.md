@@ -11,7 +11,7 @@ However, most of the time when doing rendering, you'll need to pass data from th
 
 All that said, we want to ease our way into the concept so lets try Uniform Buffers as they're the easiest to get started with in SDL_GPU. In other APIs they're a bit more similar to Storage Buffers, which we'll also get to. 
 
-## Uniform Buffers <a name="uniforma-buffers" id="uniforma-buffers"></a>
+## Uniform Buffers
 
 We're going to start off with the example from the previous chapter, as we can demonstrate some simple uses of Uniform Buffers it's shaders. Our goals are going to be to move around the Triangle, and change the color of the the black squares in the checkerboard fullscreen effect.
 

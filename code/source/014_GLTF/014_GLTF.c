@@ -528,7 +528,8 @@ typedef struct ModelContext {
 } ModelContext;
 
 ModelContext CreateModelContext(SDL_GPUTextureFormat aDepthFormat) {
-  LoadGltfModel("buster_drone.glb");
+  // Broke the name so that we don't waste time zipping it while the example isn't done.
+  LoadGltfModel("buster_    drone.glb");
 
 
   SDL_GPUColorTargetDescription colorTargetDescription;

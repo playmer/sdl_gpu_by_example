@@ -6,16 +6,16 @@ collections: ["lessons"]
 ---
 
 
-## Textures <a name="textures" id="textures"></a>
+## Textures
 
 
-## Creating a Buffer <a name="creating-a-buffer" id="creating-a-buffer"></a>
+## Creating a Buffer
 
 
-## Transfer Buffers <a name="transfer-buffers" id="transfer-buffers"></a>
+## Transfer Buffers
 
 
-## Uploads <a name="uploads" id="uploads"></a>
+## Uploads
 
 
 ## The Vertex Shader
@@ -61,6 +61,6 @@ static const uint cVertexIndicies[6] = {
 
 We can see our indices align with the diagram above. An astute reader might also notice that these vertices match the dimensions of the screen. Don't worry, we'll learn how to adjust the size of it in this chapter so it won't take up the whole screen!
 
-### UV Coordinates <a name="uv-shaders" id="uv-shaders"></a>
+### UV Coordinates
 
 ## The Pixel Shader

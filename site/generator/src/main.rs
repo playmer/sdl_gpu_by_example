@@ -1,17 +1,17 @@
 
-use std::cell::Cell;
-use std::cell::RefCell;
 use std::collections::HashMap;
+use std::env;
 use std::fs::create_dir_all;
 use std::fs::File;
+use std::io::stdout;
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::sync::Arc;
 use std::sync::RwLock;
-use std::thread::panicking;
-//use std::str::pattern::Pattern;
-use std::{env, fmt, fs};
+
+use std::thread;
+use std::{fmt, fs};
 use extract_frontmatter::config::Splitter;
 use extract_frontmatter::Extractor;
 use handlebars::Handlebars;
@@ -287,49 +287,66 @@ fn get_agnostic_lesson_code() -> Vec<PathBuf> {
 
 
 fn write_lesson_zips(output_dir: &Path) {
+    println!("Writing lesson zips");
+
     let code_dir = Path::new(CODE_DIR);
     let output_code_dir = output_dir.join("assets").join("code");
     let agnostic_code_for_lessons = get_agnostic_lesson_code();
 
     fs::create_dir_all(&output_code_dir).unwrap();
 
+    let mut handles = Vec::new();
+
     for lesson_code in get_specific_lesson_code() {
-        let zip_file_path = output_code_dir.join(lesson_code.lesson_name).with_extension("zip");
-        let zip_file = File::create(&zip_file_path).unwrap();
-        let mut zip = zip::ZipWriter::new(zip_file);
-        let mut buffer = Vec::new();
-        
-        let options = SimpleFileOptions::default()
-            .compression_method(zip::CompressionMethod::Bzip2)
-            .unix_permissions(0o755);
+        // Clones for the thread we're spawning.
+        let output_code_dir = output_code_dir.clone();
+        let agnostic_code_for_lessons = agnostic_code_for_lessons.clone();
 
-        let files = {
-            let mut files = Vec::new();
-            files.extend_from_slice(&lesson_code.code_assets);
-            files.extend_from_slice(&agnostic_code_for_lessons);
-            files
-        };
-
-        for file in &files {
-            zip.start_file_from_path(&file, options).unwrap();
+        handles.push(thread::spawn(move || {
+            let zip_file_path = output_code_dir.join(lesson_code.lesson_name).with_extension("zip");
+            let zip_file = File::create(&zip_file_path).unwrap();
+            let mut zip = zip::ZipWriter::new(zip_file);
+            let mut buffer = Vec::new();
             
-            let mut f = File::open(code_dir.join(file)).unwrap();
-            f.read_to_end(&mut buffer).unwrap();
-            zip.write_all(&buffer).unwrap();
-            buffer.clear();
-        }
-        
-        for file in &lesson_code.code_files {
-            println!("{}", file.display());
-            zip.start_file_from_path(&file, options).unwrap();
-            
-            let mut f = File::open(lesson_code.lesson_code_directory.join(file)).unwrap();
-            f.read_to_end(&mut buffer).unwrap();
-            zip.write_all(&buffer).unwrap();
-            buffer.clear();
-        }
+            let options = SimpleFileOptions::default()
+                .compression_method(zip::CompressionMethod::Bzip2)
+                .unix_permissions(0o755);
 
-        zip.finish().unwrap();
+            let files = {
+                let mut files = Vec::new();
+                files.extend_from_slice(&lesson_code.code_assets);
+                files.extend_from_slice(&agnostic_code_for_lessons);
+                files
+            };
+
+            for file in &files {
+                zip.start_file_from_path(&file, options).unwrap();
+                
+                let mut f = File::open(code_dir.join(file)).unwrap();
+                f.read_to_end(&mut buffer).unwrap();
+                zip.write_all(&buffer).unwrap();
+                buffer.clear();
+            }
+            
+            for file in &lesson_code.code_files {
+                println!("\t{}", file.display());
+                zip.start_file_from_path(&file, options).unwrap();
+                
+                let mut f = File::open(lesson_code.lesson_code_directory.join(file)).unwrap();
+                f.read_to_end(&mut buffer).unwrap();
+                zip.write_all(&buffer).unwrap();
+                buffer.clear();
+            }
+
+            zip.finish().unwrap();
+
+            println!("Finished zipping {}", zip_file_path.as_path().display());
+            stdout().flush().unwrap();
+        }));
+    }
+
+    for handle in handles {
+        handle.join().unwrap();
     }
 }
 
@@ -342,19 +359,6 @@ fn write_static_data(output_dir: &Path) {
         fs::create_dir_all(file_destination.parent().unwrap()).unwrap();
         fs::copy(static_data_dir.join(&file_source), &file_destination).unwrap();
     }
-}
-
-fn write_site_to_folder() {
-    let output_dir = Path::new(OUTPUT_DIR);
-
-    // Delete existing output    
-    if fs::exists(&output_dir).unwrap()
-    {
-        fs::remove_dir_all(&output_dir).unwrap();
-    }
-
-    write_static_data(&output_dir);
-    write_lesson_zips(&output_dir);
 }
 
 struct Content {
@@ -373,6 +377,7 @@ fn get_content() -> Vec<Content> {
     for file_path in get_files(&content_dir) {
         let file_name = file_path.file_name().unwrap().to_str().unwrap().to_string();
         println!("Getting Content for {file_name}");
+        stdout().flush().unwrap();
 
         let front_matter_and_markdown: String = std::fs::read_to_string(&content_dir.join(&file_path)).unwrap();
         
@@ -470,59 +475,60 @@ fn get_specific_content_context(handlebars: &Handlebars<'_>, template_context: &
         },
         ..Options::gfm()
     };
-
-    let temp_rendered_html = {
-        format!(
-            "{}\n{}", 
-            NO_ESCAPE, 
-            markdown::to_html_with_options(&content.markdown, &markdown_options).unwrap()
-        )
-    };
-
+    
     let content_title = content.front_matter["title"].as_str().unwrap().to_string();
 
-    if let Some(item) = get_toc_from_content_html(&content_title, &temp_rendered_html) {
-        map.insert("table_of_contents".to_string(), item.into());
-    }
+    let (current_content, inserts) = {
+        let mut temp_map = {
+            let mut temp_map = map.clone();
+            let temp_current_context = current_content.clone();
+            temp_map.insert("current_content".to_string(), temp_current_context.into());
+            temp_map
+        };
 
-    map.insert("inserts".to_string(), {
-        let mut temp_map = map.clone();
-        let temp_current_context = current_content.clone();
-        temp_map.insert("current_content".to_string(), temp_current_context.into());
-        
-        let context_for_inserts: Value = map.clone().into();
-    
-        let mut insert_objects: serde_json::Map<String, Value> = serde_json::Map::new();
+        let rendered_content_html = {
+            let (rendered_html, toc_items) = diff::parse_markdown_to_html(&content_title, &content.markdown);
 
-        for (name, html) in inserts {
-            insert_objects.insert(name.clone(), handlebars.render_template(&html, &context_for_inserts).unwrap().into());
-        }
-        insert_objects.into()
-    });
-
-    map.insert("current_content".to_string(), {
-        let mut temp_map = map.clone();
-        let temp_current_context = current_content.clone();
-        temp_map.insert("current_content".to_string(), temp_current_context.into());
-
-        // We now have everything we might need to re-render the markdown into HTML
-        let context_for_content_render: Value = map.clone().into();
-
-        let html = {
             let rendered_html = format!(
                 "{}\n{}", 
                 NO_ESCAPE, 
-                markdown::to_html_with_options(&content.markdown, &markdown_options).unwrap()
+                rendered_html
             );
-
-            handlebars.render_template(
-                &rendered_html, 
-                &context_for_content_render).unwrap()
+            
+            temp_map.insert("table_of_contents".to_string(), toc_items.unwrap().into());
+            rendered_html
         };
+
+        let inserts_value = {
+            let context_for_inserts: Value = temp_map.clone().into();
         
+            let mut insert_objects: serde_json::Map<String, Value> = serde_json::Map::new();
+
+            for (name, html) in inserts {
+                insert_objects
+                    .insert(
+                        name.clone(), 
+                        handlebars.render_template(&html, &context_for_inserts)
+                    .unwrap().into());
+            }
+            insert_objects
+        };
+
+        temp_map.insert("inserts".to_string(), inserts_value.clone().into());
+
+        // We now have everything we might need to re-render the markdown into HTML
+        let context_for_content_render: Value = temp_map.clone().into();
+        
+        let html = handlebars.render_template(
+            &rendered_content_html, 
+            &context_for_content_render).unwrap();
+
         current_content.insert("rendered_html".to_string(), html.into());
-        current_content.into()
-    });
+        (current_content.into(), inserts_value.into())
+    };
+
+    map.insert("inserts".to_string(), inserts);
+    map.insert("current_content".to_string(), current_content);
 
     return map.into();
 }
@@ -534,148 +540,6 @@ pub fn handlebars_escape(data: &str) -> String {
     }
     
     return handlebars::html_escape(data);
-}
-struct TocItem {
-    level: i8,
-    text: String,
-    url: String,
-    children: Vec<TocItem>
-}
-
-
-
-fn get_header_info_from_element(header: &ElementRef<'_>) -> Option<TocItem> {
-    let current_level = header
-        .value()
-        .name.local
-        .to_string()
-        .split_off(1)
-        .parse::<i8>()
-        .unwrap();
-    
-    let header_text = header.text().into_iter().next().unwrap().to_string();
-
-    if header.child_elements().count() != 0 {
-        let child = header.child_elements().into_iter().next().unwrap();
-
-        let url = format!("#{}", child.attr("name").unwrap());
-
-        return Some(TocItem{
-            level: current_level,
-            text: header_text,
-            url, 
-            children: Vec::new()
-        });
-    }
-
-    println!("Warning, missing tags: {}", header.html());
-    return None;
-}
-
-
-//fn print_root_toc(item: &TocItem) {
-//    let base_indentation = "\t".repeat((item.level - 1) as usize);
-//    println!("{}{}: {}", base_indentation, item.text, item.url);
-//
-//    for child in &item.children {
-//        print_root_toc(child);
-//    }
-//}
-
-
-fn process_root_toc(item: &TocItem) -> Value {
-    let mut children: Vec<Value> = Vec::new();
-
-    for child in &item.children {
-        children.push(process_root_toc(child));
-    }
-
-    let mut map: serde_json::Map<String, Value> = serde_json::Map::new();
-    map.insert("name".to_string(), item.text.clone().into());
-    map.insert("url".to_string(),  item.url.clone().into());
-    map.insert("children".to_string(),  children.into());
-
-    return map.into();
-}
-
-fn get_toc_from_content_html(title: &String, html: &String) -> Option<Value> {
-    let mut children_stack: Vec<TocItem> = Vec::new();
-    children_stack.push(TocItem { 
-        level: 1, 
-        text: title.clone(),
-        url: "#title".to_string(), 
-        children: Vec::new()
-    });
-
-    let document: Html = Html::parse_document(&html);
-    let h1_selector = Selector::parse("h1, h2, h3, h4, h5, h6").unwrap();
-    let mut last_level = 1;
-
-    for header in document.select(&h1_selector) {
-        let info = get_header_info_from_element(&header);
-        if info.is_none() {
-            continue;
-        }
-
-        let item = info.unwrap();
-
-        if item.level == 1 {
-            panic!("Processing a header with name {} and id {}, this header has a heading of 1, which is disallowed in content. Anything above 1 is allowed. Headers must start at 2, and only increase one at a time.",
-                item.text, 
-                item.url);
-        }
-
-        println!("{}, {}", last_level, item.level);
-
-        if last_level < item.level {
-            last_level += 1;
-            children_stack.push(item);
-        } else if last_level == item.level {
-            let last_item  = children_stack.pop().unwrap();
-            children_stack.iter_mut().nth_back(0).unwrap().children.push(last_item);
-            children_stack.push(item);
-        }  else if last_level >= item.level {
-            for _ in 0..(last_level - item.level) + 1 {
-                let last_item  = children_stack.pop().unwrap();
-                children_stack.iter_mut().nth_back(0).unwrap().children.push(last_item);
-                last_level -= 1;
-            }
-
-            children_stack.push(item);
-            last_level += 1;
-        }
-
-        // if (last_level < item.level) && ((last_level + 2) == item.level) { // Starting a new stack.
-        //     last_level += 1;
-        //     children_stack.push(item);
-        // } else if (last_level < item.level) && ((last_level + 1) == item.level) { // We're one level ahead, just push into the children of the last item of the previous level
-        //     children_stack.iter_mut().nth_back(0).unwrap().children.push(item);
-        // } else if last_level >= item.level {
-        //     while last_level >= item.level {
-        //         let last_item  = children_stack.pop().unwrap();
-        //         children_stack.iter_mut().nth_back(0).unwrap().children.push(last_item);
-        //         last_level -= 1;
-        //     }
-
-        //     children_stack.iter_mut().nth_back(0).unwrap().children.push(item);
-        // }
-    }
-
-    
-    for _ in 0..(children_stack.len() - 1) {
-        let last_item  = children_stack.pop().unwrap();
-        children_stack.iter_mut().nth_back(0).unwrap().children.push(last_item);
-    }
-
-    if children_stack.len() != 0 {
-        let toc = children_stack.first().unwrap();
-        //println!("StartToc");
-        //print_root_toc(&toc);
-        //println!("EndToc");
-        return Some(process_root_toc(&toc));
-    }
-
-    return None
 }
 
 fn get_inserts() -> Vec<(String, String)> {
@@ -784,6 +648,8 @@ fn process_content() -> Vec<(PathBuf, String)> {
 
     for content in contents {
         println!("Processing {} content", content.file_name);
+        stdout().flush().unwrap();
+
         let template_path = template_dir.join(content.front_matter["template"].as_str().unwrap());
         let template_html = std::fs::read_to_string(&template_path).unwrap();
         let current_content_context = get_specific_content_context(&handlebars, &template_context, &inserts, &content);
@@ -800,40 +666,56 @@ fn process_content() -> Vec<(PathBuf, String)> {
 
 
 fn main() {
-    diff::diff_and_highlight();
+    //diff::diff_and_highlight();
 
+    let output_dir = Path::new(OUTPUT_DIR);
 
-    // let output_dir = Path::new(OUTPUT_DIR);
-    // write_site_to_folder();
-    // process_content();
+    // Delete existing output    
+    if fs::exists(&output_dir).unwrap()
+    {
+        fs::remove_dir_all(&output_dir).unwrap();
+    }
 
-    // let args: Vec<String> = env::args().collect();
+    let lesson_zip_task = thread::spawn(move || {
+        write_lesson_zips(&output_dir);
+    });
 
-    // if !args.contains(&"--no-serve".to_owned())
-    // {
-    //     let gh_output_dir = Path::new("output_github");
-    //     let destination = gh_output_dir.join("sdl_gpu_by_example");
+    let static_data_task = thread::spawn(move || {
+        write_static_data(&output_dir);
+    });
+    
+    static_data_task.join().unwrap();
+    lesson_zip_task.join().unwrap();
 
-    //     // Delete existing output    
-    //     if fs::exists(&gh_output_dir).unwrap()
-    //     {
-    //         fs::remove_dir_all(&gh_output_dir).unwrap();
-    //     }
+    process_content();
+
+    let args: Vec<String> = env::args().collect();
+
+    if !args.contains(&"--no-serve".to_owned())
+    {
+        let gh_output_dir = Path::new("output_github");
+        let destination = gh_output_dir.join("sdl_gpu_by_example");
+
+        // Delete existing output    
+        if fs::exists(&gh_output_dir).unwrap()
+        {
+            fs::remove_dir_all(&gh_output_dir).unwrap();
+        }
         
-    //     fs::create_dir_all(&destination).unwrap();
+        fs::create_dir_all(&destination).unwrap();
 
-    //     for file_source in get_files(&output_dir) {
-    //         let file_destination = destination.join(&file_source);
-    //         fs::create_dir_all(file_destination.parent().unwrap()).unwrap();
-    //         fs::copy(output_dir.join(&file_source), &file_destination).unwrap();
-    //     }
+        for file_source in get_files(&output_dir) {
+            let file_destination = destination.join(&file_source);
+            fs::create_dir_all(file_destination.parent().unwrap()).unwrap();
+            fs::copy(output_dir.join(&file_source), &file_destination).unwrap();
+        }
 
-    //     println!("Link to site: http://127.0.0.1:4040/sdl_gpu_by_example/");
+        println!("Link to site: http://127.0.0.1:4040/sdl_gpu_by_example/");
 
-    //     // Should run the bottom command to host the site.
-    //     let _ = Command::new("http-serve-folder")
-    //         .args([gh_output_dir])
-    //         .status()
-    //         .expect("failed to execute process");
-    // }
+        // Should run the bottom command to host the site.
+        let _ = Command::new("http-serve-folder")
+            .args([gh_output_dir])
+            .status()
+            .expect("failed to execute process");
+    }
 }

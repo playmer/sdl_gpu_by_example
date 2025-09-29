@@ -7,21 +7,21 @@ collections: ["lessons"]
 
 So if you've come here, you're interested in learning SDL_GPU. As background, I should first say that I myself am not an expert in the topic of Graphics, or in SDL_GPU itself. I've written a few relatively simple renderers for games, imgui projects, and similar dabbling. I've mostly focused on the CPU side of things, and only recently have I been learning about some of the more "modern" approaches to rendering. When [Evan Hemsley](https://moonside.games/pages/about/) (also known as cosmonaut), pricipal designer of SDL_GPU, finishes his graphics book, please go buy it and read it!
 
-## Expectations <a name="expectations" id="expectations"></a>
+## Expectations
 So all that being said don't expect scene graphs, PBR models, raytracing, or any of that sort of thing. This isn't a replacement for formal graphics coursework or in-depth learning of everything you might need to know to read technical papers on the above topics. It's intent is to get beginners comfortable with the basics so they can _begin_ to learn some of that outside of a formal setting. I can't give you a complete understanding of Linear Algebra, or the foundational knowledge to understand the rendering equation. 
 
 In the more broad sense, it's also not an SDL3 or C tutorial. Anytime I do something I consider somewhat interesting in SDL3 for a beginner, I'll try to briefly cover it. Those asides however, are not a replacement for the documentation. On the other hand, I will spend no time on C as a language or it's features. It's too difficult to try to combine learning a language, a library, _and_ the basics of Graphics all at the same time. I wouldn't encourage it, and this tutorial would become much too heavy if it also had to cover pointers, arrays, macros, memory management, and the like. Similarly, while I expect the setup portion of this guide to increase in size, ultimately this is not a replacement for understanding your chosen tools, hence the assumption that you have a handle on the basics of Git, CMake, and your C/C++ toolchain.
 
 The goal of this guide is to help you understand the API surface of SDL_GPU. Ideally we get you to the point where you're comfortable reading about techniques written in other APIs and applying them to this API. Most of these APIs do look at least roughly similar. OpenGL is a state machine, but a lot of that state is stuff you'd put into pipelines in SDL_GPU or the other lower level APIs. If you've used Vulkan, DX, or Metal, you'll see echoes of those in SDL_GPU.
 
-## Language Choice <a name="language_choice" id="language_choice"></a>
+## Language Choice
 As mentioned about, the CPU side code examples will be written in relatively simple C99 so that both C and C++ programmers can copy and paste and it works in both. For folks who love C, this does mean that I won't be using designated initializers, so apologies for that. Feel free to use them in your own code. It'll assume you know your language of choice and are familiar with the tooling. Regarding shaders, we'll be using HLSL by way of SDL_shadercross. As of writing, it's not stable yet, so things might change a bit, I'll endeavor to keep it up to date.
 
 If you decide to use the template, there will be some short setup involving CMake, git, and some tools we'll download and install down below. I know CMake isn't for everyone, but for the sake of this tutorial I'll assume you're using it, or otherwise have your tooling figured out. I'll try to give you a pretty simple framework to work with in CMake so that you can just copy and paste it, and things will be easy from then on.
 
 When we get there, I'll briefly explain how to use SDL_shadercross to compile shaders, but from then on will assume that you're comfortable with that. The template has this entirely automated on Windows, further work is needed for Mac, and some manual setup will be required from Linux. 
 
-## How to read this Tutorial <a name="how_to_read_this_tutorial" id="how_to_read_this_tutorial"></a>
+## How to read this Tutorial
 
 First off, if you're already comfortable with the basics from another API, and just want to get a handle on SDL_GPU with some additional context beyond the [documentation](https://wiki.libsdl.org/SDL3/CategoryGPU) and [samples repo](https://github.com/TheSpydog/SDL_gpu_examples/), feel free to jump around. If you already know SDL, please skip the sections that cover new-to-beginners SDL calls.
 
@@ -30,7 +30,7 @@ Every major section of a chapter will have some notes at the bottom on API calls
 I cannot cover every aspect of every function hence this documentation reading encouragement. SDL is a living API, and while we likely won't cover them _much_, many of the APIs have alternate functions that take an SDL_PropertiesID for additional tweaking. These properties will evolve with time, so there may be new ones added after time of writing that I can't know about. We'll be using this functionality mostly for creating our own functions for making Graphics resources to ensure they're all named for the sake of debugging in tools like RenderDoc.
 
 
-## A Discussion on Code Organization <a name="code_organization" id="code_organization"></a>
+## A Discussion on Code Organization
 
 Something I don't like about some Graphics material I've read is writing literally everything in `main`. On the other hand examples being strewn around multiple files have their own problems. To a certain extent we can't get around that, given that shaders exist, and in the modern APIs, including SDL_GPU, you can't just provide text to the API, not to mention the portability problem. We _could_ use something like SDL_shadercross as a library to compile our shaders at runtime, but suffice it to say, it's not a trivial integration.
 
@@ -46,7 +46,7 @@ The goal of these is two fold.
 
  - Selfishly the other reason is it helps me to organize these chapters and samples. If we want to go back and extend a previous example, we can go grab it and be off to the races. And at least personally I dislike when my scopes have access to a bunch of data that really isn't relevant for the task at hand. These contexts will begin seemingly pretty granular, but they'll evolve to processing a lot of objects at once down the line, managing their upload, manipulation of the data in compute, and executing on rendering that data.
 
-## The Setup <a name="setup" id="setup"></a>
+## The Setup { #setup }
 
 So first, go install some stuff if you haven't already:
  - [git](https://git-scm.com/):
@@ -98,7 +98,7 @@ To briefly explain the anatomy of the repo you've cloned and built:
 
 Finally, lets take a look at one of the most basic SDL programs we can make, which if you chose to follow along with the examples and use the template, was one of the things you compiled up above.
 
-## The Template and SDL Basics  <a name="template" id="template"></a>
+## The Template and SDL Basics 
 
 So lets pull up the code we just compiled in the template and take a look at it:
 
@@ -142,4 +142,5 @@ Now that we've covered the basics, lets get us a Window and an Event loop.
 - [`SDL_main`](https://wiki.libsdl.org/SDL3/SDL_main) and the [main functions](https://wiki.libsdl.org/SDL3/README-main-functions)
   - Already fairly covered above, but I encourage you again to read the documentation on SDL_main itself and on the main functions.
   - Regarding the [callbacks system](https://wiki.libsdl.org/SDL3/README-main-functions#main-callbacks-in-sdl3) I'll formulate these tutorials such that it won't be difficult to use them instead. When we're a little further along I'll make a short demonstration of how that would look instead.
+
 {{collapsible-card-end}}
