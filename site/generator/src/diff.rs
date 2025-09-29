@@ -60,7 +60,7 @@ fn diff(old_content: &Path, new_content: &Path) -> (Vec<ChangeTag>, String)
         full_content.push_str(line);
     }
 
-    return (changes, full_content);
+    (changes, full_content)
 }
 
 pub fn diff_and_highlight(source: &Path, dest: &Path)
@@ -76,7 +76,7 @@ pub fn diff_and_highlight(source: &Path, dest: &Path)
 
     let (changes, full_content) = diff(source, dest);
     
-    let html = highlighted_html_for_string(&full_content, &default_syntax_set, &syntax, &theme).unwrap();
+    let html = highlighted_html_for_string(&full_content, &default_syntax_set, syntax, theme).unwrap();
     let html = html.replace("\n</span>", "</span>\n");
     let html_lines : Vec<&str> = html.lines().collect();
 
@@ -153,11 +153,11 @@ struct Highlighter {
 
 impl Highlighter {
     fn new() -> Highlighter {
-        return Highlighter{
+        Highlighter{
             theme: ThemeSet::load_defaults().themes["InspiredGitHub"].clone(),
             syntax_set: SyntaxSet::load_defaults_newlines(),
             to_highlight: String::new()
-        };
+        }
     }
     
     fn highlight_code_block<'a>(&mut self, transformed_events: &mut Vec<Event<'a>>, parser: &mut Parser<'a>, kind: CodeBlockKind<'_>)
@@ -175,14 +175,14 @@ impl Highlighter {
             }
         };
         
-        while let Some(event) = parser.next() {
+        for event in parser.by_ref() {
             match event {
                 Event::Text(text) => {
                     self.to_highlight.push_str(&text);
                 }
                 Event::End(TagEnd::CodeBlock) => {
                     let syntax = language_syntax.unwrap();
-                    let html = highlighted_html_for_string(&self.to_highlight, &self.syntax_set, &syntax, &self.theme).unwrap();
+                    let html = highlighted_html_for_string(&self.to_highlight, &self.syntax_set, syntax, &self.theme).unwrap();
 
                     transformed_events.push(Event::Html(CowStr::Boxed(html.into_boxed_str())));
                     self.to_highlight.clear();
@@ -215,7 +215,7 @@ pub fn process_root_toc(item: &TocItem) -> Value {
     map.insert("url".to_string(),  item.url.clone().into());
     map.insert("children".to_string(),  children.into());
 
-    return map.into();
+    map.into()
 }
 
 
@@ -234,19 +234,15 @@ impl TocGenerator {
             children: Vec::new()
         });
 
-        return TocGenerator {
+        TocGenerator {
             children_stack,
             last_level: 1
         }
     }
     
     fn string_to_id(value: &str) -> String {
-        return value
-            .replace(' ', "_")
-            .replace('/', "_")
-            .replace('\\', "_")
-            .replace('.', "_")
-            .replace(',', "_")
+        value
+            .replace([' ', '/', '\\', '.', ','], "_")
             .trim_matches('_')
             .to_ascii_lowercase()
             .replace(|c: char| !c.is_alphanumeric() && (c != '_'), "")
@@ -333,15 +329,15 @@ impl TocGenerator {
             self.children_stack.iter_mut().nth_back(0).unwrap().children.push(last_item);
         }
 
-        if self.children_stack.len() != 0 {
+        if !self.children_stack.is_empty() {
             let toc = self.children_stack.first().unwrap();
             //println!("StartToc");
             //print_root_toc(&toc);
             //println!("EndToc");
-            return Some(process_root_toc(&toc));
+            return Some(process_root_toc(toc));
         }
 
-        return None;
+        None
     }
 }
 
@@ -381,5 +377,5 @@ pub fn parse_markdown_to_html(title: &str, content: &str) -> (String, Option<Val
     // Now we send this new vector of events off to be transformed into HTML
     pulldown_cmark::html::push_html(&mut html_output, transformed_events.into_iter());
 
-    return (html_output, toc_generator.get_toc_value());
+    (html_output, toc_generator.get_toc_value())
 }

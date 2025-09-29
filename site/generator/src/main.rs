@@ -153,7 +153,7 @@ fn get_folders_or_paths(asset_dir: &Path, want_dirs: bool) -> Vec<PathBuf>
 
     for entry in it {
         let entry_path_buf = entry.into_path();
-        let entry_path = entry_path_buf.strip_prefix(&asset_dir).unwrap();
+        let entry_path = entry_path_buf.strip_prefix(asset_dir).unwrap();
 
         if entry_path.as_os_str().is_empty() {
             continue;
@@ -177,15 +177,15 @@ fn get_folders_or_paths(asset_dir: &Path, want_dirs: bool) -> Vec<PathBuf>
     paths.natural_sort_by_key::<str, _, _>(|x| x.to_str().unwrap().to_string() );
 
 
-    return paths;
+    paths
 }
 
 fn get_folders(asset_dir: &Path) -> Vec<PathBuf> {
-    return get_folders_or_paths(asset_dir, true);
+    get_folders_or_paths(asset_dir, true)
 }
 
 fn get_files(asset_dir: &Path) -> Vec<PathBuf> {
-    return get_folders_or_paths(asset_dir, false);
+    get_folders_or_paths(asset_dir, false)
 }
 
 struct LessonCode {
@@ -236,7 +236,7 @@ fn get_code_assets_lesson_needs(assets: &Vec<PathBuf>, lesson_c_source_path: &Pa
         }
     }
     
-    return assets_lesson_needs;
+    assets_lesson_needs
 }
 
 fn get_specific_lesson_code() -> Vec<LessonCode> {
@@ -247,14 +247,14 @@ fn get_specific_lesson_code() -> Vec<LessonCode> {
     let assets = {
         let asset_final_dir = Path::new(code_asset_dir.file_name().unwrap());
         
-        get_files(&code_asset_dir)
+        get_files(code_asset_dir)
             .into_iter()
             .map(|i| asset_final_dir.join(i))
             .collect()
     };
 
     
-    for path in get_folders(&source_dir) {
+    for path in get_folders(source_dir) {
         let lesson_name = path;
         let lesson_code_directory = source_dir.join(&lesson_name);
         let lesson_c_source_path: PathBuf = lesson_code_directory.join(&lesson_name).with_extension("c");
@@ -272,14 +272,14 @@ fn get_specific_lesson_code() -> Vec<LessonCode> {
 
     lessons.natural_sort_by_key::<str, _, _>(|x| x.lesson_name.clone());
 
-    return lessons;
+    lessons
 }
 
 fn get_agnostic_lesson_code() -> Vec<PathBuf> {
     let cmake_dir = Path::new(CODE_CMAKE_DIR);
     let cmake_final_dir = Path::new(cmake_dir.file_name().unwrap());
     
-    get_files(&cmake_dir)
+    get_files(cmake_dir)
         .into_iter()
         .map(|i| cmake_final_dir.join(i))
         .collect()
@@ -320,7 +320,7 @@ fn write_lesson_zips(output_dir: &Path) {
             };
 
             for file in &files {
-                zip.start_file_from_path(&file, options).unwrap();
+                zip.start_file_from_path(file, options).unwrap();
                 
                 let mut f = File::open(code_dir.join(file)).unwrap();
                 f.read_to_end(&mut buffer).unwrap();
@@ -330,7 +330,7 @@ fn write_lesson_zips(output_dir: &Path) {
             
             for file in &lesson_code.code_files {
                 println!("\t{}", file.display());
-                zip.start_file_from_path(&file, options).unwrap();
+                zip.start_file_from_path(file, options).unwrap();
                 
                 let mut f = File::open(lesson_code.lesson_code_directory.join(file)).unwrap();
                 f.read_to_end(&mut buffer).unwrap();
@@ -374,12 +374,12 @@ fn get_content() -> Vec<Content> {
 
     let mut content: Vec<Content> = Vec::new();
 
-    for file_path in get_files(&content_dir) {
+    for file_path in get_files(content_dir) {
         let file_name = file_path.file_name().unwrap().to_str().unwrap().to_string();
         println!("Getting Content for {file_name}");
         stdout().flush().unwrap();
 
-        let front_matter_and_markdown: String = std::fs::read_to_string(&content_dir.join(&file_path)).unwrap();
+        let front_matter_and_markdown: String = std::fs::read_to_string(content_dir.join(&file_path)).unwrap();
         
         let (front_matter, markdown) = Extractor::new(Splitter::EnclosingLines("---"))
             .extract(&front_matter_and_markdown);
@@ -387,14 +387,14 @@ fn get_content() -> Vec<Content> {
         let docs = YamlLoader::load_from_str(&front_matter).unwrap();
 
         content.push(Content { 
-            file_name: file_name,
-            file_path: file_path, 
+            file_name,
+            file_path, 
             front_matter: docs[0].clone(), 
             markdown: markdown.to_string() 
         });
     }
 
-    return content;
+    content
 }
 
 
@@ -416,11 +416,11 @@ fn get_collections(content: &Vec<Content>) -> Value {
             println!("\tcollection_name: {}", collection_name);
 
             if let Some(inner_collection) = collections_to_return.get_mut(collection_name) {
-                inner_collection.push(&content_file);
+                inner_collection.push(content_file);
             } else {
                 collections_to_return.insert(collection_name.to_string(), Vec::new());
                 let inner_collection = collections_to_return.get_mut(collection_name).unwrap();
-                inner_collection.push(&content_file);
+                inner_collection.push(content_file);
             }
         }
     }
@@ -430,7 +430,7 @@ fn get_collections(content: &Vec<Content>) -> Value {
         collection_map.insert(name.clone(), Value::Array(collection.iter().map(|i| get_content_info(i).into()).collect()));
     }
 
-    return collection_map.into();
+    collection_map.into()
 }
 
 fn get_content_info(content: &Content) -> serde_json::Map<String, Value> {
@@ -443,7 +443,7 @@ fn get_content_info(content: &Content) -> serde_json::Map<String, Value> {
     map.insert("description".to_string(), Value::String(content.front_matter["description"].as_str().unwrap().to_string()));
     map.insert("url".to_string(), Value::String(content.file_path.with_extension("html").to_str().unwrap().to_string().replace("\\", "/")));
 
-    return map;
+    map
 }
 
 fn get_content_infos(content: &Vec<Content>) -> Value {
@@ -453,20 +453,20 @@ fn get_content_infos(content: &Vec<Content>) -> Value {
         map.insert(content_file.file_name.clone(), get_content_info(content_file).into());
     }
 
-    return Value::Object(map);
+    Value::Object(map)
 }
 
 fn get_template_context(content: &Vec<Content>) -> serde_json::Map<String, Value> {
     let mut map: serde_json::Map<String, Value> = serde_json::Map::new();
 
-    map.insert("contents".to_string(), get_content_infos(&content));
-    map.insert("collections".to_string(), get_collections(&content));
-    return map;
+    map.insert("contents".to_string(), get_content_infos(content));
+    map.insert("collections".to_string(), get_collections(content));
+    map
 }
 
 fn get_specific_content_context(handlebars: &Handlebars<'_>, template_context: &serde_json::Map<String, Value>, inserts: &Vec<(String, String)>, content: &Content) -> Value {
     let mut map: serde_json::Map<String, Value> = template_context.clone();
-    let mut current_content = get_content_info(&content);
+    let mut current_content = get_content_info(content);
         
     let content_title = content.front_matter["title"].as_str().unwrap().to_string();
 
@@ -487,7 +487,7 @@ fn get_specific_content_context(handlebars: &Handlebars<'_>, template_context: &
                 rendered_html
             );
             
-            temp_map.insert("table_of_contents".to_string(), toc_items.unwrap().into());
+            temp_map.insert("table_of_contents".to_string(), toc_items.unwrap());
             rendered_html
         };
 
@@ -500,7 +500,7 @@ fn get_specific_content_context(handlebars: &Handlebars<'_>, template_context: &
                 insert_objects
                     .insert(
                         name.clone(), 
-                        handlebars.render_template(&html, &context_for_inserts)
+                        handlebars.render_template(html, &context_for_inserts)
                     .unwrap().into());
             }
             insert_objects
@@ -522,7 +522,7 @@ fn get_specific_content_context(handlebars: &Handlebars<'_>, template_context: &
     map.insert("inserts".to_string(), inserts);
     map.insert("current_content".to_string(), current_content);
 
-    return map.into();
+    map.into()
 }
 
 
@@ -531,7 +531,7 @@ pub fn handlebars_escape(data: &str) -> String {
         return data.to_owned();
     }
     
-    return handlebars::html_escape(data);
+    handlebars::html_escape(data)
 }
 
 fn get_inserts() -> Vec<(String, String)> {
@@ -545,7 +545,7 @@ fn get_inserts() -> Vec<(String, String)> {
         inserts.push((name, insert_html));
     }
 
-    return inserts;
+    inserts
 }
 
 fn process_content() -> Vec<(PathBuf, String)> {
@@ -584,7 +584,7 @@ fn process_content() -> Vec<(PathBuf, String)> {
         std::fs::write(final_file_path, final_html).unwrap();
     }
 
-    return rendered_html;
+    rendered_html
 }
 
 
@@ -594,17 +594,17 @@ fn main() {
     let output_dir = Path::new(OUTPUT_DIR);
 
     // Delete existing output    
-    if fs::exists(&output_dir).unwrap()
+    if fs::exists(output_dir).unwrap()
     {
-        fs::remove_dir_all(&output_dir).unwrap();
+        fs::remove_dir_all(output_dir).unwrap();
     }
 
     let lesson_zip_task = thread::spawn(move || {
-        write_lesson_zips(&output_dir);
+        write_lesson_zips(output_dir);
     });
 
     let static_data_task = thread::spawn(move || {
-        write_static_data(&output_dir);
+        write_static_data(output_dir);
     });
     
     static_data_task.join().unwrap();
@@ -620,14 +620,14 @@ fn main() {
         let destination = gh_output_dir.join("sdl_gpu_by_example");
 
         // Delete existing output    
-        if fs::exists(&gh_output_dir).unwrap()
+        if fs::exists(gh_output_dir).unwrap()
         {
-            fs::remove_dir_all(&gh_output_dir).unwrap();
+            fs::remove_dir_all(gh_output_dir).unwrap();
         }
         
         fs::create_dir_all(&destination).unwrap();
 
-        for file_source in get_files(&output_dir) {
+        for file_source in get_files(output_dir) {
             let file_destination = destination.join(&file_source);
             fs::create_dir_all(file_destination.parent().unwrap()).unwrap();
             fs::copy(output_dir.join(&file_source), &file_destination).unwrap();
