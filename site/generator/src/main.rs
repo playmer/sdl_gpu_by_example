@@ -134,7 +134,7 @@ fn image_helper(
     let description = h.param(0).unwrap();
     let url = h.param(1).unwrap();
 
-    let img_html = format!("<img src={} class=\"img-fluid\" alt={}>",
+    let img_html = format!("<img src={} class=\"img-fluid\" alt=\"{}\">",
         description.value().as_str().unwrap(),
         url.value().as_str().unwrap()
     );

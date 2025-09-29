@@ -251,7 +251,7 @@ SDL_SubmitGPUCommandBuffer(commandBuffer);
 
 We did it! You should be seeing a window with a blue background! 
 
-<p>{{img "/sdl_gpu_by_example/assets/images/002_Window_and_Clearing__Running.jpg" "A window on Windows, with the contents just being a solid shade of blue."}}</p>
+{{img "/sdl_gpu_by_example/assets/images/002_Window_and_Clearing__Running.jpg" "A window on Windows, with the contents just being a solid shade of blue."}}
 
 [`SDL_BeginGPURenderPass`](https://wiki.libsdl.org/SDL3/SDL_BeginGPURenderPass) is the first time for us that an SDL GPU call requires a fair bit of configuration, but it won't be the last by a long shot. [`SDL_GPUColorTargetInfo`](https://wiki.libsdl.org/SDL3/SDL_GPUColorTargetInfo) is one of many create/info structs we'll be going over. As will become tradition, we zero it out to "default" the fields, but right now, we can concern ourselves with just the 4 fields we're setting here:
   - texture: The is the texture we're rendering to, the "target".
