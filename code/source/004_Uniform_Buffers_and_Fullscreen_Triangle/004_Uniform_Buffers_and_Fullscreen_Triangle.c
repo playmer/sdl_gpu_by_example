@@ -11,6 +11,14 @@ namespace cpp_test {
 #endif
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// MATH
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+typedef struct float2 {
+  float x, y;
+} float2;
+
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Shared GPU Code
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 typedef struct GpuContext {
@@ -117,84 +125,14 @@ SDL_GPUShader* CreateShader(
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 ////////////////////////////////////////////////////////////
-/// TrianglePipeline
-typedef struct TrianglePipeline {
+/// FullscreenContext
+typedef struct FullscreenContext {
   SDL_GPUGraphicsPipeline* mPipeline;
-  SDL_FRect mPosition;
-} TrianglePipeline;
-
-TrianglePipeline CreateTrianglePipeline() {
-  SDL_GPUColorTargetDescription colorTargetDescription;
-  SDL_zero(colorTargetDescription);
-  colorTargetDescription.format = SDL_GetGPUSwapchainTextureFormat(gContext.mDevice, gContext.mWindow);
-
-  SDL_GPUGraphicsPipelineCreateInfo graphicsPipelineCreateInfo;
-  SDL_zero(graphicsPipelineCreateInfo);
-
-  graphicsPipelineCreateInfo.target_info.num_color_targets = 1;
-  graphicsPipelineCreateInfo.target_info.color_target_descriptions = &colorTargetDescription;
-  graphicsPipelineCreateInfo.primitive_type = SDL_GPU_PRIMITIVETYPE_TRIANGLELIST;
-
-  graphicsPipelineCreateInfo.vertex_shader = CreateShader(
-    "UniformTriangle.vert",
-    SDL_GPU_SHADERSTAGE_VERTEX,
-    0,
-    1,
-    0,
-    0,
-    SDL_PROPERTY_TYPE_INVALID
-  );
-  SDL_assert(graphicsPipelineCreateInfo.vertex_shader);
-
-  graphicsPipelineCreateInfo.fragment_shader = CreateShader(
-    "UniformTriangle.frag",
-    SDL_GPU_SHADERSTAGE_FRAGMENT,
-    0,
-    0,
-    0,
-    0,
-    SDL_PROPERTY_TYPE_INVALID
-  );
-  SDL_assert(graphicsPipelineCreateInfo.fragment_shader);
-
-  SDL_assert(SDL_SetStringProperty(gContext.mProperties, SDL_PROP_GPU_SHADER_CREATE_NAME_STRING, "TrianglePipeline"));
-
-  TrianglePipeline pipeline;
-  pipeline.mPipeline = SDL_CreateGPUGraphicsPipeline(gContext.mDevice, &graphicsPipelineCreateInfo);
-  SDL_assert(pipeline.mPipeline);
-
-  pipeline.mPosition.x = 0.f;
-  pipeline.mPosition.y = 0.f;
-  pipeline.mPosition.w = 1.f;
-  pipeline.mPosition.h = 1.f;
-
-  SDL_ReleaseGPUShader(gContext.mDevice, graphicsPipelineCreateInfo.vertex_shader);
-  SDL_ReleaseGPUShader(gContext.mDevice, graphicsPipelineCreateInfo.fragment_shader);
-
-  return pipeline;
-}
-
-void DrawTrianglePipeline(TrianglePipeline* aPipeline, SDL_GPUCommandBuffer* aCommandBuffer, SDL_GPURenderPass* aRenderPass)
-{
-  SDL_BindGPUGraphicsPipeline(aRenderPass, aPipeline->mPipeline);
-  SDL_PushGPUVertexUniformData(aCommandBuffer, 0, &aPipeline->mPosition, sizeof(aPipeline->mPosition));
-  SDL_DrawGPUPrimitives(aRenderPass, 3, 1, 0, 0);
-}
-
-void DestroyTrianglePipeline(TrianglePipeline* aPipeline)
-{
-  SDL_ReleaseGPUGraphicsPipeline(gContext.mDevice, aPipeline->mPipeline);
-  SDL_zero(*aPipeline);
-}
-
-////////////////////////////////////////////////////////////
-/// FullscreenPipeline
-typedef struct FullscreenPipeline {
-  SDL_GPUGraphicsPipeline* mPipeline;
+  float2 mOffset;
   int mColorIndex;
-} FullscreenPipeline;
+} FullscreenContext;
 
-FullscreenPipeline CreateFullscreenPipeline() {
+FullscreenContext CreateFullscreenContext() {
   SDL_GPUColorTargetDescription colorTargetDescription;
   SDL_zero(colorTargetDescription);
   colorTargetDescription.format = SDL_GetGPUSwapchainTextureFormat(gContext.mDevice, gContext.mWindow);
@@ -207,10 +145,10 @@ FullscreenPipeline CreateFullscreenPipeline() {
   graphicsPipelineCreateInfo.primitive_type = SDL_GPU_PRIMITIVETYPE_TRIANGLELIST;
 
   graphicsPipelineCreateInfo.vertex_shader = CreateShader(
-    "UniformFullscreenTriangle.vert",
+    "FullscreenTriangle.vert",
     SDL_GPU_SHADERSTAGE_VERTEX,
     0,
-    0,
+    1,
     0,
     0,
     SDL_PROPERTY_TYPE_INVALID
@@ -218,7 +156,7 @@ FullscreenPipeline CreateFullscreenPipeline() {
   SDL_assert(graphicsPipelineCreateInfo.vertex_shader);
 
   graphicsPipelineCreateInfo.fragment_shader = CreateShader(
-    "UniformFullscreenTriangle.frag",
+    "FullscreenTriangle.frag",
     SDL_GPU_SHADERSTAGE_FRAGMENT,
     0,
     1,
@@ -228,12 +166,12 @@ FullscreenPipeline CreateFullscreenPipeline() {
   );
   SDL_assert(graphicsPipelineCreateInfo.fragment_shader);
 
-  SDL_assert(SDL_SetStringProperty(gContext.mProperties, SDL_PROP_GPU_SHADER_CREATE_NAME_STRING, "FullscreenPipeline"));
+  SDL_assert(SDL_SetStringProperty(gContext.mProperties, SDL_PROP_GPU_SHADER_CREATE_NAME_STRING, "FullscreenContext"));
 
-  FullscreenPipeline pipeline;
+  FullscreenContext pipeline;
+  SDL_zero(pipeline);
   pipeline.mPipeline = SDL_CreateGPUGraphicsPipeline(gContext.mDevice, &graphicsPipelineCreateInfo);
   SDL_assert(pipeline.mPipeline);
-  pipeline.mColorIndex = 0;
 
   SDL_ReleaseGPUShader(gContext.mDevice, graphicsPipelineCreateInfo.vertex_shader);
   SDL_ReleaseGPUShader(gContext.mDevice, graphicsPipelineCreateInfo.fragment_shader);
@@ -241,7 +179,7 @@ FullscreenPipeline CreateFullscreenPipeline() {
   return pipeline;
 }
 
-void DrawFullscreenPipeline(FullscreenPipeline* aPipeline, SDL_GPUCommandBuffer* aCommandBuffer, SDL_GPURenderPass* aRenderPass)
+void DrawFullscreenContext(FullscreenContext* aPipeline, SDL_GPUCommandBuffer* aCommandBuffer, SDL_GPURenderPass* aRenderPass)
 {
   SDL_FColor colors[] = {
     {1, 0, 0, 1},
@@ -250,11 +188,12 @@ void DrawFullscreenPipeline(FullscreenPipeline* aPipeline, SDL_GPUCommandBuffer*
   };
 
   SDL_BindGPUGraphicsPipeline(aRenderPass, aPipeline->mPipeline);
+  SDL_PushGPUVertexUniformData(aCommandBuffer, 0, &aPipeline->mOffset, sizeof(float2));
   SDL_PushGPUFragmentUniformData(aCommandBuffer, 0, &colors[aPipeline->mColorIndex], sizeof(SDL_FColor));
   SDL_DrawGPUPrimitives(aRenderPass, 3, 1, 0, 0);
 }
 
-void DestroyFullscreenPipeline(FullscreenPipeline* aPipeline)
+void DestroyFullscreenContext(FullscreenContext* aPipeline)
 {
   SDL_ReleaseGPUGraphicsPipeline(gContext.mDevice, aPipeline->mPipeline);
   SDL_zero(*aPipeline);
@@ -274,8 +213,7 @@ int main(int argc, char** argv)
 
   CreateGpuContext(window);
 
-  FullscreenPipeline fullscreenPipeline = CreateFullscreenPipeline();
-  TrianglePipeline trianglePipeline = CreateTrianglePipeline();
+  FullscreenContext fullscreenContext = CreateFullscreenContext();
 
   const float speed = 1.f;
   Uint64 last_frame_ticks_so_far = SDL_GetTicksNS();	
@@ -296,23 +234,20 @@ int main(int argc, char** argv)
         break;
       case SDL_EVENT_KEY_DOWN:
         switch (event.key.scancode) {
-          case SDL_SCANCODE_1: fullscreenPipeline.mColorIndex = 0; break;
-          case SDL_SCANCODE_2: fullscreenPipeline.mColorIndex = 1; break;
-          case SDL_SCANCODE_3: fullscreenPipeline.mColorIndex = 2; break;
+          case SDL_SCANCODE_1: fullscreenContext.mColorIndex = 0; break;
+          case SDL_SCANCODE_2: fullscreenContext.mColorIndex = 1; break;
+          case SDL_SCANCODE_3: fullscreenContext.mColorIndex = 2; break;
           default: break;
         }
         break;
       }
     }
-      
-    if (key_map[SDL_SCANCODE_D]) trianglePipeline.mPosition.x += speed * dt * 1.0f;
-    if (key_map[SDL_SCANCODE_A]) trianglePipeline.mPosition.x -= speed * dt * 1.0f;
-    if (key_map[SDL_SCANCODE_W]) trianglePipeline.mPosition.y += speed * dt * 1.0f;
-    if (key_map[SDL_SCANCODE_S]) trianglePipeline.mPosition.y -= speed * dt * 1.0f;
-    if (key_map[SDL_SCANCODE_R]) trianglePipeline.mPosition.w += speed * dt * 1.0f;
-    if (key_map[SDL_SCANCODE_F]) trianglePipeline.mPosition.w -= speed * dt * 1.0f;
-    if (key_map[SDL_SCANCODE_T]) trianglePipeline.mPosition.h += speed * dt * 1.0f;
-    if (key_map[SDL_SCANCODE_G]) trianglePipeline.mPosition.h -= speed * dt * 1.0f;
+
+    if (key_map[SDL_SCANCODE_D]) fullscreenContext.mOffset.x += speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_A]) fullscreenContext.mOffset.x -= speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_W]) fullscreenContext.mOffset.y += speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_S]) fullscreenContext.mOffset.y -= speed * dt * 1.0f;
+
 
     SDL_GPUCommandBuffer* commandBuffer = SDL_AcquireGPUCommandBuffer(gContext.mDevice);
     if (!commandBuffer)
@@ -346,15 +281,13 @@ int main(int argc, char** argv)
       NULL
     );
 
-    DrawFullscreenPipeline(&fullscreenPipeline, commandBuffer, renderPass);
-    DrawTrianglePipeline(&trianglePipeline, commandBuffer, renderPass);
+    DrawFullscreenContext(&fullscreenContext, commandBuffer, renderPass);
 
     SDL_EndGPURenderPass(renderPass);
     SDL_SubmitGPUCommandBuffer(commandBuffer);
   }
 
-  DestroyTrianglePipeline(&trianglePipeline);
-  DestroyFullscreenPipeline(&fullscreenPipeline);
+  DestroyFullscreenContext(&fullscreenContext);
 
   DestroyGpuContext();
 

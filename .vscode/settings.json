@@ -1,5 +1,13 @@
 {
     "rust-analyzer.linkedProjects": [
         "site/generator/Cargo.toml"
-    ]
+    ],
+    "files.associations": {
+        "system_error": "cpp",
+        "array": "cpp",
+        "span": "cpp",
+        "vector": "cpp",
+        "xstring": "cpp",
+        "xutility": "cpp"
+    }
 }

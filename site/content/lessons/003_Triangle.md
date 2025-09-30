@@ -1,17 +1,13 @@
 ---
 title: Triangle and a "Fullscreen Triangle"
-description: Finally you can see a triangle, and then a demonstration on why you might actually use a single triangle later on in your Graphics journey. Will cover the creation of Vertex and Pixel shaders, a simple demonstration of "Vertex Pulling", and then an extension of the triangle to cover the whole screen with a shader effect.
+description: After clearing the screen, the next milestone is rendering a triangle Triangle. Will cover the creation of Vertex and Fragment shaders and a simple demonstration of "Vertex Pulling".
 template: lesson_template.html
 example_status: Finished
 chapter_status: Not Finished
 collections: ["lessons"]
 ---
 
-The big one, it's time to draw a Triangle. And after that, we're going to learn a trick on how to extend this triangle to display over the entire screen. This technique is a small optimization that gets used when you start learning about fullscreen effects. We'll be using it in the next chapter to play around with pixel shaders to get a little more comfortable with writing transfering data to the GPU as well as writing code for it.
-
-That said, this is a text heavy one, we need to get into a bit of the high level details on how GPUs work, as well as some geometry. If you just want to work through the examples, I understand, and you can do some fun stuff at a deep level. Just know that to have a good understanding of these, you'll want to read these sections, or similar from other sources.
-
-Lets start adding to the previous example
+The big one, it's time to draw a Triangle. This is a text heavy one, we need to get into a bit of the high level details on how GPUs work, as well as some geometry. Lets start by adding to the previous example
 
 ## The Triangle Context
 
@@ -38,9 +34,9 @@ Pipelines are how we configure everything else not encapsulated in a RenderPass.
 | Input Assembler | -> | Vertex Shader   | -> | Tesselation Shader | --+
 +-----------------+    +-----------------+    +--------------------+   |
  +---------------------------------------------------------------------+
- |    +-----------------+  +---------------+  +---------------+
- + -> | Geometry Shader |  | Rasterization |  | Pixel Shaders |
-      +-----------------+  +---------------+  +---------------+ 
+ |    +-----------------+    +---------------+    +------------------+
+ + -> | Geometry Shader | -> | Rasterization | -> | Fragment Shaders |
+      +-----------------+    +---------------+    +------------------+ 
 ```
 
 We should first mention the Input Assembler which is something that's technically always happening, but we won't interact with much for some time. Essentially it takes data we describe in the Pipeline, and sets it up to be used in the subsequent stages.
@@ -102,7 +98,7 @@ We'll go into _much_ greater detail on the Vertex pipeline, Vertex shaders, and 
 
 ## The Vertex Shader
 
-Now that we've discussed the theory, let's get back to the code a bit, but before we can make a pipeline, we'll need to write both a Vertex and Pixel shader. We'll create a couple of files [`Triangle.vert.hlsl` and `Triangle.frag.hlsl`] to start working on, starting with the Vertex shader.
+Now that we've discussed the theory, let's get back to the code a bit, but before we can make a pipeline, we'll need to write both a Vertex and Fragment shader. We'll create a couple of files [`Triangle.vert.hlsl` and `Triangle.frag.hlsl`] to start working on, starting with the Vertex shader.
 
 To display a triangle, we must produce geometry. For very simple shapes like Triangle, and even cubes, we can get away with storing this data within the shader itself. And it's helpful to learn this how to do this because this isn't unlike how you might pull geometry out of a storage buffer. Or for 2D you may store the transformations and UV info for sprites into a storage buffer but produce geometry like we will here.
 
@@ -144,7 +140,7 @@ static const float3 cColors[3] = {
 };
 ```
 
-Now we've discussed that Vertex Shaders have to output geometry, we do this through returning a value from our `main` function which we'll be writing in a moment. That said, we do not need to return just a single value. Vertex Shaders can also output data for Pixel Shaders to use. In general these values will be interpolated based on the values of the vertices output by this function based on the position of the pixel within the triangle those vertices make up. We'll discuss this in a bit more detail during the FullScreen Triangle section below.
+Now we've discussed that Vertex Shaders have to output geometry, we do this through returning a value from our `main` function which we'll be writing in a moment. That said, we do not need to return just a single value. Vertex Shaders can also output data for Fragment Shaders to use. In general these values will be interpolated based on the values of the vertices output by this function based on the position of the pixel within the triangle those vertices make up. We'll discuss this in a bit more detail during the FullScreen Triangle example in the next chapter.
 
 So, to return multiple values, you create a struct that contains those values. The shader needs to know which field means what and the method by which we do this are called "Semantics" in HLSL. 
 
@@ -171,43 +167,57 @@ Output main(uint id : SV_VertexID)
 }
 ```
 
-Right off the bat we see two interesting things, the return value is using our `Output` struct, and we're taking a paramter and it's marked with a built-in semantic. When we mark inputs with semantics, this means that we're asking the shader runtime to let us use that built-in variable. In this case `SV_VertexID` represents the ID of the vertex we're currently processing in this shader. Remember that the Vertex Shader will run for every vertex you request to draw. 
+Right off the bat we see two interesting things, the return value is using our `Output` struct, and we're taking a paramter and it's marked with a built-in semantic. When we mark inputs with semantics, this means that we're asking the shader runtime to let us use that built-in variable. In this case `SV_VertexID` represents the ID/index of the vertex we're currently processing in this shader. Remember that the Vertex Shader will run for every vertex you request to draw, so in this case it's purely an ID and not an index, as we're not traversing any buffers.
+
+Next we compute the index into our constant buffers for position and color by using modulo to ensure we're always looking within our 3 vertx/colors. The values at that index will be used to fill in our `Output` instance. Notice that we're passing this vertex position into a `float4` along with two other values. Because the existing position is a `float2`, this means we're extending it to be a `float4`, with the latter values filing in for `z` and `w`.
+
+Now you might wonder why we're using modulo here, since we know we're only going to try rendering 3 vertices. Honestly, you'd be right to think it's unneeded. We're not going to need this for this chapter. But we'll be extending this shader in future chapters, and it's a good habit to get into, as you'll probably not always be rendering only one thing if you're using Vertex Pulling like this.
+
+## Fragments (and Pixels)
 
 
-## Pixels (and Fragments)
 
-### The Fullscreen Triangle
+## Compiling your Shaders
 
-Now lets do something a little more practical, or at least on the borders of practical. You can copy and paste the TriangleContext you made above, and just create some new shaders to use with this FullScreenContext.
+The samples all build their shader code as part of their CMake build, and you're encouraged to copy the sample from Chapter 1 and reuse it for all of them to sidestep the details here, but let's cover this briefly.
 
-FullScreen triangles might be used for all sorts of things, but fundamentally they're generally there for when you just want a canvas to paint on in th Pixel Shader. We'll be doing something pretty basic here, but we'll revisit it much later. We're covering it now so that you can see that sometimes, you really do need to render a single triangle, but what's special is what's within it.
+As discussed previously, we use [`SDL_shadercross`](https://github.com/libsdl-org/SDL_shadercross) for compiling our shaders. We'll cover compiling all three types of shaders here, but you'll only be compiling your vertex and pixel shaders in this chapter.
 
-#### The Vertex Shader 
+The anatomy of a call into `SDL_shadercross` is as such:
 
-We know from our work above that we don't actually need geometry from the CPU to output something in the vertex stage, as long as we know which vertex we're outputting. We also know that we can interpolate values between the vertices of the triangle. Thus, a fullscreen triangle is the minimum triangle that fills the entirety of the screen (NDC space) while giving us an interpolated value between (0, 0) and (1, 1) within the screen. That interpolated value is how we'll know where we are when we're inside the pixel shader, and will allow you to do some fun things, although my demonstration will be a simple checkerboard effect.
-
-It'll end up looking something like this, albeit with everything outside of the screen being clipped off and not rendered past the vertex stage.
-
+```bash
+SDL_shadercross <InputShader> -g --source <SourceFormat> --dest <DestinationFormat> --stage <ShaderStage> --output <OutputShader>
 ```
-2
-| \ 
-|   \
-|     \
-|       \
-|         \
-|           \
-|             \
-|               \
-+--------+--------\
-|        |        | \
-|        |(0,0)   |   \
-|--------*--------|     \
-|        |        |       \
-|        |        |         \
-|        |        |           \
-0--------+---------------------1
+The `SourceFormat` will always be HLSL for also, but you can also pass SPIRV into it. Obviously it must match the format of the `InputShader`. Similarly `DestinationFormat` is the format we're compiling for, and it's waht the `OutputShader` will come out as. And you must also let the tool know which `ShaderStage` you're compiling this shader for. Finally one addition here that hasn't been mentioned is the `-g` flag. This ensures the compiler emits debug info into the compiled shader. This isn't something you'd want to use in a released game or for a release build, but it's useful for debugging and trying to figure out why you're seeing what you're seeing.
 
+When we automate this, we generally generate shaders for all backends of SDL_GPU, but if you'd like to simplify things for yourself, you can choose to only do the ones availible to you, or choose one among those and only compile that one. Just ensure you adjust your call to SDL_CreateGPUDevice to only take the ones you're compiling.
+
+Lets see what compiling the vertex shader for all of our backends looks like.
+
+```bash
+SDL_shadercross Triangle.vert.hlsl -g --source HLSL --dest SPIRV --stage vertex --output Triangle.vert.spv
+SDL_shadercross Triangle.vert.hlsl -g --source HLSL --dest MSL --stage vertex --output Triangle.vert.msl
+SDL_shadercross Triangle.vert.hlsl -g --source HLSL --dest DXIL --stage vertex --output Triangle.vert.dxil
 ```
+
+And the Fragment shader
+
+```bash
+SDL_shadercross Triangle.frag.hlsl -g --source HLSL --dest SPIRV --stage fragment --output Triangle.frag.spv
+SDL_shadercross Triangle.frag.hlsl -g --source HLSL --dest MSL --stage fragment --output Triangle.frag.msl
+SDL_shadercross Triangle.frag.hlsl -g --source HLSL --dest DXIL --stage fragment --output Triangle.frag.dxil
+```
+And a theoretical, but nonexistance, compute shader
+
+```bash
+SDL_shadercross Triangle.comp.hlsl -g --source HLSL --dest SPIRV --stage compute --output Triangle.comp.spv
+SDL_shadercross Triangle.comp.hlsl -g --source HLSL --dest MSL --stage compute --output Triangle.comp.msl
+SDL_shadercross Triangle.comp.hlsl -g --source HLSL --dest DXIL --stage compute --output Triangle.comp.dxil
+```
+
+Assuming your shaders were correct, you should now have those output files and be able to load them as we're setting up our pipeline.
+
+## Back to Creating the Pipeline
 
 
 
