@@ -1,7 +1,9 @@
 ---
-title: Quads and Textures (Example Done)
+title: Quads and Textures
 description: Extending off of Uniform Buffers, we'll learn about Texture Buffers, so we can finally display images beyond colored shapes.
 template: lesson_template.html
+example_status: Finished
+chapter_status: Not Started
 collections: ["lessons"]
 ---
 

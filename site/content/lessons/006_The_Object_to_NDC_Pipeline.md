@@ -1,7 +1,9 @@
 ---
-title: The Object To NDC Pipeline (Example Done, Started Writing)
+title: The Object To NDC Pipeline
 description: We've been skirting around it, but it's time to talk in more detail about coordinate spaces and how we transform between them. We'll also be demonstraiting the Orthographic Projection so we can display objects in a more sensible space than a [-1, -1] to [1, 1] box.
 template: lesson_template.html
+example_status: Finished
+chapter_status: Not Finished
 collections: ["lessons"]
 ---
 

@@ -441,6 +441,8 @@ fn get_content_info(content: &Content) -> serde_json::Map<String, Value> {
     map.insert("file_path".to_string(), Value::String(content.file_path.to_str().unwrap().to_string()));
     map.insert("title".to_string(), Value::String(content.front_matter["title"].as_str().unwrap().to_string()));
     map.insert("description".to_string(), Value::String(content.front_matter["description"].as_str().unwrap().to_string()));
+    map.insert("example_status".to_string(), Value::String(content.front_matter["example_status"].as_str().unwrap_or("finished").to_string()));
+    map.insert("chapter_status".to_string(), Value::String(content.front_matter["chapter_status"].as_str().unwrap_or("finished").to_string()));
     map.insert("url".to_string(), Value::String(content.file_path.with_extension("html").to_str().unwrap().to_string().replace("\\", "/")));
 
     map

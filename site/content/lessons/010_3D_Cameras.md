@@ -1,7 +1,9 @@
 ---
-title: An "FPS" Camera (Not Started)
+title: An "FPS" Camera
 description: Without a dynamic camera, we'll be really struggling when rendering models and scenes, so lets get this out of the way.
 template: lesson_template.html
+example_status: Finished
+chapter_status: Not Started
 collections: ["lessons"]
 ---
 

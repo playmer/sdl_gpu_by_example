@@ -2,6 +2,8 @@
 title: Window and Clearing
 description: Before you render a triangle, you must first create a window, and then ideally clear it to a friendly blue color. Covers the basics of initialization of SDL, the Window, and the GPU Device, as well as the most basic usage of Command Buffers, Swapchain Textures, and a RenderPass.
 template: lesson_template.html
+example_status: Finished
+chapter_status: Finished
 collections: ["lessons"]
 ---
 

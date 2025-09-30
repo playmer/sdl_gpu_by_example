@@ -1,7 +1,9 @@
 ---
-title: The Cube and Math (Example Done, Started Outlining)
+title: The Cube and Math
 description: We're not done learning about APIs that can help us in 2D, but it's time to start learning about 3D rendering. We'll be rendering a cube, and along the way learn about properly constructing a model matrix, and expand out our math library.
 template: lesson_template.html
+example_status: Finished
+chapter_status: Outlined
 collections: ["lessons"]
 ---
 
