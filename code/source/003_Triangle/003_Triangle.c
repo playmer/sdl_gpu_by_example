@@ -82,16 +82,16 @@ SDL_GPUShader* CreateShader(
   void* fileData = SDL_LoadFile(shader_path, &fileSize);
   SDL_assert(fileData);
 
-  SDL_GPUShaderCreateInfo shaderCreateInfo;
-  SDL_zero(shaderCreateInfo);
-
   SDL_PropertiesID properties = gContext.mProperties;
 
-  if (aProperties != SDL_PROPERTY_TYPE_INVALID) {
+  if (aProperties != 0) {
     properties = aProperties;
   }
 
   SDL_assert(SDL_SetStringProperty(properties, SDL_PROP_GPU_SHADER_CREATE_NAME_STRING, aShaderFilename));
+
+  SDL_GPUShaderCreateInfo shaderCreateInfo;
+  SDL_zero(shaderCreateInfo);
 
   shaderCreateInfo.entrypoint = gContext.mShaderEntryPoint;
   shaderCreateInfo.format = gContext.mChosenBackendFormat;
