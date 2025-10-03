@@ -1,5 +1,5 @@
 ---
-title: Triangle and a "Fullscreen Triangle"
+title: A Triangle
 description: After clearing the screen, the next milestone is rendering a triangle Triangle. Will cover the creation of Vertex and Fragment shaders and a simple demonstration of "Vertex Pulling".
 template: lesson_template.html
 example_status: Finished
@@ -225,7 +225,7 @@ SDL_shadercross Triangle.frag.hlsl -g --source HLSL --dest SPIRV --stage fragmen
 SDL_shadercross Triangle.frag.hlsl -g --source HLSL --dest MSL --stage fragment --output Triangle.frag.msl
 SDL_shadercross Triangle.frag.hlsl -g --source HLSL --dest DXIL --stage fragment --output Triangle.frag.dxil
 ```
-And a theoretical, but nonexistance, compute shader
+And a theoretical, but nonexistant, compute shader
 
 ```bash
 SDL_shadercross Triangle.comp.hlsl -g --source HLSL --dest SPIRV --stage compute --output Triangle.comp.spv

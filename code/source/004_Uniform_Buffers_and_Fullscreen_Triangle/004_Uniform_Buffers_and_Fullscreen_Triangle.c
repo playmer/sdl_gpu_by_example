@@ -171,6 +171,8 @@ FullscreenContext CreateFullscreenContext() {
   FullscreenContext pipeline;
   SDL_zero(pipeline);
   pipeline.mPipeline = SDL_CreateGPUGraphicsPipeline(gContext.mDevice, &graphicsPipelineCreateInfo);
+  pipeline.mOffset.x = 0.5f;
+  pipeline.mOffset.y = 0.5f;
   SDL_assert(pipeline.mPipeline);
 
   SDL_ReleaseGPUShader(gContext.mDevice, graphicsPipelineCreateInfo.vertex_shader);
