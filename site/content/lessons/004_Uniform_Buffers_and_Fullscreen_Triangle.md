@@ -11,8 +11,6 @@ Now lets do something a little more practical, we're going to learn a trick on h
 
 We'll also discuss Uniform Buffers and how to transfer data between the CPU and GPU, in future chapters we'll go over different types of buffers with many use cases.
 
-
-
 ## The Fullscreen Triangle
 
 FullScreen triangles might be used for all sorts of things, but fundamentally they're generally there for when you just want a canvas to paint on in th Fragment Shader. We'll be doing something pretty basic here, but we'll revisit it much later. We're covering it now so that you can see that sometimes, you really do need to render a single triangle, but what's special is what's within it.
@@ -97,6 +95,8 @@ Output main(uint id : SV_VertexID)
 }
 ```
 
+### Drawing an Oval with a Fragment Shader
+
 ## An Aside on Buffers
 
 Almost everything we do in graphics requires data. Sometimes this can be generated or stored in-shader, we did the most simplistic version of this in the previous chapter to do pull-style vertex rendering. We just created some constant arrays and based on the VertexID, we were able to index into those arrays for our Vertex positions and colors. 
@@ -121,16 +121,24 @@ We've not discussed it before in this tutorial, but you may have heard about str
 
 ### Vertex Shader with a Uniform
 
+To get data from the CPU, lets first decide what we want it to look like. We're rendering an oval on the center of the screen, so lets have it moved around. We'll take a Position, and use that to determine the center of the oval. To do that, we need to declare a Uniform Buffer:
+
 ```hlsl
 cbuffer UBO : register(b0, space1)
 {
-  float2 Offset;
+  float2 Position;
 };
+```
 
+Per the SDL_CreateGPUShader documentation, we know that within Vertex shaders, Uniform Buffers are going to be in `space1`, and we'll be placing this in slot 0 on both the CPU and GPU sides, hence the `b0`. Now there's a bunch of rules about alignment for these buffers, we don't have to worry about it for now, but just know that when you start passing float3s in, you need to treat it as if it were a float4 and pad it out, specifically this is called `std140` alignment. We'll deal with this situation in a later chapter as demonstration, but I'll link various documentation around this below.
+
+All we'll have to do with this is pass it through to the fragment shader:
+
+```hlsl
 struct Output
 {
   float2 TextureCoordinates : TEXCOORD0;
-  float2 Offset : TEXCOORD1;
+  float2 OvalPosition : TEXCOORD1;
   float4 Position : SV_Position;
 };
 
@@ -141,10 +149,42 @@ Output main(uint id : SV_VertexID)
   Output output;
   output.Position = float4(cVertexPositions[vertexIndex], 0.0f, 1.0f);
   output.TextureCoordinates = cTextureCoordinates[vertexIndex];
-  output.Offset = Offset;
+  output.OvalPosition = OvalPosition;
   return output;
 }
 ```
 
+And you may remember that we talked a lot about interpolation in the last chapter, and you might wonder if the position of this Oval is. The answer is both yes and no. It is interpolated, but given it will be the same for each vertex, in effect it isn't, all runs of the fragment shader below will see the same position. You might also wonder why we don't just pass this directly into the fragment shader since it's always the same, and you're right, we could've. This is more for demonstration purposes of the interpolation effects here. 
 
 ### Fragment Shader with a Uniform
+
+For our Fragment shader, we'll need to adjust our `main` to take in the value we passed in from the Vertex shader, but we'll also take a Uniform Buffer in here as well:
+
+```
+cbuffer UBO : register(b0, space3)
+{
+  float4 color;
+};
+```
+
+Again we'll reference the documentation for `SDL_CreateGPUShader` to see that in Fragment shaders, uniforms are in `space3`, and the slots are different between shader stages, so we'll use `b0` here as well.
+
+
+
+```hlsl
+float4 main(float2 aTextureCoordinates : TEXCOORD0, float2 aOvalPosition : TEXCOORD1) : SV_Target0
+{
+  const float3 cColors[2] =
+  {
+    color.xyz,
+    { 0.0f, 0.0f, 0.0f },
+  };
+  
+  float distanceFromCenter = length(aTextureCoordinates - aOvalPosition);
+
+  return distanceFromCenter < .1f ?
+    float4(cColors[0], 1.0f) :
+    float4(cColors[1], 1.0f);
+}
+```
+
