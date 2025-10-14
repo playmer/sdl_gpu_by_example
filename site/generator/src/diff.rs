@@ -111,6 +111,8 @@ impl Highlighter {
     
     fn highlight_code_block<'a>(&mut self, transformed_events: &mut Vec<Event<'a>>, parser: &mut Parser<'a>, kind: CodeBlockKind<'_>)
     {
+        transformed_events.push(Event::Html(CowStr::Boxed("<div class=\"card card-body\">".to_string().into_boxed_str())));
+
         let language_syntax = match kind {
             CodeBlockKind::Fenced(lang) => {
                 if let Some(found_syntax) = self.syntax_set.find_syntax_by_extension(&lang) {
@@ -131,8 +133,8 @@ impl Highlighter {
                 }
                 Event::End(TagEnd::CodeBlock) => {
                     let syntax = language_syntax.unwrap();
-                    let html = highlighted_html_for_string(&self.to_highlight, &self.syntax_set, syntax, &self.theme).unwrap();
-
+                    let mut html = highlighted_html_for_string(&self.to_highlight, &self.syntax_set, syntax, &self.theme).unwrap();
+                    html.push_str("</div>");
                     transformed_events.push(Event::Html(CowStr::Boxed(html.into_boxed_str())));
                     self.to_highlight.clear();
                     return;
