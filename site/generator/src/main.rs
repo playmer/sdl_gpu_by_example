@@ -5,7 +5,6 @@ use std::fs::create_dir_all;
 use std::fs::File;
 use std::io::stdout;
 use std::io::{Read, Write};
-use std::ops::Index;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::sync::Arc;
