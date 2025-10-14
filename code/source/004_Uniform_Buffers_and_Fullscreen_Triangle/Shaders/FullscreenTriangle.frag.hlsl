@@ -8,7 +8,7 @@ float4 main(float2 aTextureCoordinates : TEXCOORD0, float2 aOvalPosition : TEXCO
   const float3 cColors[2] =
   {
     color.xyz,
-    { 0.0f, 0.0f, 0.0f },
+    { 1.0f, 1.0f, 1.0f },
   };
   
   float distanceFromCenter = length(aTextureCoordinates - aOvalPosition);

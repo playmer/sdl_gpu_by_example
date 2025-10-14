@@ -1,15 +1,15 @@
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_stdinc.h>
 
-// This is for testing to ensure the code works in both C and C++,
-// this entire preprocessor block should just be the #include
-// in your own code.
+
 #ifndef __cplusplus
+#define SDL_MAIN_USE_CALLBACKS
 #include <SDL3/SDL_main.h>
 #else
 namespace cpp_test {
 #endif
 
+#if 0
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // MATH
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -36,12 +36,28 @@ void CreateGpuContext(SDL_Window* aWindow) {
   SDL_zero(gContext);
 
   gContext.mWindow = aWindow;
-  gContext.mDevice = SDL_CreateGPUDevice(SDL_GPU_SHADERFORMAT_SPIRV | SDL_GPU_SHADERFORMAT_DXIL | SDL_GPU_SHADERFORMAT_MSL, true, NULL);
+  {
+    gContext.mProperties = SDL_CreateProperties();
+    SDL_SetBooleanProperty(gContext.mProperties, SDL_PROP_GPU_DEVICE_CREATE_DEBUGMODE_BOOLEAN, true);
+    //SDL_SetBooleanProperty(gContext.mProperties, SDL_PROP_GPU_DEVICE_CREATE_PREFERLOWPOWER_BOOLEAN, true);
+    SDL_SetBooleanProperty(gContext.mProperties, SDL_PROP_GPU_DEVICE_CREATE_SHADERS_SPIRV_BOOLEAN, true);
+    SDL_SetBooleanProperty(gContext.mProperties, SDL_PROP_GPU_DEVICE_CREATE_SHADERS_DXIL_BOOLEAN, true);
+    SDL_SetBooleanProperty(gContext.mProperties, SDL_PROP_GPU_DEVICE_CREATE_SHADERS_MSL_BOOLEAN, true);
+
+    gContext.mDevice = SDL_CreateGPUDeviceWithProperties(gContext.mProperties);
+  }
+
+
+  //gContext.mDevice = SDL_CreateGPUDevice(
+  //  SDL_GPU_SHADERFORMAT_SPIRV |
+  //  SDL_GPU_SHADERFORMAT_DXIL |
+  //  SDL_GPU_SHADERFORMAT_MSL,
+  //  true,
+  //  NULL);
   SDL_assert(gContext.mDevice);
 
   SDL_assert(SDL_ClaimWindowForGPUDevice(gContext.mDevice, gContext.mWindow));
 
-  gContext.mProperties = SDL_CreateProperties();
   SDL_assert(gContext.mProperties);
 
   SDL_GPUShaderFormat availableFormats = SDL_GetGPUShaderFormats(gContext.mDevice);
@@ -204,98 +220,246 @@ void DestroyFullscreenContext(FullscreenContext* aPipeline)
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Main
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-int main(int argc, char** argv)
+
+
+SDL_Window* window = NULL;;
+FullscreenContext fullscreenContext;
+const float speed = 1.f;
+Uint64 last_frame_ticks_so_far = 0;
+int keys = 0;
+const bool* key_map = NULL;
+bool running = true;
+
+SDL_AppResult SDL_AppInit(void** appstate, int argc, char** argv)
 {
   (void)argc;
   (void)argv;
   SDL_assert(SDL_Init(SDL_INIT_VIDEO));
 
-  SDL_Window* window = SDL_CreateWindow(TARGET_NAME, 1280, 720, 0);
+  window = SDL_CreateWindow(TARGET_NAME, 1280, 720, SDL_WINDOW_RESIZABLE);
   SDL_assert(window);
 
   CreateGpuContext(window);
 
-  FullscreenContext fullscreenContext = CreateFullscreenContext();
+  fullscreenContext = CreateFullscreenContext();
 
-  const float speed = 1.f;
-  Uint64 last_frame_ticks_so_far = SDL_GetTicksNS();	
-  int keys;
-  const bool* key_map = SDL_GetKeyboardState(&keys);
-  bool running = true;
+  last_frame_ticks_so_far = SDL_GetTicksNS();
+  key_map = SDL_GetKeyboardState(&keys);
+  running = true;
 
-  while (running) {
-    Uint64 current_frame_ticks_so_far = SDL_GetTicksNS();
-    float dt = (current_frame_ticks_so_far - last_frame_ticks_so_far) / 1000000000.f;
-    last_frame_ticks_so_far = current_frame_ticks_so_far;
+  SDL_SetGPUAllowedFramesInFlight(gContext.mDevice, 1);
+  return SDL_APP_CONTINUE;
+}
 
-    SDL_Event event;
-    while (SDL_PollEvent(&event)) {
-      switch (event.common.type) {
-      case SDL_EVENT_QUIT:
-        running = false;
-        break;
-      case SDL_EVENT_KEY_DOWN:
-        switch (event.key.scancode) {
-          case SDL_SCANCODE_1: fullscreenContext.mColorIndex = 0; break;
-          case SDL_SCANCODE_2: fullscreenContext.mColorIndex = 1; break;
-          case SDL_SCANCODE_3: fullscreenContext.mColorIndex = 2; break;
-          default: break;
-        }
-        break;
-      }
-    }
-
-    if (key_map[SDL_SCANCODE_D]) fullscreenContext.mOffset.x += speed * dt * 1.0f;
-    if (key_map[SDL_SCANCODE_A]) fullscreenContext.mOffset.x -= speed * dt * 1.0f;
-    if (key_map[SDL_SCANCODE_W]) fullscreenContext.mOffset.y += speed * dt * 1.0f;
-    if (key_map[SDL_SCANCODE_S]) fullscreenContext.mOffset.y -= speed * dt * 1.0f;
+SDL_AppResult SDL_AppIterate(void* appstate)
+{
+  Uint64 current_frame_ticks_so_far = SDL_GetTicksNS();
+  float dt = (current_frame_ticks_so_far - last_frame_ticks_so_far) / 1000000000.f;
+  last_frame_ticks_so_far = current_frame_ticks_so_far;
 
 
-    SDL_GPUCommandBuffer* commandBuffer = SDL_AcquireGPUCommandBuffer(gContext.mDevice);
-    if (!commandBuffer)
-    {
-      SDL_Log("AcquireGPUCommandBuffer failed: %s", SDL_GetError());
-      continue;
-    }
+  if (key_map[SDL_SCANCODE_D]) fullscreenContext.mOffset.x += speed * dt * 1.0f;
+  if (key_map[SDL_SCANCODE_A]) fullscreenContext.mOffset.x -= speed * dt * 1.0f;
+  if (key_map[SDL_SCANCODE_W]) fullscreenContext.mOffset.y += speed * dt * 1.0f;
+  if (key_map[SDL_SCANCODE_S]) fullscreenContext.mOffset.y -= speed * dt * 1.0f;
 
-    SDL_GPUTexture* swapchainTexture;
-    if (!SDL_WaitAndAcquireGPUSwapchainTexture(commandBuffer, gContext.mWindow, &swapchainTexture, NULL, NULL))
-    {
-      SDL_Log("WaitAndAcquireGPUSwapchainTexture failed: %s", SDL_GetError());
-      continue;
-    }
 
-    SDL_GPUColorTargetInfo colorTargetInfo;
-    SDL_zero(colorTargetInfo);
-
-    colorTargetInfo.texture = swapchainTexture;
-    colorTargetInfo.load_op = SDL_GPU_LOADOP_CLEAR;
-    colorTargetInfo.store_op = SDL_GPU_STOREOP_STORE;
-    colorTargetInfo.clear_color.r = 0.2f;
-    colorTargetInfo.clear_color.g = 0.2f;
-    colorTargetInfo.clear_color.b = 0.85f;
-    colorTargetInfo.clear_color.a = 1.0f;
-
-    SDL_GPURenderPass* renderPass = SDL_BeginGPURenderPass(
-      commandBuffer,
-      &colorTargetInfo,
-      1,
-      NULL
-    );
-
-    DrawFullscreenContext(&fullscreenContext, commandBuffer, renderPass);
-
-    SDL_EndGPURenderPass(renderPass);
-    SDL_SubmitGPUCommandBuffer(commandBuffer);
+  SDL_GPUCommandBuffer* commandBuffer = SDL_AcquireGPUCommandBuffer(gContext.mDevice);
+  if (!commandBuffer)
+  {
+    SDL_Log("AcquireGPUCommandBuffer failed: %s", SDL_GetError());
+    return SDL_APP_CONTINUE;;
   }
 
+  SDL_GPUTexture* swapchainTexture;
+  if (!SDL_WaitAndAcquireGPUSwapchainTexture(commandBuffer, gContext.mWindow, &swapchainTexture, NULL, NULL))
+  {
+    SDL_Log("WaitAndAcquireGPUSwapchainTexture failed: %s", SDL_GetError());
+    return SDL_APP_CONTINUE;
+  }
+
+  SDL_GPUColorTargetInfo colorTargetInfo;
+  SDL_zero(colorTargetInfo);
+
+  colorTargetInfo.texture = swapchainTexture;
+  colorTargetInfo.load_op = SDL_GPU_LOADOP_CLEAR;
+  colorTargetInfo.store_op = SDL_GPU_STOREOP_STORE;
+  colorTargetInfo.clear_color.r = 1.f;
+  colorTargetInfo.clear_color.g = 1.f;
+  colorTargetInfo.clear_color.b = 1.f;
+  colorTargetInfo.clear_color.a = 1.f;
+
+  SDL_GPURenderPass* renderPass = SDL_BeginGPURenderPass(
+    commandBuffer,
+    &colorTargetInfo,
+    1,
+    NULL
+  );
+
+  DrawFullscreenContext(&fullscreenContext, commandBuffer, renderPass);
+
+  SDL_EndGPURenderPass(renderPass);
+  SDL_SubmitGPUCommandBuffer(commandBuffer);
+
+  SDL_WaitForGPUSwapchain(gContext.mDevice, gContext.mWindow);
+  SDL_WaitForGPUIdle(gContext.mDevice);
+
+  return SDL_APP_CONTINUE;
+}
+
+SDL_AppResult SDL_AppEvent(void* appstate, SDL_Event* event)
+{
+  switch (event->common.type) {
+    case SDL_EVENT_QUIT:
+      return SDL_APP_SUCCESS;
+      break;
+    case SDL_EVENT_KEY_DOWN:
+      switch (event->key.scancode) {
+      case SDL_SCANCODE_1: fullscreenContext.mColorIndex = 0; break;
+      case SDL_SCANCODE_2: fullscreenContext.mColorIndex = 1; break;
+      case SDL_SCANCODE_3: fullscreenContext.mColorIndex = 2; break;
+      default: break;
+      }
+      break;
+    case SDL_EVENT_WINDOW_EXPOSED:
+    {
+      SDL_GPUCommandBuffer* commandBuffer = SDL_AcquireGPUCommandBuffer(gContext.mDevice);
+      if (!commandBuffer)
+      {
+        SDL_Log("AcquireGPUCommandBuffer failed: %s", SDL_GetError());
+        return SDL_APP_CONTINUE;;
+      }
+
+      SDL_GPUTexture* swapchainTexture;
+      int w_w = 0, w_h = 0;
+      Uint32 s_w = 0, s_h = 0;
+      if (!SDL_WaitAndAcquireGPUSwapchainTexture(commandBuffer, gContext.mWindow, &swapchainTexture, &s_w, &s_h))
+      {
+        SDL_Log("WaitAndAcquireGPUSwapchainTexture failed: %s", SDL_GetError());
+        return SDL_APP_CONTINUE;
+      }
+
+      SDL_GetWindowSizeInPixels(gContext.mWindow, &w_w, &w_h);
+
+      SDL_GPUColorTargetInfo colorTargetInfo;
+      SDL_zero(colorTargetInfo);
+
+      colorTargetInfo.texture = swapchainTexture;
+      colorTargetInfo.load_op = SDL_GPU_LOADOP_CLEAR;
+      colorTargetInfo.store_op = SDL_GPU_STOREOP_STORE;
+      colorTargetInfo.clear_color.r = 1.f;
+      colorTargetInfo.clear_color.g = 1.f;
+      colorTargetInfo.clear_color.b = 1.f;
+      colorTargetInfo.clear_color.a = 1.f;
+
+      SDL_GPURenderPass* renderPass = SDL_BeginGPURenderPass(
+        commandBuffer,
+        &colorTargetInfo,
+        1,
+        NULL
+      );
+
+      DrawFullscreenContext(&fullscreenContext, commandBuffer, renderPass);
+
+      SDL_EndGPURenderPass(renderPass);
+      SDL_SubmitGPUCommandBuffer(commandBuffer);
+
+      SDL_WaitForGPUSwapchain(gContext.mDevice, gContext.mWindow);
+      //SDL_WaitForGPUIdle(gContext.mDevice);
+      break;
+    }
+  }
+
+  return SDL_APP_CONTINUE;
+}
+
+void SDL_AppQuit(void* appstate, SDL_AppResult result)
+{
   DestroyFullscreenContext(&fullscreenContext);
 
   DestroyGpuContext();
 
   SDL_Quit();
-  return 0;
 }
+
+#else
+
+SDL_Window* gWindow;
+SDL_Renderer* gRenderer;
+
+SDL_FRect RightAlignedRect()
+{
+  SDL_FRect rect;
+
+  int w = 0, h = 0;
+  SDL_GetWindowSizeInPixels(gWindow, &w, &h);
+
+  rect.x = w - 100;
+  rect.y = 200;
+  rect.w = 100;
+  rect.h = 100;
+
+  return rect;
+}
+
+SDL_AppResult SDL_AppInit(void** appstate, int argc, char** argv)
+{
+  (void)argc;
+  (void)argv;
+  SDL_assert(SDL_Init(SDL_INIT_VIDEO));
+
+  gWindow = SDL_CreateWindow("", 1280, 720, SDL_WINDOW_RESIZABLE);
+
+  gRenderer = SDL_CreateRenderer(gWindow, "opengl");
+
+  return SDL_APP_CONTINUE;
+}
+
+SDL_AppResult SDL_AppIterate(void* appstate)
+{
+  SDL_FRect rect = RightAlignedRect();
+
+  SDL_SetRenderDrawColor(gRenderer, 255, 255, 255, 255);
+  SDL_RenderClear(gRenderer);
+
+  SDL_SetRenderDrawColor(gRenderer, 255, 0, 0, 255);
+  SDL_RenderFillRect(gRenderer, &rect);
+  SDL_RenderPresent(gRenderer);
+
+  return SDL_APP_CONTINUE;
+}
+
+
+SDL_AppResult SDL_AppEvent(void* appstate, SDL_Event* event)
+{
+  switch (event->common.type) {
+    case SDL_EVENT_QUIT:
+      return SDL_APP_SUCCESS;
+      break;
+    case SDL_EVENT_WINDOW_EXPOSED:
+    {
+      SDL_FRect rect = RightAlignedRect();
+
+      SDL_SetRenderDrawColor(gRenderer, 255, 255, 255, 255);
+      SDL_RenderClear(gRenderer);
+
+      SDL_SetRenderDrawColor(gRenderer, 255, 0, 0, 255);
+      SDL_RenderFillRect(gRenderer, &rect);
+      SDL_RenderPresent(gRenderer);
+      break;
+    }
+  }
+
+  return SDL_APP_CONTINUE;
+}
+
+void SDL_AppQuit(void* appstate, SDL_AppResult result)
+{
+  SDL_Quit();
+}
+
+
+#endif
 
 #ifdef __cplusplus
 } // end cpp_test
