@@ -158,7 +158,7 @@ And you may remember that we talked a lot about interpolation in the last chapte
 
 ### Fragment Shader with a Uniform
 
-For our Fragment shader, we'll need to adjust our `main` to take in the value we passed in from the Vertex shader, but we'll also take a Uniform Buffer in here as well:
+For our Fragment shader, we'll also take a Uniform Buffer, this time to adjust the color of the oval we'll draw. Again we'll reference the documentation for `SDL_CreateGPUShader` to see that in Fragment shaders, uniforms are in `space3`, and the slot numbers are different between shader stages, so we'll can use `b0` here as well.
 
 ```
 cbuffer UBO : register(b0, space3)
@@ -167,9 +167,7 @@ cbuffer UBO : register(b0, space3)
 };
 ```
 
-Again we'll reference the documentation for `SDL_CreateGPUShader` to see that in Fragment shaders, uniforms are in `space3`, and the slots are different between shader stages, so we'll use `b0` here as well.
-
-
+For our `main`, we'll need to adjust our parameters to take in the value we passed in from the Vertex Shader.
 
 ```hlsl
 float4 main(float2 aTextureCoordinates : TEXCOORD0, float2 aOvalPosition : TEXCOORD1) : SV_Target0
@@ -187,4 +185,7 @@ float4 main(float2 aTextureCoordinates : TEXCOORD0, float2 aOvalPosition : TEXCO
     float4(cColors[1], 1.0f);
 }
 ```
+
+Here we're doing something interesting, we're determining the length between the 
+
 
