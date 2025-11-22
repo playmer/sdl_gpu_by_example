@@ -159,6 +159,7 @@ TriangleContext CreateTriangleContext() {
   SDL_assert(SDL_SetStringProperty(gContext.mProperties, SDL_PROP_GPU_SHADER_CREATE_NAME_STRING, "TriangleContext"));
 
   TriangleContext pipeline;
+  SDL_zero(pipeline);
   pipeline.mPipeline = SDL_CreateGPUGraphicsPipeline(gContext.mDevice, &graphicsPipelineCreateInfo);
   SDL_assert(pipeline.mPipeline);
 

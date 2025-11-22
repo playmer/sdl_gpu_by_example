@@ -466,7 +466,6 @@ float4x4 InfinitePerspectiveProjectionLHOZ(float aFovY, float aAspectRatio, floa
   return toReturn;
 }
 
-
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Shared GPU Code
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -745,14 +744,622 @@ SDL_GPUBuffer* CreateAndUploadBuffer(const void* aData, size_t aSize, SDL_GPUBuf
   return buffer;
 }
 
-typedef struct Model {
-  SDL_GPUBuffer* mPositions;          // float3
-  SDL_GPUBuffer* mNormals;            // float3
-  SDL_GPUBuffer* mTangents;           // float3
-  SDL_GPUBuffer* mTextureCoordinates; // float2
-} Model;
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// CGLTF Code
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//typedef struct ModelInfo {
+//} ModelInfo;
 
-void LoadGltfModel(const char* aModelName) {
+typedef struct SceneInfo {
+  Uint32 mIndicesCount;
+  Uint32 mPositionBytes;
+  Uint32 mNormalBytes;
+  Uint32 mTangentBytes;
+  Uint32 mTotalNodes;
+  Uint32 mRootNodes;
+
+  //ModelInfo* mInfos;
+  //size_t mModelCount;
+} SceneInfo;
+
+const char* cgltf_attribute_type_to_str(cgltf_attribute_type aType)
+{
+  switch (aType)
+  {
+    case cgltf_attribute_type_invalid: return "cgltf_attribute_type_invalid";
+    case cgltf_attribute_type_position: return "cgltf_attribute_type_position";
+    case cgltf_attribute_type_normal: return "cgltf_attribute_type_normal";
+    case cgltf_attribute_type_tangent: return "cgltf_attribute_type_tangent";
+    case cgltf_attribute_type_texcoord: return "cgltf_attribute_type_texcoord";
+    case cgltf_attribute_type_color: return "cgltf_attribute_type_color";
+    case cgltf_attribute_type_joints: return "cgltf_attribute_type_joints";
+    case cgltf_attribute_type_weights: return "cgltf_attribute_type_weights";
+    case cgltf_attribute_type_custom: return "cgltf_attribute_type_custom";
+    case cgltf_attribute_type_max_enum: return "cgltf_attribute_type_max_enum";
+  }
+
+  return "unknown_attribute_type";
+} cgltf_attribute_type;
+
+
+void PrintMaterial(const cgltf_material* aMaterial, const char* aTabs)
+{
+  if (!aMaterial) {
+    return;
+  }
+
+  SDL_Log("%sMaterial (%s):", aTabs, aMaterial->name);
+  SDL_Log("%s", aTabs);
+
+  SDL_Log("%s\thas_pbr_metallic_roughness: %s", aTabs, aMaterial->has_pbr_metallic_roughness ? "true" : "false");
+  SDL_Log("%s\thas_pbr_specular_glossiness: %s", aTabs, aMaterial->has_pbr_specular_glossiness ? "true" : "false");
+  SDL_Log("%s\thas_clearcoat: %s", aTabs, aMaterial->has_clearcoat ? "true" : "false");
+  SDL_Log("%s\thas_ior: %s", aTabs, aMaterial->has_ior ? "true" : "false");
+  SDL_Log("%s\thas_specular: %s", aTabs, aMaterial->has_specular ? "true" : "false");
+  SDL_Log("%s\thas_sheen: %s", aTabs, aMaterial->has_sheen ? "true" : "false");
+  SDL_Log("%s\thas_transmission: %s", aTabs, aMaterial->has_transmission ? "true" : "false");
+  SDL_Log("%s\thas_volume: %s", aTabs, aMaterial->has_volume ? "true" : "false");
+  SDL_Log("%s\thas_emissive_strength: %s", aTabs, aMaterial->has_emissive_strength ? "true" : "false");
+  SDL_Log("%s\thas_iridescence: %s", aTabs, aMaterial->has_iridescence ? "true" : "false");
+  SDL_Log("%s\thas_diffuse_transmission: %s", aTabs, aMaterial->has_diffuse_transmission ? "true" : "false");
+  SDL_Log("%s\thas_anisotropy: %s", aTabs, aMaterial->has_anisotropy ? "true" : "false");
+  SDL_Log("%s\thas_dispersion: %s", aTabs, aMaterial->has_dispersion ? "true" : "false");
+  /*
+  cgltf_pbr_metallic_roughness pbr_metallic_roughness;
+  cgltf_pbr_specular_glossiness pbr_specular_glossiness;
+  cgltf_clearcoat clearcoat;
+  cgltf_ior ior;
+  cgltf_specular specular;
+  cgltf_sheen sheen;
+  cgltf_transmission transmission;
+  cgltf_volume volume;
+  cgltf_emissive_strength emissive_strength;
+  cgltf_iridescence iridescence;
+  cgltf_diffuse_transmission diffuse_transmission;
+  cgltf_anisotropy anisotropy;
+  cgltf_dispersion dispersion;
+  cgltf_texture_view normal_texture;
+  cgltf_texture_view occlusion_texture;
+  cgltf_texture_view emissive_texture;
+
+  cgltf_alpha_mode alpha_mode;
+
+
+  cgltf_extras extras;
+
+
+
+  cgltf_size extensions_count;
+  cgltf_extension* extensions;
+  */
+  SDL_Log("%s\temissive_factor: [%f, %f, %f]", aTabs, aMaterial->emissive_factor[0], aMaterial->emissive_factor[1], aMaterial->emissive_factor[2]);
+
+  SDL_Log("%s\talpha_cutoff: %f", aTabs, aMaterial->alpha_cutoff);
+
+  SDL_Log("%s\tdouble_sided: %s", aTabs, aMaterial->double_sided ? "true" : "false");
+  SDL_Log("%s\tunlit: %s", aTabs, aMaterial->unlit ? "true" : "false");
+}
+
+void ProcessNodeInfo(cgltf_node* aNode, SceneInfo* aSceneInfo)
+{
+  aSceneInfo->mTotalNodes += aNode->children_count;
+
+  for (size_t i = 0; i < aNode->children_count; ++i) {
+    ProcessNodeInfo(aNode->children[i], aSceneInfo);
+  }
+
+  cgltf_mesh* mesh = aNode->mesh;
+  if (mesh == NULL) {
+    return;
+  }
+
+  for (size_t j = 0; j < mesh->primitives_count; ++j) {
+    cgltf_primitive* primitive = &mesh->primitives[j];
+
+    aSceneInfo->mIndicesCount += primitive->indices->count;
+
+    SDL_assert(primitive->indices->type == cgltf_type_scalar);
+    SDL_assert(primitive->indices->component_type == cgltf_component_type_r_32u);
+
+    for (size_t k = 0; k < primitive->attributes_count; ++k) {
+      cgltf_attribute* attribute = &primitive->attributes[k];
+      switch (attribute->type) {
+        case cgltf_attribute_type_position: {
+          SDL_assert(attribute->data->type == cgltf_type_vec3);
+          SDL_assert(attribute->data->component_type == cgltf_component_type_r_32f);
+          aSceneInfo->mPositionBytes += attribute->data->count * sizeof(float3);
+          break;
+        }
+        case cgltf_attribute_type_normal: {
+          SDL_assert(attribute->data->type == cgltf_type_vec3);
+          SDL_assert(attribute->data->component_type == cgltf_component_type_r_32f);
+          aSceneInfo->mNormalBytes += attribute->data->count * sizeof(float3);
+          break;
+        }
+        case cgltf_attribute_type_tangent: {
+          SDL_assert(attribute->data->type == cgltf_type_vec4);
+          SDL_assert(attribute->data->component_type == cgltf_component_type_r_32f);
+          aSceneInfo->mTangentBytes += attribute->data->count * sizeof(float4);
+          break;
+        }
+      }
+    }
+  }
+}
+
+
+SceneInfo GetSceneInfo(cgltf_data* aData)
+{
+  SceneInfo sceneInfo;
+  SDL_zero(sceneInfo);
+
+  if (!aData) {
+    return sceneInfo;
+  }
+
+  if (!aData->scene) {
+    return sceneInfo;
+  }
+
+  sceneInfo.mRootNodes = aData->scene->nodes_count;
+
+  //sceneInfo.mInfos = SDL_calloc(aData->scene->nodes_count, sizeof(ModelInfo));
+  //sceneInfo.mModelCount = aData->scene->nodes_count;
+
+  for (size_t i = 0; i < aData->scene->nodes_count; ++i) {
+    sceneInfo.mTotalNodes++;
+    //ProcessNodeInfo(aData->scene->nodes[i], sceneInfo.mInfos + i);
+    ProcessNodeInfo(aData->scene->nodes[i], &sceneInfo);
+  }
+
+  return sceneInfo;
+}
+
+typedef struct Mesh {
+  float4x4 mTransform;
+
+  float4x4 mCurrentTransform; 
+
+  Uint32 mIndicesCount;
+
+  Uint32 mChildrenOffset;
+  Uint32 mChildrenCount;
+
+  // Offsets into parent model position/normal/tangent/index buffers
+  Uint32 mPositionOffset;
+  Uint32 mNormalOffset;
+  Uint32 mTangentOffset;
+  Uint32 mIndexOffset;
+} Mesh;
+
+
+
+
+typedef struct Scene {
+  SDL_GPUBuffer* mPositions;
+  SDL_GPUBuffer* mNormals;
+  SDL_GPUBuffer* mTangents;
+  SDL_GPUBuffer* mIndices;
+
+  Mesh** mRootMeshes;
+  Mesh* mMeshes;
+  Uint32* mChildren;
+  size_t mRootMeshesCount;
+  size_t mMeshesCount;
+  //SDL_GPUBuffer* mTextureCoordinates; // float2
+} Scene;
+
+void ApplyMeshTransformToChildren(Scene* aScene, Mesh* aMesh)
+{
+  for (size_t i = 0; i < aMesh->mChildrenCount; ++i)
+  {
+    Mesh* aChildMesh = aScene->mMeshes + aScene->mChildren[aMesh->mChildrenOffset + i];
+    aChildMesh->mCurrentTransform = Float4x4_Multiply(&aMesh->mCurrentTransform, &aChildMesh->mTransform);
+    //aChildMesh->mCurrentTransform = Float4x4_Multiply(&aChildMesh->mTransform, &aMesh->mCurrentTransform);
+    ApplyMeshTransformToChildren(aScene, aChildMesh);
+  }
+}
+
+void RecalculateSceneTransform(Scene* aScene)
+{
+  for (size_t i = 0; i < aScene->mRootMeshesCount; ++i)
+  {
+    Mesh* mesh = aScene->mRootMeshes[i];
+    mesh->mCurrentTransform = mesh->mTransform;
+    ApplyMeshTransformToChildren(aScene, mesh);
+  }
+}
+
+//Model GenerateGPUModel(cgltf_data* aData, ModelInfo aModelInfo)
+//{
+//
+//}
+
+typedef struct SceneProcessing {
+  Uint32 mPositionOffset;
+  Uint32 mPositionOffsetSoFar;
+  Uint32 mNormalOffset;
+  Uint32 mNormalOffsetSoFar;
+  Uint32 mTangentOffset;
+  Uint32 mTangentOffsetSoFar;
+  Uint32 mIndexOffset;
+  Uint32 mIndexOffsetSoFar;
+  Uint32 mCurrentMeshIndex;
+  Uint32 mCurrentChildrenIndex;
+} SceneProcessing;
+
+size_t transferBufferSize = 0;
+
+void GenerateGPUMesh(cgltf_node* aNode, Scene* aScene, SceneProcessing* aSceneProcessing, Mesh* aMesh, Uint8* aTransferPtr)
+{
+  aMesh->mChildrenOffset = aSceneProcessing->mCurrentChildrenIndex;
+  aMesh->mChildrenCount = aNode->children_count;
+  Uint32* meshChildren = aScene->mChildren + aMesh->mChildrenOffset;
+  aSceneProcessing->mCurrentChildrenIndex += aNode->children_count;
+
+  for (size_t i = 0; i < aNode->children_count; ++i) {
+    meshChildren[i] = aSceneProcessing->mCurrentMeshIndex++;
+
+    SDL_assert(meshChildren[i] < aScene->mMeshesCount);
+    
+    GenerateGPUMesh(aNode->children[i], aScene, aSceneProcessing, &aScene->mMeshes[meshChildren[i]], aTransferPtr);
+  }
+
+  aMesh->mTransform = IdentityMatrix();
+
+  if (aNode->has_matrix) {
+    SDL_memcpy(aMesh->mTransform.data, aNode->matrix, sizeof(aNode->matrix));
+  }
+
+  aMesh->mPositionOffset = aSceneProcessing->mPositionOffsetSoFar - aSceneProcessing->mPositionOffset;
+  aMesh->mNormalOffset = aSceneProcessing->mNormalOffsetSoFar - aSceneProcessing->mNormalOffset;
+  aMesh->mTangentOffset = aSceneProcessing->mTangentOffsetSoFar - aSceneProcessing->mTangentOffset;
+  aMesh->mIndexOffset = aSceneProcessing->mIndexOffsetSoFar - aSceneProcessing->mIndexOffset;
+
+  cgltf_mesh* mesh_file = aNode->mesh;
+  if (mesh_file == NULL) {
+    return;
+  }
+
+  for (size_t j = 0; j < mesh_file->primitives_count; ++j) {
+    cgltf_primitive* primitive = &mesh_file->primitives[j];
+
+    aMesh->mIndicesCount = primitive->indices->count;
+    cgltf_accessor_unpack_indices(primitive->indices, (void*)(aTransferPtr + aSceneProcessing->mIndexOffsetSoFar), sizeof(Uint32), primitive->indices->count);
+    aSceneProcessing->mIndexOffsetSoFar += primitive->indices->count * sizeof(Uint32);
+
+    SDL_assert(aSceneProcessing->mIndexOffsetSoFar <= transferBufferSize);
+
+    for (size_t k = 0; k < primitive->attributes_count; ++k) {
+      Uint32* attributeCount = NULL;
+      cgltf_attribute* attribute = &primitive->attributes[k];
+      switch (attribute->type) {
+        case cgltf_attribute_type_position: attributeCount = &aSceneProcessing->mPositionOffsetSoFar; break;
+        case cgltf_attribute_type_normal: attributeCount = &aSceneProcessing->mNormalOffsetSoFar; break;
+        case cgltf_attribute_type_tangent: attributeCount = &aSceneProcessing->mTangentOffsetSoFar; break;
+      }
+
+      if (!attributeCount) {
+        continue;
+      }
+
+      *attributeCount += cgltf_accessor_unpack_floats(
+        attribute->data,
+        (cgltf_float*)(aTransferPtr + *attributeCount),
+        attribute->data->count * cgltf_num_components(attribute->data->type)
+      ) * sizeof(float);
+
+      SDL_assert(*attributeCount < transferBufferSize);
+    }
+  }
+}
+
+Scene GenerateGPUScene(cgltf_data* aData, SceneInfo aSceneInfo)
+{
+  Scene scene;
+  SDL_zero(scene);
+
+  Uint32 indexBytes = aSceneInfo.mIndicesCount * sizeof(Uint32);
+  scene.mPositions = CreateGPUBuffer(aSceneInfo.mPositionBytes, SDL_GPU_BUFFERUSAGE_VERTEX, "Positions");
+  scene.mNormals = CreateGPUBuffer(aSceneInfo.mNormalBytes, SDL_GPU_BUFFERUSAGE_VERTEX, "Normals");
+  scene.mTangents = CreateGPUBuffer(aSceneInfo.mTangentBytes, SDL_GPU_BUFFERUSAGE_VERTEX, "Tangents");
+  scene.mIndices = CreateGPUBuffer(indexBytes, SDL_GPU_BUFFERUSAGE_INDEX, "Indices");
+
+  SDL_GPUTransferBuffer* transferBuffer = NULL;
+
+  {
+    SDL_GPUTransferBufferCreateInfo transferCreateInfo;
+    SDL_zero(transferCreateInfo);
+    SDL_SetStringProperty(gContext.mProperties, SDL_PROP_GPU_TEXTURE_CREATE_NAME_STRING, "ModelTransferBuffer");
+    transferCreateInfo.usage = SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD;
+    transferCreateInfo.size = aSceneInfo.mPositionBytes + aSceneInfo.mNormalBytes + aSceneInfo.mTangentBytes + indexBytes;
+    transferCreateInfo.props = gContext.mProperties;
+
+    transferBufferSize = transferCreateInfo.size;
+
+    transferBuffer = SDL_CreateGPUTransferBuffer(gContext.mDevice, &transferCreateInfo);
+  }
+  SceneProcessing processing;
+  {
+    SDL_zero(processing);
+    processing.mPositionOffsetSoFar = processing.mPositionOffset = 0;
+    processing.mNormalOffsetSoFar = processing.mNormalOffset = aSceneInfo.mPositionBytes;
+    processing.mTangentOffsetSoFar = processing.mTangentOffset = processing.mNormalOffset + aSceneInfo.mNormalBytes;
+    processing.mIndexOffsetSoFar = processing.mIndexOffset = processing.mTangentOffset + aSceneInfo.mTangentBytes;
+  }
+
+  // Copy all of the scene data into the transfer buffer, generate Mesh hierarchy.
+  {
+    Uint8* transferPtr = SDL_MapGPUTransferBuffer(gContext.mDevice, transferBuffer, false);
+
+    scene.mChildren = SDL_calloc(aSceneInfo.mTotalNodes, sizeof(Uint32));
+
+    scene.mMeshesCount = aSceneInfo.mTotalNodes;
+    scene.mMeshes = SDL_calloc(scene.mMeshesCount, sizeof(Mesh));
+
+    scene.mRootMeshesCount = aSceneInfo.mRootNodes;
+    scene.mRootMeshes = SDL_calloc(scene.mRootMeshesCount, sizeof(Mesh*));
+
+    for (size_t i = 0; i < aData->scene->nodes_count; ++i) {
+      Uint32 meshIndex = processing.mCurrentMeshIndex++;
+      scene.mRootMeshes[i] = scene.mMeshes + meshIndex;
+      GenerateGPUMesh(aData->scene->nodes[i], &scene, &processing, scene.mMeshes + meshIndex, transferPtr);
+    }
+
+    SDL_UnmapGPUTransferBuffer(gContext.mDevice, transferBuffer);
+  }
+
+  // Upload to the appropriate buffers
+  {
+    SDL_GPUCommandBuffer* commandBuffer = SDL_AcquireGPUCommandBuffer(gContext.mDevice);
+    SDL_assert(commandBuffer);
+    SDL_GPUCopyPass* copyPass = SDL_BeginGPUCopyPass(commandBuffer);
+    SDL_assert(copyPass);
+
+    SDL_GPUTransferBufferLocation source;
+    source.offset = 0;
+    source.transfer_buffer = transferBuffer;
+
+    SDL_GPUBufferRegion destination;
+    destination.offset = 0;
+
+    // Positions
+    {
+      source.offset = processing.mPositionOffset;
+      destination.buffer = scene.mPositions;
+      destination.size = aSceneInfo.mPositionBytes;
+
+      SDL_UploadToGPUBuffer(copyPass, &source, &destination, false);
+    }
+
+    // Normals
+    {
+      source.offset = processing.mNormalOffset;
+
+      destination.buffer = scene.mNormals;
+      destination.size = aSceneInfo.mNormalBytes;
+
+      SDL_UploadToGPUBuffer(copyPass, &source, &destination, false);
+    }
+
+    // Tangents
+    {
+      source.offset = processing.mTangentOffset;
+
+      destination.buffer = scene.mTangents;
+      destination.size = aSceneInfo.mTangentBytes;
+
+      SDL_UploadToGPUBuffer(copyPass, &source, &destination, false);
+    }
+
+    // Indices
+    {
+      source.offset = processing.mIndexOffset;
+
+      destination.buffer = scene.mIndices;
+      destination.size = indexBytes;
+
+      SDL_UploadToGPUBuffer(copyPass, &source, &destination, false);
+    }
+
+    SDL_EndGPUCopyPass(copyPass);
+    SDL_SubmitGPUCommandBuffer(commandBuffer);
+
+    SDL_ReleaseGPUTransferBuffer(gContext.mDevice, transferBuffer);
+  }
+
+  RecalculateSceneTransform(&scene);
+
+  return scene;
+}
+
+
+
+Scene GetModel(cgltf_data* aData)
+{
+  {
+    SceneInfo sceneInfo = GetSceneInfo(aData);
+    return GenerateGPUScene(aData, sceneInfo);
+  }
+
+  /*
+
+  Uint32 indicesCount = 0;
+  Uint32 positionBytes = 0;
+  Uint32 normalBytes = 0;
+  Uint32 tangentBytes = 0;
+
+  {
+    for (size_t i = 0; i < data->nodes_count; ++i) {
+      cgltf_node* node = &data->nodes[i];
+      cgltf_mesh* mesh = node->mesh;
+      if (mesh == NULL) {
+        continue;
+      }
+
+      for (size_t j = 0; j < mesh->primitives_count; ++j) {
+        cgltf_primitive* primitive = &mesh->primitives[j];
+
+        indicesCount += primitive->indices->count;
+
+        for (size_t k = 0; k < primitive->attributes_count; ++k) {
+          cgltf_attribute* attribute = &primitive->attributes[k];
+          switch (attribute->type) {
+          case cgltf_attribute_type_position: positionBytes += attribute->data->count * sizeof(float3); break;
+          case cgltf_attribute_type_normal:   normalBytes += attribute->data->count * sizeof(float3);   break;
+          case cgltf_attribute_type_tangent:  tangentBytes += attribute->data->count * sizeof(float4);  break;
+          }
+        }
+      }
+    }
+  }
+
+
+  SDL_GPUTransferBuffer* transferBuffer = NULL;
+  Model info;
+  SDL_zero(info);
+
+  Uint32 indexBytes = indicesCount * sizeof(Uint32);
+
+  info.mPositions = CreateGPUBuffer(positionBytes, SDL_GPU_BUFFERUSAGE_VERTEX, "Positions");
+  info.mNormals = CreateGPUBuffer(normalBytes, SDL_GPU_BUFFERUSAGE_VERTEX, "Normals");
+  info.mTangents = CreateGPUBuffer(tangentBytes, SDL_GPU_BUFFERUSAGE_VERTEX, "Tangents");
+  info.mIndices = CreateGPUBuffer(indexBytes, SDL_GPU_BUFFERUSAGE_INDEX, "Indices");
+  info.mIndicesCount = indicesCount;
+
+  Uint32 positionOffset = 0;
+  Uint32 normalOffset = positionBytes;
+  Uint32 tangentOffset = normalOffset + normalBytes;
+  Uint32 indiceOffset = tangentOffset + tangentBytes;
+
+  // Copy all the data into the transfer buffer;
+  {
+    Uint32 positionOffsetSoFar = positionOffset;
+    Uint32 normalOffsetSoFar = normalOffset;
+    Uint32 tangentOffsetSoFar = tangentOffset;
+    Uint32 indiceOffsetSoFar = indiceOffset;
+
+    SDL_GPUTransferBufferCreateInfo transferCreateInfo;
+    SDL_zero(transferCreateInfo);
+    SDL_SetStringProperty(gContext.mProperties, SDL_PROP_GPU_TEXTURE_CREATE_NAME_STRING, "ModelTransferBuffer");
+    transferCreateInfo.usage = SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD;
+    transferCreateInfo.size = positionBytes + normalBytes + tangentBytes + indexBytes;
+    transferCreateInfo.props = gContext.mProperties;
+
+    transferBuffer = SDL_CreateGPUTransferBuffer(gContext.mDevice, &transferCreateInfo);
+    Uint8* transferPtr = SDL_MapGPUTransferBuffer(gContext.mDevice, transferBuffer, false);
+
+
+    //cgltf_size cgltf_accessor_unpack_floats(const cgltf_accessor * accessor, cgltf_float * out, cgltf_size float_count);
+    //cgltf_size cgltf_accessor_unpack_indices(const cgltf_accessor * accessor, void* out, cgltf_size out_component_size, cgltf_size index_count);
+
+    for (size_t i = 0; i < data->nodes_count; ++i) {
+      cgltf_mesh* mesh = data->nodes[i].mesh;
+      if (mesh == NULL) {
+        continue;
+      }
+
+      for (size_t j = 0; j < mesh->primitives_count; ++j) {
+        cgltf_primitive* primitive = &mesh->primitives[j];
+
+        cgltf_accessor_unpack_indices(primitive->indices, (void*)(transferPtr + indiceOffsetSoFar), sizeof(Uint32), primitive->indices->count);
+        indiceOffsetSoFar += primitive->indices->count * sizeof(Uint32);
+        
+        for (size_t k = 0; k < primitive->attributes_count; ++k) {
+          cgltf_attribute* attribute = &primitive->attributes[k];
+          switch (attribute->type) {
+            case cgltf_attribute_type_position: {
+              positionOffsetSoFar += cgltf_accessor_unpack_floats(attribute->data, (cgltf_float*)(transferPtr + positionOffsetSoFar), attribute->data->count * 3) * sizeof(float);
+              break;
+            }
+            case cgltf_attribute_type_normal: {
+              normalOffsetSoFar += cgltf_accessor_unpack_floats(attribute->data, (cgltf_float*)(transferPtr + normalOffsetSoFar), attribute->data->count * 3) * sizeof(float);
+              break;
+            }
+            case cgltf_attribute_type_tangent: {
+              tangentOffsetSoFar += cgltf_accessor_unpack_floats(attribute->data, (cgltf_float*)(transferPtr + tangentOffsetSoFar), attribute->data->count * 4) * sizeof(float);
+              break;
+            }
+          }
+        }
+      }
+    }
+
+    SDL_UnmapGPUTransferBuffer(gContext.mDevice, transferBuffer);
+  }
+
+
+  // Upload to the appropriate buffers
+  {
+    SDL_GPUCommandBuffer* commandBuffer = SDL_AcquireGPUCommandBuffer(gContext.mDevice);
+    SDL_assert(commandBuffer);
+    SDL_GPUCopyPass* copyPass = SDL_BeginGPUCopyPass(commandBuffer);
+    SDL_assert(copyPass);
+
+
+    SDL_GPUTransferBufferLocation source;
+    source.offset = 0;
+    source.transfer_buffer = transferBuffer;
+
+    // Positions
+    {
+      source.offset = positionOffset;
+
+      SDL_GPUBufferRegion destination;
+      destination.buffer = info.mPositions;
+      destination.offset = 0;
+      destination.size = positionBytes;
+
+      SDL_UploadToGPUBuffer(copyPass, &source, &destination, false);
+    }
+
+    // Normals
+    {
+      source.offset = normalOffset;
+
+      SDL_GPUBufferRegion destination;
+      destination.buffer = info.mNormals;
+      destination.offset = 0;
+      destination.size = normalBytes;
+
+      SDL_UploadToGPUBuffer(copyPass, &source, &destination, false);
+    }
+
+    // Tangents
+    {
+      source.offset = tangentOffset;
+
+      SDL_GPUBufferRegion destination;
+      destination.buffer = info.mTangents;
+      destination.offset = 0;
+      destination.size = tangentBytes;
+
+      SDL_UploadToGPUBuffer(copyPass, &source, &destination, false);
+    }
+
+    // Indices
+    {
+      source.offset = indiceOffset;
+
+      SDL_GPUBufferRegion destination;
+      destination.buffer = info.mIndices;
+      destination.offset = 0;
+      destination.size = indexBytes;
+
+      SDL_UploadToGPUBuffer(copyPass, &source, &destination, false);
+    }
+
+    SDL_EndGPUCopyPass(copyPass);
+    SDL_SubmitGPUCommandBuffer(commandBuffer);
+
+    SDL_ReleaseGPUTransferBuffer(gContext.mDevice, transferBuffer);
+  }
+
+  return info;
+  */
+}
+
+Scene LoadGltfModel(const char* aModelName) {
   char model_path[4096];
   SDL_snprintf(model_path, SDL_arraysize(model_path), "Assets/Models/%s", aModelName);
 
@@ -764,7 +1371,12 @@ void LoadGltfModel(const char* aModelName) {
   cgltf_result result = cgltf_parse_file(&options, model_path, &data);
   SDL_assert(result == cgltf_result_success);
 
+  result = cgltf_load_buffers(&options, data, model_path);
+  SDL_assert(result == cgltf_result_success);
+
   SDL_Log("Model: %s", model_path);
+
+  Scene info = GetModel(data);
 
 
   SDL_Log("\tMeshes:");
@@ -784,11 +1396,13 @@ void LoadGltfModel(const char* aModelName) {
     for (size_t j = 0; j < mesh->primitives_count; ++j) {
       cgltf_primitive* primitive = &mesh->primitives[j];
 
+      PrintMaterial(primitive->material, "\t\t\t\t");
+
       SDL_Log("\t\t\t\tAttributes:");
 
       for (size_t k = 0; k < primitive->attributes_count; ++k) {
         cgltf_attribute* attribute = &primitive->attributes[k];
-        SDL_Log("\t\t\t\t\t%d: i:{%d} n: %s", attribute->type, attribute->index, attribute->name);
+        SDL_Log("\t\t\t\t\t%s: i:{%d} n: %s", cgltf_attribute_type_to_str(attribute->type), attribute->index, attribute->name);
       }
     }
 
@@ -825,6 +1439,7 @@ void LoadGltfModel(const char* aModelName) {
     //}
   }
 
+  return info;
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -840,16 +1455,11 @@ typedef struct ModelContext {
   SDL_GPUGraphicsPipeline* mPipeline;
   SDL_GPUTexture* mTexture;
   SDL_GPUSampler* mSampler;
-  SDL_GPUBuffer* mVertexBuffer;
-  SDL_GPUBuffer* mIndexBuffer;
   ModelUbo mUbo[2];
+  Scene mModel;
 } ModelContext;
 
 ModelContext CreateModelContext(SDL_GPUTextureFormat aDepthFormat) {
-  // Broke the name so that we don't waste time zipping it while the example isn't done.
-  LoadGltfModel("buster_    drone.glb");
-
-
   SDL_GPUColorTargetDescription colorTargetDescription;
   SDL_zero(colorTargetDescription);
   colorTargetDescription.format = SDL_GetGPUSwapchainTextureFormat(gContext.mDevice, gContext.mWindow);
@@ -862,13 +1472,18 @@ ModelContext CreateModelContext(SDL_GPUTextureFormat aDepthFormat) {
   graphicsPipelineCreateInfo.target_info.depth_stencil_format = aDepthFormat;
   graphicsPipelineCreateInfo.target_info.has_depth_stencil_target = true;
   graphicsPipelineCreateInfo.primitive_type = SDL_GPU_PRIMITIVETYPE_TRIANGLELIST;
-  graphicsPipelineCreateInfo.rasterizer_state.front_face = SDL_GPU_FRONTFACE_CLOCKWISE;
-  graphicsPipelineCreateInfo.rasterizer_state.cull_mode = SDL_GPU_CULLMODE_BACK;
+  graphicsPipelineCreateInfo.rasterizer_state.front_face = SDL_GPU_FRONTFACE_COUNTER_CLOCKWISE;
+  //graphicsPipelineCreateInfo.rasterizer_state.cull_mode = SDL_GPU_CULLMODE_BACK;
+  graphicsPipelineCreateInfo.rasterizer_state.cull_mode = SDL_GPU_CULLMODE_NONE;
 
-  graphicsPipelineCreateInfo.vertex_input_state.num_vertex_buffers = 1;
-  graphicsPipelineCreateInfo.vertex_input_state.num_vertex_attributes = 2;
 
-  SDL_GPUVertexAttribute attributes[2];
+  graphicsPipelineCreateInfo.depth_stencil_state.compare_op = SDL_GPU_COMPAREOP_GREATER_OR_EQUAL;
+
+  graphicsPipelineCreateInfo.depth_stencil_state.enable_depth_test = true;
+  graphicsPipelineCreateInfo.depth_stencil_state.enable_depth_write = true;
+
+
+  SDL_GPUVertexAttribute attributes[3];
 
   // Position
   attributes[0].location = 0;
@@ -876,22 +1491,37 @@ ModelContext CreateModelContext(SDL_GPUTextureFormat aDepthFormat) {
   attributes[0].format = SDL_GPU_VERTEXELEMENTFORMAT_FLOAT3;
   attributes[0].offset = 0;
 
-  // Color
+  // Normal
   attributes[1].location = 1;
-  attributes[1].buffer_slot = 0;
+  attributes[1].buffer_slot = 1;
   attributes[1].format = SDL_GPU_VERTEXELEMENTFORMAT_FLOAT3;
   attributes[1].offset = 0;
 
+  // Tangent
+  attributes[2].location = 2;
+  attributes[2].buffer_slot = 2;
+  attributes[2].format = SDL_GPU_VERTEXELEMENTFORMAT_FLOAT4;
+  attributes[2].offset = 0;
+
   graphicsPipelineCreateInfo.vertex_input_state.vertex_attributes = attributes;
+  graphicsPipelineCreateInfo.vertex_input_state.num_vertex_attributes = SDL_arraysize(attributes);
 
-  SDL_GPUVertexBufferDescription bufferDescription;
-  bufferDescription.slot = 0;
-  bufferDescription.pitch = 2 * sizeof(float3);
-  bufferDescription.input_rate = SDL_GPU_VERTEXINPUTRATE_VERTEX;
-  bufferDescription.instance_step_rate = 0;
+  SDL_GPUVertexBufferDescription bufferDescription[3];
+  bufferDescription[0].slot = 0;
+  bufferDescription[0].pitch = sizeof(float3);
+  bufferDescription[0].input_rate = SDL_GPU_VERTEXINPUTRATE_VERTEX;
+  bufferDescription[1].instance_step_rate = 0;
+  bufferDescription[1].slot = 1;
+  bufferDescription[1].pitch = sizeof(float3);
+  bufferDescription[1].input_rate = SDL_GPU_VERTEXINPUTRATE_VERTEX;
+  bufferDescription[0].instance_step_rate = 0;
+  bufferDescription[2].slot = 2;
+  bufferDescription[2].pitch = sizeof(float4);
+  bufferDescription[2].input_rate = SDL_GPU_VERTEXINPUTRATE_VERTEX;
+  bufferDescription[2].instance_step_rate = 0;
 
-  graphicsPipelineCreateInfo.vertex_input_state.vertex_buffer_descriptions = &bufferDescription;
-
+  graphicsPipelineCreateInfo.vertex_input_state.vertex_buffer_descriptions = bufferDescription;
+  graphicsPipelineCreateInfo.vertex_input_state.num_vertex_buffers = SDL_arraysize(bufferDescription);
 
   // Remember to come back to this later in the tutorial, don't show it off immediately.
   graphicsPipelineCreateInfo.depth_stencil_state.compare_op = SDL_GPU_COMPAREOP_LESS_OR_EQUAL;
@@ -900,7 +1530,7 @@ ModelContext CreateModelContext(SDL_GPUTextureFormat aDepthFormat) {
   graphicsPipelineCreateInfo.depth_stencil_state.enable_depth_write = true;
 
   graphicsPipelineCreateInfo.vertex_shader = CreateShader(
-    "Cube.vert",
+    "VertexAndIndexBuffer.vert",
     SDL_GPU_SHADERSTAGE_VERTEX,
     0,
     2,
@@ -911,7 +1541,7 @@ ModelContext CreateModelContext(SDL_GPUTextureFormat aDepthFormat) {
   SDL_assert(graphicsPipelineCreateInfo.vertex_shader);
 
   graphicsPipelineCreateInfo.fragment_shader = CreateShader(
-    "Cube.frag",
+    "VertexAndIndexBuffer.frag",
     SDL_GPU_SHADERSTAGE_FRAGMENT,
     1,
     0,
@@ -924,6 +1554,10 @@ ModelContext CreateModelContext(SDL_GPUTextureFormat aDepthFormat) {
   SDL_assert(SDL_SetStringProperty(gContext.mProperties, SDL_PROP_GPU_SHADER_CREATE_NAME_STRING, "ModelContext"));
 
   ModelContext context;
+
+  // Broke the name so that we don't waste time zipping it while the example isn't done.
+  context.mModel = LoadGltfModel("buster_drone.glb");
+
   context.mPipeline = SDL_CreateGPUGraphicsPipeline(gContext.mDevice, &graphicsPipelineCreateInfo);
   context.mTexture = CreateAndUploadTexture(NULL, "sample");
 
@@ -934,59 +1568,14 @@ ModelContext CreateModelContext(SDL_GPUTextureFormat aDepthFormat) {
   context.mSampler = SDL_CreateGPUSampler(gContext.mDevice, &samplerCreateInfo);
   SDL_assert(context.mPipeline);
 
-  {
-    static const float3 cVertexPositions[16] = {
-      /* 0 */ /* Position */ { -1.0f,  1.0f, -1.0f }, /* Color */ { 1.0f, 0.0f, 0.0f }, // top left forward
-      /* 1 */ /* Position */ {  1.0f,  1.0f, -1.0f }, /* Color */ { 0.0f, 1.0f, 0.0f }, // top right forward
-      /* 2 */ /* Position */ { -1.0f, -1.0f, -1.0f }, /* Color */ { 0.0f, 0.0f, 1.0f }, // bottom left foward
-      /* 3 */ /* Position */ {  1.0f, -1.0f, -1.0f }, /* Color */ { 1.0f, 1.0f, 1.0f }, // bottom right forward
-      /* 4 */ /* Position */ { -1.0f,  1.0f,  1.0f }, /* Color */ { 0.0f, 0.0f, 0.0f }, // top left back
-      /* 5 */ /* Position */ {  1.0f,  1.0f,  1.0f }, /* Color */ { 1.0f, 1.0f, 0.0f }, // top right back
-      /* 6 */ /* Position */ { -1.0f, -1.0f,  1.0f }, /* Color */ { 1.0f, 0.0f, 1.0f }, // bottom left back
-      /* 7 */ /* Position */ {  1.0f, -1.0f,  1.0f }, /* Color */ { 0.0f, 1.0f, 1.0f }, // bottom right back
-    };
-
-    context.mVertexBuffer = CreateAndUploadBuffer(&cVertexPositions, sizeof(cVertexPositions), SDL_GPU_BUFFERUSAGE_VERTEX);
-  }
-
-  {
-    static const Uint16 cVertexIndicies[36] = {
-      // Front Face
-      0, 1, 2,
-      1, 3, 2,
-
-      // Back Face
-      5, 4, 7,
-      4, 6, 7,
-
-      // Top Face
-      4, 5, 0,
-      5, 1, 0,
-
-      // Bottom Face
-      2, 3, 6,
-      3, 7, 6,
-
-      // Left Face:
-      4, 0, 6,
-      0, 2, 6,
-
-      // Right Face: 
-      1, 5, 3,
-      5, 7, 3,
-    };
-
-    context.mIndexBuffer = CreateAndUploadBuffer(&cVertexIndicies, sizeof(cVertexIndicies), SDL_GPU_BUFFERUSAGE_VERTEX);
-  }
-
   context.mUbo[0].mPosition.x = 0.f;
   context.mUbo[0].mPosition.y = -1.f;
   context.mUbo[0].mPosition.z = 5.f;
-  context.mUbo[0].mPosition.w = 0.f;
-  context.mUbo[0].mScale.x = 0.5f;
-  context.mUbo[0].mScale.y = 0.5f;
-  context.mUbo[0].mScale.z = 0.5f;
-  context.mUbo[0].mScale.w = 0.5f;
+  context.mUbo[0].mPosition.w = 1.f;
+  context.mUbo[0].mScale.x = 0.01f;
+  context.mUbo[0].mScale.y = 0.01f;
+  context.mUbo[0].mScale.z = 0.01f;
+  context.mUbo[0].mScale.w = 1.0f;
   context.mUbo[0].mRotation.x = 0.f;
   context.mUbo[0].mRotation.y = 0.f;
   context.mUbo[0].mRotation.z = 0.f;
@@ -1011,50 +1600,76 @@ ModelContext CreateModelContext(SDL_GPUTextureFormat aDepthFormat) {
   return context;
 }
 
-void DrawModelContext(ModelContext* aPipeline, SDL_GPUCommandBuffer* aCommandBuffer, SDL_GPURenderPass* aRenderPass)
+void DrawModelContext(ModelContext* aContext, SDL_GPUCommandBuffer* aCommandBuffer, SDL_GPURenderPass* aRenderPass)
 {
-  SDL_BindGPUGraphicsPipeline(aRenderPass, aPipeline->mPipeline);
+  SDL_BindGPUGraphicsPipeline(aRenderPass, aContext->mPipeline);
 
-  float4x4 model = CreateModelMatrix(aPipeline->mUbo[0].mPosition, aPipeline->mUbo[0].mScale, aPipeline->mUbo[0].mRotation);
-
-  SDL_PushGPUVertexUniformData(aCommandBuffer, 0, &model, sizeof(model));
+  float4x4 model = CreateModelMatrix(aContext->mUbo[0].mPosition, aContext->mUbo[0].mScale, aContext->mUbo[0].mRotation);
   SDL_PushGPUVertexUniformData(aCommandBuffer, 1, &gContext.WorldToNDC, sizeof(gContext.WorldToNDC));
 
-  {
-    SDL_GPUTextureSamplerBinding textureBinding;
-    SDL_zero(textureBinding);
-    textureBinding.texture = aPipeline->mTexture;
-    textureBinding.sampler = aPipeline->mSampler;
-    SDL_BindGPUFragmentSamplers(aRenderPass, 0, &textureBinding, 1);
-  }
+  for (size_t i = 0; i < aContext->mModel.mMeshesCount; ++i) {
+    Mesh* mesh = aContext->mModel.mMeshes + i;
 
-  {
-    SDL_GPUBufferBinding binding;
-    binding.buffer = aPipeline->mVertexBuffer;
-    binding.offset = 0;
-    SDL_BindGPUVertexBuffers(aRenderPass, 0, &binding, 1);
-  }
+    // I should preprocess this list and iterate that instead so I don't have to do this.
+    if (mesh->mIndicesCount == 0) {
+      continue;
+    }
 
-  {
-    SDL_GPUBufferBinding binding;
-    binding.buffer = aPipeline->mIndexBuffer;
-    binding.offset = 0;
-    SDL_BindGPUIndexBuffer(aRenderPass, &binding, SDL_GPU_INDEXELEMENTSIZE_16BIT);
+    {
+      SDL_GPUBufferBinding binding[3];
+      binding[0].buffer = aContext->mModel.mPositions;
+      binding[0].offset = mesh->mPositionOffset;
+      binding[1].buffer = aContext->mModel.mNormals;
+      binding[1].offset = mesh->mNormalOffset;
+      binding[2].buffer = aContext->mModel.mTangents;
+      binding[2].offset = mesh->mTangentOffset;
+      SDL_BindGPUVertexBuffers(aRenderPass, 0, binding, SDL_arraysize(binding));
+
+    }
+
+    {
+      SDL_GPUBufferBinding binding;
+      binding.buffer = aContext->mModel.mIndices;
+      binding.offset = mesh->mIndexOffset;
+      SDL_BindGPUIndexBuffer(aRenderPass, &binding, SDL_GPU_INDEXELEMENTSIZE_32BIT);
+    }
+
+    {
+      SDL_GPUTextureSamplerBinding textureBinding;
+      SDL_zero(textureBinding);
+      textureBinding.texture = aContext->mTexture;
+      textureBinding.sampler = aContext->mSampler;
+      SDL_BindGPUFragmentSamplers(aRenderPass, 0, &textureBinding, 1);
+    }
+
+    float4x4 meshMatrix = Float4x4_Multiply(&model, &mesh->mTransform);
+
+    SDL_PushGPUVertexUniformData(aCommandBuffer, 0, &meshMatrix, sizeof(meshMatrix));
+
+    SDL_DrawGPUIndexedPrimitives(aRenderPass, mesh->mIndicesCount, 1, 0, 0, 0);
   }
 
   // Draw the first cube
-  SDL_DrawGPUPrimitives(aRenderPass, 6 /* 6 per face */ * 6 /* 6 sides of our cube */, 1, 0, 0);
 
   // Draw the second cube, make sure to recalculate the model matrix for it and reupload it.
-  model = CreateModelMatrix(aPipeline->mUbo[1].mPosition, aPipeline->mUbo[1].mScale, aPipeline->mUbo[1].mRotation);
-  SDL_PushGPUVertexUniformData(aCommandBuffer, 0, &model, sizeof(model));
-  SDL_DrawGPUPrimitives(aRenderPass, 6 /* 6 per face */ * 6 /* 6 sides of our cube */, 1, 0, 0);
+  //model = CreateModelMatrix(aContext->mUbo[1].mPosition, aContext->mUbo[1].mScale, aContext->mUbo[1].mRotation);
+  //SDL_PushGPUVertexUniformData(aCommandBuffer, 0, &model, sizeof(model));
+  //SDL_DrawGPUPrimitives(aRenderPass, aContext->mModel.mVertices, 1, 0, 0);
 }
 
-void DestroyModelContext(ModelContext* aPipeline)
+void DestroyModelContext(ModelContext* aContext)
 {
-  SDL_ReleaseGPUGraphicsPipeline(gContext.mDevice, aPipeline->mPipeline);
-  SDL_zero(*aPipeline);
+  SDL_ReleaseGPUBuffer(gContext.mDevice, aContext->mModel.mPositions);
+  SDL_ReleaseGPUBuffer(gContext.mDevice, aContext->mModel.mNormals);
+  SDL_ReleaseGPUBuffer(gContext.mDevice, aContext->mModel.mTangents);
+  SDL_ReleaseGPUBuffer(gContext.mDevice, aContext->mModel.mIndices);
+
+  SDL_ReleaseGPUTexture(gContext.mDevice, aContext->mTexture);
+  SDL_ReleaseGPUSampler(gContext.mDevice, aContext->mSampler);
+  SDL_ReleaseGPUGraphicsPipeline(gContext.mDevice, aContext->mPipeline);
+
+  SDL_ReleaseGPUGraphicsPipeline(gContext.mDevice, aContext->mPipeline);
+  SDL_zero(*aContext);
 }
 
 
@@ -1102,10 +1717,10 @@ int main(int argc, char** argv)
     int w = 0, h = 0;
     SDL_GetWindowSizeInPixels(gContext.mWindow, &w, &h);
 
-    gContext.WorldToNDC = PerspectiveProjectionLHZO(
+    gContext.WorldToNDC = InfinitePerspectiveProjectionLHOZ(
       45.0f * SDL_PI_F / 180.0f,
       (float)w / (float)h,
-      20.0f, 60.0f
+      0.1f
     );
 
     if (key_map[SDL_SCANCODE_D])        cubeContext.mUbo[0].mPosition.x += speed * dt * 1.0f;
@@ -1143,7 +1758,10 @@ int main(int argc, char** argv)
 
     if (depthWidth != swapchainWidth || depthHeight != swapchainHeight)
     {
-      SDL_ReleaseGPUTexture(gContext.mDevice, depthTexture);
+      if (depthTexture) {
+        SDL_ReleaseGPUTexture(gContext.mDevice, depthTexture);
+      }
+
       depthTexture = CreateTexture(swapchainWidth, swapchainHeight, SDL_GPU_TEXTUREUSAGE_DEPTH_STENCIL_TARGET, depthFormat);
       SDL_assert(depthTexture);
 
@@ -1188,6 +1806,8 @@ int main(int argc, char** argv)
     SDL_EndGPURenderPass(renderPass);
     SDL_SubmitGPUCommandBuffer(commandBuffer);
   }
+
+  SDL_ReleaseGPUTexture(gContext.mDevice, depthTexture);
 
   DestroyModelContext(&cubeContext);
 

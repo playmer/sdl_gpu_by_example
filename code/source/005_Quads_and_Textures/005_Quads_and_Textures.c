@@ -11,6 +11,129 @@ namespace cpp_test {
 #endif
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// MATH
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+typedef struct float2 {
+  float x, y;
+} float2;
+
+typedef struct float3 {
+  float x, y, z;
+} float3;
+
+typedef struct float4 {
+  float x, y, z, w;
+} float4;
+
+//////////////////////////////////////////////////////
+// Downcasts
+
+float2 Float3_XY(float3 aValue) {
+  float2 toReturn = { aValue.x, aValue.y };
+  return toReturn;
+}
+
+float2 Float4_XY(float4 aValue) {
+  float2 toReturn = { aValue.x, aValue.y };
+  return toReturn;
+}
+
+float3 Float4_XYZ(float4 aValue) {
+  float3 toReturn = { aValue.x, aValue.y, aValue.z };
+  return toReturn;
+}
+
+//////////////////////////////////////////////////////
+// Subtraction
+
+float2 Float2_Subtract(float2 aLeft, float2 aRight) {
+  float2 toReturn = { aLeft.x - aRight.x, aLeft.y - aRight.y };
+  return toReturn;
+}
+
+float3 Float3_Subtract(float3 aLeft, float3 aRight) {
+  float3 toReturn = { aLeft.x - aRight.x, aLeft.y - aRight.y, aLeft.z - aRight.z };
+  return toReturn;
+}
+
+float4 Float4_Subtract(float4 aLeft, float4 aRight) {
+  float4 toReturn = { aLeft.x - aRight.x, aLeft.y - aRight.y, aLeft.z - aRight.z, aLeft.w - aRight.w };
+  return toReturn;
+}
+
+//////////////////////////////////////////////////////
+// Addition
+
+float2 Float2_Add(float2 aLeft, float2 aRight) {
+  float2 toReturn = { aLeft.x + aRight.x, aLeft.y + aRight.y };
+  return toReturn;
+}
+
+float3 Float3_Add(float3 aLeft, float3 aRight) {
+  float3 toReturn = { aLeft.x + aRight.x, aLeft.y + aRight.y, aLeft.z + aRight.z };
+  return toReturn;
+}
+
+float4 Float4_Add(float4 aLeft, float4 aRight) {
+  float4 toReturn = { aLeft.x + aRight.x, aLeft.y + aRight.y, aLeft.z + aRight.z, aLeft.w + aRight.w };
+  return toReturn;
+}
+
+//////////////////////////////////////////////////////
+// Scalar Addition
+
+float2 Float2_Scalar_Add(float2 aLeft, float aRight) {
+  float2 toReturn = { aLeft.x + aRight, aLeft.y + aRight };
+  return toReturn;
+}
+
+float3 Float3_Scalar_Add(float3 aLeft, float aRight) {
+  float3 toReturn = { aLeft.x + aRight, aLeft.y + aRight, aLeft.z + aRight };
+  return toReturn;
+}
+
+float4 Float4_Scalar_Add(float4 aLeft, float aRight) {
+  float4 toReturn = { aLeft.x + aRight, aLeft.y + aRight, aLeft.z + aRight, aLeft.w + aRight };
+  return toReturn;
+}
+
+//////////////////////////////////////////////////////
+// Scalar Multiplication
+
+float2 Float2_Scalar_Multiply(float2 aLeft, float aRight) {
+  float2 toReturn = { aLeft.x * aRight, aLeft.y * aRight };
+  return toReturn;
+}
+
+float3 Float3_Scalar_Multiply(float3 aLeft, float aRight) {
+  float3 toReturn = { aLeft.x * aRight, aLeft.y * aRight, aLeft.z * aRight };
+  return toReturn;
+}
+
+float4 Float4_Scalar_Multiply(float4 aLeft, float aRight) {
+  float4 toReturn = { aLeft.x * aRight, aLeft.y * aRight, aLeft.z * aRight, aLeft.w * aRight };
+  return toReturn;
+}
+
+//////////////////////////////////////////////////////
+// Scalar Divison
+
+float2 Float2_Scalar_Division(float2 aLeft, float aRight) {
+  float2 toReturn = { aLeft.x / aRight, aLeft.y / aRight };
+  return toReturn;
+}
+
+float3 Float3_Scalar_Division(float3 aLeft, float aRight) {
+  float3 toReturn = { aLeft.x / aRight, aLeft.y / aRight, aLeft.z / aRight };
+  return toReturn;
+}
+
+float4 Float4_Scalar_Division(float4 aLeft, float aRight) {
+  float4 toReturn = { aLeft.x / aRight, aLeft.y / aRight, aLeft.z / aRight, aLeft.w / aRight };
+  return toReturn;
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Shared GPU Code
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 typedef struct GpuContext {
@@ -82,17 +205,17 @@ SDL_GPUShader* CreateShader(
   void* fileData = SDL_LoadFile(shader_path, &fileSize);
   SDL_assert(fileData);
 
-  SDL_GPUShaderCreateInfo shaderCreateInfo;
-  SDL_zero(shaderCreateInfo);
-
   SDL_PropertiesID properties = gContext.mProperties;
 
-  if (aProperties != SDL_PROPERTY_TYPE_INVALID) {
+  if (aProperties != 0) {
     properties = aProperties;
   }
 
   SDL_assert(SDL_SetStringProperty(properties, SDL_PROP_GPU_SHADER_CREATE_NAME_STRING, aShaderFilename));
 
+  SDL_GPUShaderCreateInfo shaderCreateInfo;
+  SDL_zero(shaderCreateInfo);
+  
   shaderCreateInfo.entrypoint = gContext.mShaderEntryPoint;
   shaderCreateInfo.format = gContext.mChosenBackendFormat;
   shaderCreateInfo.code = (Uint8*)fileData;
@@ -110,6 +233,20 @@ SDL_GPUShader* CreateShader(
   SDL_assert(shader);
 
   return shader;
+}
+
+
+SDL_GPUTexture* CreateTexture(Uint32 aWidth, Uint32 aHeight, SDL_GPUTextureUsageFlags aUsage, SDL_GPUTextureFormat aFormat)
+{
+  SDL_GPUTextureCreateInfo textureCreateInfo;
+  SDL_zero(textureCreateInfo);
+  textureCreateInfo.width = aWidth;
+  textureCreateInfo.height = aHeight;
+  textureCreateInfo.layer_count_or_depth = 1;
+  textureCreateInfo.num_levels = 1;
+  textureCreateInfo.usage = aUsage;
+  textureCreateInfo.format = aFormat;
+  return SDL_CreateGPUTexture(gContext.mDevice, &textureCreateInfo);
 }
 
 SDL_GPUTexture* CreateAndUploadTexture(SDL_GPUCopyPass* aCopyPass, const char* aTextureName) {
@@ -131,7 +268,6 @@ SDL_GPUTexture* CreateAndUploadTexture(SDL_GPUCopyPass* aCopyPass, const char* a
   
   {
     const SDL_PixelFormatDetails* formatDetails = SDL_GetPixelFormatDetails(surface->format);
-    //transferCreateInfo.size = surface->h * ((surface->w * formatDetails->bytes_per_pixel) + surface->pitch);
     transferCreateInfo.size = surface->h * surface->pitch;
   }
 
@@ -148,15 +284,8 @@ SDL_GPUTexture* CreateAndUploadTexture(SDL_GPUCopyPass* aCopyPass, const char* a
     copyPass = SDL_BeginGPUCopyPass(commandBuffer);
   }
 
-  SDL_GPUTextureCreateInfo textureCreateInfo;
-  SDL_zero(textureCreateInfo);
-  textureCreateInfo.width = surface->w;
-  textureCreateInfo.height = surface->h;
-  textureCreateInfo.layer_count_or_depth = 1;
-  textureCreateInfo.num_levels = 1;
-  textureCreateInfo.usage = SDL_GPU_TEXTUREUSAGE_SAMPLER;
-  textureCreateInfo.format = SDL_GPU_TEXTUREFORMAT_R8G8B8A8_UNORM;
-  SDL_GPUTexture* texture = SDL_CreateGPUTexture(gContext.mDevice, &textureCreateInfo);
+  SDL_GPUTexture* texture = CreateTexture(surface->w, surface->h, SDL_GPU_TEXTUREUSAGE_SAMPLER, SDL_GPU_TEXTUREFORMAT_R8G8B8A8_UNORM);
+  SDL_assert(texture);
 
   // Copy to GPU
   SDL_GPUTextureTransferInfo textureTransferInfo;
@@ -195,16 +324,21 @@ SDL_GPUTexture* CreateAndUploadTexture(SDL_GPUCopyPass* aCopyPass, const char* a
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 ////////////////////////////////////////////////////////////
-/// QuadPipeline
+/// QuadContext
 
-typedef struct QuadPipeline {
+typedef struct ModelUniform {
+  float2 mPosition;
+  float2 mScale;
+} ModelUniform;
+
+typedef struct QuadContext {
   SDL_GPUGraphicsPipeline* mPipeline;
   SDL_GPUTexture* mTexture;
   SDL_GPUSampler* mSampler;
-  SDL_FRect mPosition;
-} QuadPipeline;
+  ModelUniform mUniform;
+} QuadContext;
 
-QuadPipeline CreateQuadPipeline() {
+QuadContext CreateQuadContext() {
   SDL_GPUColorTargetDescription colorTargetDescription;
   SDL_zero(colorTargetDescription);
   colorTargetDescription.format = SDL_GetGPUSwapchainTextureFormat(gContext.mDevice, gContext.mWindow);
@@ -238,9 +372,9 @@ QuadPipeline CreateQuadPipeline() {
   );
   SDL_assert(graphicsPipelineCreateInfo.fragment_shader);
 
-  SDL_assert(SDL_SetStringProperty(gContext.mProperties, SDL_PROP_GPU_SHADER_CREATE_NAME_STRING, "QuadPipeline"));
+  SDL_assert(SDL_SetStringProperty(gContext.mProperties, SDL_PROP_GPU_SHADER_CREATE_NAME_STRING, "QuadContext"));
 
-  QuadPipeline pipeline;
+  QuadContext pipeline;
   pipeline.mPipeline = SDL_CreateGPUGraphicsPipeline(gContext.mDevice, &graphicsPipelineCreateInfo);
   pipeline.mTexture = CreateAndUploadTexture(NULL, "sample");
 
@@ -251,10 +385,10 @@ QuadPipeline CreateQuadPipeline() {
   pipeline.mSampler = SDL_CreateGPUSampler(gContext.mDevice, &samplerCreateInfo);
   SDL_assert(pipeline.mPipeline);
 
-  pipeline.mPosition.x = 0.f;
-  pipeline.mPosition.y = 0.f;
-  pipeline.mPosition.w = 0.5f;
-  pipeline.mPosition.h = 0.5f;
+  pipeline.mUniform.mPosition.x = 0.f;
+  pipeline.mUniform.mPosition.y = 0.f;
+  pipeline.mUniform.mScale.x = 0.5f;
+  pipeline.mUniform.mScale.y = 0.5f;
 
   SDL_ReleaseGPUShader(gContext.mDevice, graphicsPipelineCreateInfo.vertex_shader);
   SDL_ReleaseGPUShader(gContext.mDevice, graphicsPipelineCreateInfo.fragment_shader);
@@ -262,10 +396,10 @@ QuadPipeline CreateQuadPipeline() {
   return pipeline;
 }
 
-void DrawQuadPipeline(QuadPipeline* aPipeline, SDL_GPUCommandBuffer* aCommandBuffer, SDL_GPURenderPass* aRenderPass)
+void DrawQuadContext(QuadContext* aPipeline, SDL_GPUCommandBuffer* aCommandBuffer, SDL_GPURenderPass* aRenderPass)
 {
   SDL_BindGPUGraphicsPipeline(aRenderPass, aPipeline->mPipeline);
-  SDL_PushGPUVertexUniformData(aCommandBuffer, 0, &aPipeline->mPosition, sizeof(aPipeline->mPosition));
+  SDL_PushGPUVertexUniformData(aCommandBuffer, 0, &aPipeline->mUniform, sizeof(aPipeline->mUniform));
 
   {
     SDL_GPUTextureSamplerBinding textureBinding;
@@ -278,7 +412,7 @@ void DrawQuadPipeline(QuadPipeline* aPipeline, SDL_GPUCommandBuffer* aCommandBuf
   SDL_DrawGPUPrimitives(aRenderPass, 6, 1, 0, 0);
 }
 
-void DestroyQuadPipeline(QuadPipeline* aPipeline)
+void DestroyQuadContext(QuadContext* aPipeline)
 {
   SDL_ReleaseGPUGraphicsPipeline(gContext.mDevice, aPipeline->mPipeline);
   SDL_zero(*aPipeline);
@@ -298,7 +432,7 @@ int main(int argc, char** argv)
 
   CreateGpuContext(window);
 
-  QuadPipeline quadPipeline = CreateQuadPipeline();
+  QuadContext quadContext = CreateQuadContext();
 
   const float speed = 1.f;
   Uint64 last_frame_ticks_so_far = SDL_GetTicksNS();
@@ -317,23 +451,16 @@ int main(int argc, char** argv)
           running = false;
           break;
       }
-    }
+    }      
       
-    if (key_map[SDL_SCANCODE_D]) quadPipeline.mPosition.x += speed * dt * 1.0f;
-    if (key_map[SDL_SCANCODE_A]) quadPipeline.mPosition.x -= speed * dt * 1.0f;
-    if (key_map[SDL_SCANCODE_W]) quadPipeline.mPosition.y += speed * dt * 1.0f;
-    if (key_map[SDL_SCANCODE_S]) quadPipeline.mPosition.y -= speed * dt * 1.0f;
-    if (key_map[SDL_SCANCODE_R]) quadPipeline.mPosition.w += speed * dt * 1.0f;
-    if (key_map[SDL_SCANCODE_F]) quadPipeline.mPosition.w -= speed * dt * 1.0f;
-    if (key_map[SDL_SCANCODE_T]) quadPipeline.mPosition.h += speed * dt * 1.0f;
-    if (key_map[SDL_SCANCODE_G]) quadPipeline.mPosition.h -= speed * dt * 1.0f;
-    
-    SDL_Log("{%f, %f}, {%f, %f}}",
-      quadPipeline.mPosition.x,
-      quadPipeline.mPosition.y,
-      quadPipeline.mPosition.w,
-      quadPipeline.mPosition.h
-    );
+    if (key_map[SDL_SCANCODE_D]) quadContext.mUniform.mPosition.x += speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_A]) quadContext.mUniform.mPosition.x -= speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_W]) quadContext.mUniform.mPosition.y += speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_S]) quadContext.mUniform.mPosition.y -= speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_R]) quadContext.mUniform.mScale.x += speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_F]) quadContext.mUniform.mScale.x -= speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_T]) quadContext.mUniform.mScale.y += speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_G]) quadContext.mUniform.mScale.y -= speed * dt * 1.0f;
 
     SDL_GPUCommandBuffer* commandBuffer = SDL_AcquireGPUCommandBuffer(gContext.mDevice);
     if (!commandBuffer)
@@ -367,13 +494,13 @@ int main(int argc, char** argv)
       NULL
     );
 
-    DrawQuadPipeline(&quadPipeline, commandBuffer, renderPass);
+    DrawQuadContext(&quadContext, commandBuffer, renderPass);
 
     SDL_EndGPURenderPass(renderPass);
     SDL_SubmitGPUCommandBuffer(commandBuffer);
   }
 
-  DestroyQuadPipeline(&quadPipeline);
+  DestroyQuadContext(&quadContext);
 
   DestroyGpuContext();
 

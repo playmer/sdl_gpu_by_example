@@ -959,6 +959,8 @@ int main(int argc, char** argv)
     SDL_SubmitGPUCommandBuffer(commandBuffer);
   }
 
+  SDL_ReleaseGPUTexture(gContext.mDevice, depthTexture);
+
   DestroyCubeContext(&cubeContext);
 
   DestroyGpuContext();

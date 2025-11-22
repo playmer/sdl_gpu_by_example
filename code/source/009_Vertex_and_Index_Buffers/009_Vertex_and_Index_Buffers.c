@@ -752,7 +752,6 @@ typedef struct CubeUbo {
 
 typedef struct CubeContext {
   SDL_GPUGraphicsPipeline* mPipeline;
-  SDL_GPUSampler* mSampler;
   SDL_GPUBuffer* mVertexBuffer;
   SDL_GPUBuffer* mIndexBuffer;
   CubeUbo mUbo[2];
@@ -834,12 +833,6 @@ CubeContext CreateCubeContext(SDL_GPUTextureFormat aDepthFormat) {
 
   CubeContext context;
   context.mPipeline = SDL_CreateGPUGraphicsPipeline(gContext.mDevice, &graphicsPipelineCreateInfo);
-
-  SDL_GPUSamplerCreateInfo samplerCreateInfo;
-  SDL_zero(samplerCreateInfo);
-  samplerCreateInfo.address_mode_u = SDL_GPU_SAMPLERADDRESSMODE_REPEAT;
-  samplerCreateInfo.address_mode_v = SDL_GPU_SAMPLERADDRESSMODE_REPEAT;
-  context.mSampler = SDL_CreateGPUSampler(gContext.mDevice, &samplerCreateInfo);
   SDL_assert(context.mPipeline);
 
   {
@@ -951,10 +944,12 @@ void DrawCubeContext(CubeContext* aPipeline, SDL_GPUCommandBuffer* aCommandBuffe
   SDL_DrawGPUIndexedPrimitives(aRenderPass, 36, 1, 0, 0, 0);
 }
 
-void DestroyCubeContext(CubeContext* aPipeline)
+void DestroyCubeContext(CubeContext* aContext)
 {
-  SDL_ReleaseGPUGraphicsPipeline(gContext.mDevice, aPipeline->mPipeline);
-  SDL_zero(*aPipeline);
+  SDL_ReleaseGPUBuffer(gContext.mDevice, aContext->mVertexBuffer);
+  SDL_ReleaseGPUBuffer(gContext.mDevice, aContext->mIndexBuffer);
+  SDL_ReleaseGPUGraphicsPipeline(gContext.mDevice, aContext->mPipeline);
+  SDL_zero(*aContext);
 }
 
 
@@ -1088,6 +1083,8 @@ int main(int argc, char** argv)
     SDL_EndGPURenderPass(renderPass);
     SDL_SubmitGPUCommandBuffer(commandBuffer);
   }
+
+  SDL_ReleaseGPUTexture(gContext.mDevice, depthTexture);
 
   DestroyCubeContext(&cubeContext);
 

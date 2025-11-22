@@ -32,6 +32,46 @@ typedef struct float4x4 {
   };
 } float4x4;
 
+typedef struct Transform {
+  float4 mPosition;
+  float4 mScale;
+  float4 mRotation;
+} Transform;
+
+typedef struct Orientation {
+  float3 mForward;
+  float3 mRight;
+  float3 mUp;
+} Orientation;
+
+Transform GetDefaultTransform()
+{
+  Transform toReturn;
+
+  toReturn.mPosition.x = 0.f;
+  toReturn.mPosition.y = 0.f;
+  toReturn.mPosition.z = 0.f;
+  toReturn.mPosition.w = 0.f;
+  toReturn.mScale.x = 1.f;
+  toReturn.mScale.y = 1.f;
+  toReturn.mScale.z = 1.f;
+  toReturn.mScale.w = 1.f;
+  toReturn.mRotation.x = 0.f;
+  toReturn.mRotation.y = 0.f;
+  toReturn.mRotation.z = 0.f;
+  toReturn.mRotation.w = 0.f;
+
+  return toReturn;
+}
+
+float4 Float4_From3(float3 aFloat3, float aW) {
+  float4 toReturn = {
+    aFloat3.x, aFloat3.y, aFloat3.z, aW,
+  };
+
+  return toReturn;
+}
+
 //////////////////////////////////////////////////////
 // Downcasts
 
@@ -123,7 +163,7 @@ float4 Float4_Scalar_Multiply(float4 aLeft, float aRight) {
 }
 
 //////////////////////////////////////////////////////
-// Scalar Divison
+// Scalar Multiplication
 
 float2 Float2_Scalar_Division(float2 aLeft, float aRight) {
   float2 toReturn = { aLeft.x / aRight, aLeft.y / aRight };
@@ -144,20 +184,20 @@ float4 Float4_Scalar_Division(float4 aLeft, float aRight) {
 // Dot Product
 
 float Float2_Dot(float2 aLeft, float2 aRight) {
-  return
+  return 
     (aLeft.x * aRight.x) +
     (aLeft.y * aRight.y);
 }
 
 float Float3_Dot(float3 aLeft, float3 aRight) {
-  return
+  return 
     (aLeft.x * aRight.x) +
     (aLeft.y * aRight.y) +
     (aLeft.z * aRight.z);
 }
 
 float Float4_Dot(float4 aLeft, float4 aRight) {
-  return
+  return 
     (aLeft.x * aRight.x) +
     (aLeft.y * aRight.y) +
     (aLeft.z * aRight.z) +
@@ -215,7 +255,7 @@ float2 Float2_Normalize(float2 aValue) {
   };
 
   return toReturn;
-}
+} 
 
 float3 Float3_Normalize(float3 aValue) {
   float magnitude = Float3_Magnitude(aValue);
@@ -227,7 +267,7 @@ float3 Float3_Normalize(float3 aValue) {
   };
 
   return toReturn;
-}
+} 
 
 float4 Float4_Normalize(float4 aValue) {
   float magnitude = Float4_Magnitude(aValue);
@@ -306,6 +346,59 @@ float4x4 Float4x4_Multiply(const float4x4* aLeft, const float4x4* aRight)
   return toReturn;
 }
 
+float4x4 Float4x4_Inverse(const float4x4* aValue)
+{
+  const float3 a = Float4_XYZ(aValue->columns[0]);
+  const float3 b = Float4_XYZ(aValue->columns[1]);
+  const float3 c = Float4_XYZ(aValue->columns[2]);
+  const float3 d = Float4_XYZ(aValue->columns[3]);
+
+  const float x = aValue->data[0][3];
+  const float y = aValue->data[1][3];
+  const float z = aValue->data[2][3];
+  const float w = aValue->data[3][3];
+
+  const float3 s = Float3_Cross(a, b);
+  const float3 t = Float3_Cross(c, d);
+  const float3 u = Float3_Add(Float3_Scalar_Multiply(a, y), Float3_Scalar_Multiply(b, x));
+  const float3 v = Float3_Subtract(Float3_Scalar_Multiply(c, w), Float3_Scalar_Multiply(d, z));
+
+  const float determinant_inverse = 1.0f / (Float3_Dot(s, v) + Float3_Dot(t, u));
+
+  const float3 s_prime = Float3_Scalar_Multiply(s, determinant_inverse);
+  const float3 t_prime = Float3_Scalar_Multiply(t, determinant_inverse);
+  const float3 u_prime = Float3_Scalar_Multiply(u, determinant_inverse);
+  const float3 v_prime = Float3_Scalar_Multiply(v, determinant_inverse);
+
+  const float3 row0 =      Float3_Add(Float3_Cross(      b, v_prime), Float3_Scalar_Multiply(t_prime, y));
+  const float3 row1 = Float3_Subtract(Float3_Cross(v_prime,       a), Float3_Scalar_Multiply(t_prime, x));
+  const float3 row2 =      Float3_Add(Float3_Cross(      d, u_prime), Float3_Scalar_Multiply(s_prime, w));
+  const float3 row3 = Float3_Subtract(Float3_Cross(u_prime,       c), Float3_Scalar_Multiply(s_prime, z));
+
+  float4x4 toReturn;
+  toReturn.data[0][0] = row0.x;
+  toReturn.data[0][1] = row1.x;
+  toReturn.data[0][2] = row2.x;
+  toReturn.data[0][3] = row3.x;
+
+  toReturn.data[1][0] = row0.y;
+  toReturn.data[1][1] = row1.y;
+  toReturn.data[1][2] = row2.y;
+  toReturn.data[1][3] = row3.y;
+
+  toReturn.data[2][0] = row0.z;
+  toReturn.data[2][1] = row1.z;
+  toReturn.data[2][2] = row2.z;
+  toReturn.data[2][3] = row3.z;
+
+  toReturn.data[3][0] = -Float3_Dot(b, t_prime);
+  toReturn.data[3][1] =  Float3_Dot(a, t_prime);;
+  toReturn.data[3][2] = -Float3_Dot(d, s_prime);;
+  toReturn.data[3][3] =  Float3_Dot(c, s_prime);;
+
+  return toReturn;
+}
+
 
 ////////////////////////////////////////////////////////////
 /// Core Matrices
@@ -328,16 +421,18 @@ float4x4 TranslationMatrix(float4 aPosition) {
   toReturn.data[3][0] = aPosition.x;
   toReturn.data[3][1] = aPosition.y;
   toReturn.data[3][2] = aPosition.z;
-  
+
   return toReturn;
 }
 
 float4x4 ScaleMatrix(float4 aScale) {
-  float4x4 toReturn = IdentityMatrix();
+  float4x4 toReturn;
+  SDL_zero(toReturn);
 
   toReturn.data[0][0] = aScale.x;
   toReturn.data[1][1] = aScale.y;
   toReturn.data[2][2] = aScale.z;
+  toReturn.data[3][3] = 1.0f;
 
   return toReturn;
 }
@@ -345,10 +440,10 @@ float4x4 ScaleMatrix(float4 aScale) {
 float4x4 RotationMatrixX(float aAngle) {
   float4x4 toReturn = IdentityMatrix();
 
-  toReturn.data[1][1] =  SDL_cosf(aAngle);
-  toReturn.data[1][2] =  SDL_sinf(aAngle);
+  toReturn.data[1][1] = SDL_cosf(aAngle);
+  toReturn.data[1][2] = SDL_sinf(aAngle);
   toReturn.data[2][1] = -SDL_sinf(aAngle);
-  toReturn.data[2][2] =  SDL_cosf(aAngle);
+  toReturn.data[2][2] = SDL_cosf(aAngle);
 
   return toReturn;
 }
@@ -356,10 +451,10 @@ float4x4 RotationMatrixX(float aAngle) {
 float4x4 RotationMatrixY(float aAngle) {
   float4x4 toReturn = IdentityMatrix();
 
-  toReturn.data[0][0] =  SDL_cosf(aAngle);
+  toReturn.data[0][0] = SDL_cosf(aAngle);
   toReturn.data[0][2] = -SDL_sinf(aAngle);
-  toReturn.data[2][0] =  SDL_sinf(aAngle);
-  toReturn.data[2][2] =  SDL_cosf(aAngle);
+  toReturn.data[2][0] = SDL_sinf(aAngle);
+  toReturn.data[2][2] = SDL_cosf(aAngle);
 
   return toReturn;
 }
@@ -367,10 +462,10 @@ float4x4 RotationMatrixY(float aAngle) {
 float4x4 RotationMatrixZ(float aAngle) {
   float4x4 toReturn = IdentityMatrix();
 
-  toReturn.data[0][0] =  SDL_cosf(aAngle);
-  toReturn.data[0][1] =  SDL_sinf(aAngle);
+  toReturn.data[0][0] = SDL_cosf(aAngle);
+  toReturn.data[0][1] = SDL_sinf(aAngle);
   toReturn.data[1][0] = -SDL_sinf(aAngle);
-  toReturn.data[1][1] =  SDL_cosf(aAngle);
+  toReturn.data[1][1] = SDL_cosf(aAngle);
 
   return toReturn;
 }
@@ -379,21 +474,67 @@ float4x4 RotationMatrix(float4 aPosition) {
   float4x4 xRotation = RotationMatrixX(aPosition.x);
   float4x4 yRotation = RotationMatrixY(aPosition.y);
   float4x4 zRotation = RotationMatrixZ(aPosition.z);
-  
+
   float4x4 xyRotation = Float4x4_Multiply(&yRotation, &xRotation);
-  
+
   return Float4x4_Multiply(&zRotation, &xyRotation);
 }
 
-float4x4 CreateModelMatrix(float4 aPosition, float4 aScale, float4 aRotation) {
-  float4x4 translation = TranslationMatrix(aPosition);
-  float4x4 rotation = RotationMatrix(aRotation);
-  float4x4 scale = ScaleMatrix(aScale);
+float4x4 CreateModelMatrix(const Transform* aTransform) {
+  float4x4 toReturn = IdentityMatrix();
+  float4x4 translation = TranslationMatrix(aTransform->mPosition);
+
+  float4x4 rotation = RotationMatrix(aTransform->mRotation);
+  float4x4 scale = ScaleMatrix(aTransform->mScale);
 
   float4x4 scale_rotation = Float4x4_Multiply(&rotation, &scale);
 
   return Float4x4_Multiply(&translation, &scale_rotation);
 }
+
+
+Orientation GetOrientation(const Transform* aTransform) {
+  float4 forward = {
+    0.f, 0.f, 1.0f, 1.0f
+  };
+
+  float4 right = {
+    1.f, 0.f, 0.0f, 1.0f
+  };
+
+  float4 up = {
+    0.f, 1.f, 0.0f, 1.0f
+  };
+
+  float4x4 rotation = RotationMatrix(aTransform->mRotation);
+
+  Orientation toReturn = {
+    Float4_XYZ(Float4x4_Float4_Multiply(&rotation, forward)),
+    Float4_XYZ(Float4x4_Float4_Multiply(&rotation, right)),
+    Float4_XYZ(Float4x4_Float4_Multiply(&rotation, up))
+  };
+
+  return toReturn;
+}
+
+////////////////////////////////////////////////////////////
+/// Views
+
+float4x4 LookAtLH(float3 aEye, float3 aCenter, float3 aUp) {
+  float4x4 toReturn;
+  SDL_zero(toReturn);
+
+  float3 forward = Float3_Normalize(Float3_Subtract(aEye, aCenter));
+
+  //toReturn.data[0][0] = 1.0f / (aAspectRatio * tanHalfFovy);
+  //toReturn.data[1][1] = 1.0f / (tanHalfFovy);
+  //toReturn.data[2][2] = aFar / (aFar - aNear);
+  //toReturn.data[2][3] = 1.0f;
+  //toReturn.data[3][2] = -(aFar * aNear) / (aFar - aNear);
+
+  return toReturn;
+}
+
 
 float4x4 OrthographicProjectionLHZO(float aLeft, float aRight, float aBottom, float aTop, float aNear, float aFar) {
   float4x4 toReturn;
@@ -424,6 +565,41 @@ float4x4 PerspectiveProjectionLHZO(float aFovY, float aAspectRatio, float aNear,
   toReturn.data[2][2] = k;
   toReturn.data[2][3] = 1.0f;
   toReturn.data[3][2] = -aNear * k;
+
+  return toReturn;
+}
+
+float4x4 PerspectiveProjectionLHOZ(float aFovY, float aAspectRatio, float aNear, float aFar) {
+  float4x4 toReturn;
+  SDL_zero(toReturn);
+
+  const float focalLength = 1.0f / SDL_tan(aFovY * .5f);
+  const float k = aNear / (aNear - aFar);
+
+  toReturn.data[0][0] = focalLength / aAspectRatio;
+  toReturn.data[1][1] = focalLength;
+  toReturn.data[2][2] = k;
+  toReturn.data[2][3] = 1.0f;
+  toReturn.data[3][2] = -aFar * k;
+
+  return toReturn;
+}
+
+float4x4 InfinitePerspectiveProjectionLHOZ(float aFovY, float aAspectRatio, float aNear) {
+  float4x4 toReturn;
+  SDL_zero(toReturn);
+
+  const float focalLength = 1.0f / SDL_tan(aFovY * .5f);
+
+  // For ease of use we're hardcoding the epsilon to what's recommended in Foundations of Game Engine
+  // Development: Rendering, which is 2^(-20).
+  const float epsilon = SDL_powf(2, -20);
+
+  toReturn.data[0][0] = focalLength / aAspectRatio;
+  toReturn.data[1][1] = focalLength;
+  toReturn.data[2][2] = epsilon;
+  toReturn.data[2][3] = 1.0f;
+  toReturn.data[3][2] = aNear/(1.0f - epsilon);
 
   return toReturn;
 }
@@ -575,7 +751,7 @@ SDL_GPUTexture* CreateAndUploadTexture(SDL_GPUCopyPass* aCopyPass, const char* a
   SDL_SetStringProperty(gContext.mProperties, SDL_PROP_GPU_TEXTURE_CREATE_NAME_STRING, aTextureName);
   transferCreateInfo.usage = SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD;
   transferCreateInfo.props = gContext.mProperties;
-  
+
   {
     const SDL_PixelFormatDetails* formatDetails = SDL_GetPixelFormatDetails(surface->format);
     transferCreateInfo.size = surface->h * surface->pitch;
@@ -629,27 +805,95 @@ SDL_GPUTexture* CreateAndUploadTexture(SDL_GPUCopyPass* aCopyPass, const char* a
   return texture;
 }
 
+SDL_GPUTextureFormat GetSupportedDepthFormat()
+{
+  SDL_GPUTextureFormat possibleFormats[] = {
+    SDL_GPU_TEXTUREFORMAT_D32_FLOAT_S8_UINT,
+    SDL_GPU_TEXTUREFORMAT_D24_UNORM_S8_UINT,
+    SDL_GPU_TEXTUREFORMAT_D32_FLOAT,
+    SDL_GPU_TEXTUREFORMAT_D24_UNORM,
+    SDL_GPU_TEXTUREFORMAT_D16_UNORM,
+  };
+
+  for (size_t i = 0; i < SDL_arraysize(possibleFormats); ++i) {
+    if (SDL_GPUTextureSupportsFormat(gContext.mDevice,
+      possibleFormats[i],
+      SDL_GPU_TEXTURETYPE_2D,
+      SDL_GPU_TEXTUREUSAGE_DEPTH_STENCIL_TARGET))
+    {
+      return possibleFormats[i];
+    }
+  }
+
+  // Didn't find a suitable depth format.
+  SDL_assert(false);
+
+  return SDL_GPU_TEXTUREFORMAT_INVALID;
+}
+
+
+SDL_GPUBuffer* CreateAndUploadBuffer(const void* aData, size_t aSize, SDL_GPUBufferUsageFlags aUsage)
+{
+  SDL_GPUBufferCreateInfo bufferCreateInfo;
+  SDL_zero(bufferCreateInfo);
+
+  bufferCreateInfo.usage = aUsage;
+  bufferCreateInfo.size = aSize;
+  bufferCreateInfo.props = gContext.mProperties;
+
+  SDL_GPUBuffer* buffer = SDL_CreateGPUBuffer(gContext.mDevice, &bufferCreateInfo);
+  SDL_assert(buffer);
+
+  {
+    SDL_GPUTransferBufferCreateInfo transferBufferCreateInfo;
+    SDL_zero(transferBufferCreateInfo);
+    transferBufferCreateInfo.props = gContext.mProperties;
+    transferBufferCreateInfo.size = aSize;
+    transferBufferCreateInfo.usage = SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD;
+
+    SDL_GPUTransferBuffer* transferBuffer = SDL_CreateGPUTransferBuffer(gContext.mDevice, &transferBufferCreateInfo);
+    SDL_assert(transferBuffer);
+
+    void* mappedBuffer = SDL_MapGPUTransferBuffer(gContext.mDevice, transferBuffer, false);
+    SDL_memcpy(mappedBuffer, aData, aSize);
+
+    SDL_UnmapGPUTransferBuffer(gContext.mDevice, transferBuffer);
+
+    SDL_GPUCommandBuffer* commandBuffer = SDL_AcquireGPUCommandBuffer(gContext.mDevice);
+    SDL_assert(commandBuffer);
+    SDL_GPUCopyPass* copyPass = SDL_BeginGPUCopyPass(commandBuffer);
+    SDL_assert(copyPass);
+
+    SDL_GPUTransferBufferLocation source;
+    source.offset = 0;
+    source.transfer_buffer = transferBuffer;
+
+    SDL_GPUBufferRegion destination;
+    destination.buffer = buffer;
+    destination.offset = 0;
+    destination.size = aSize;
+
+    SDL_UploadToGPUBuffer(copyPass, &source, &destination, false);
+
+    SDL_EndGPUCopyPass(copyPass);
+    SDL_SubmitGPUCommandBuffer(commandBuffer);
+  }
+
+  return buffer;
+}
+
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Technique Code
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-////////////////////////////////////////////////////////////
-/// CubeContext
-
-typedef struct ModelUniform {
-  float4 mPosition;
-  float4 mScale;
-  float4 mRotation;
-} ModelUniform;
-
 typedef struct CubeContext {
   SDL_GPUGraphicsPipeline* mPipeline;
-  SDL_GPUTexture* mTexture;
   SDL_GPUSampler* mSampler;
-  ModelUniform mUniform;
+  SDL_GPUBuffer* mVertexBuffer;
+  SDL_GPUBuffer* mIndexBuffer;
+  Transform mUbo[2];
 } CubeContext;
 
-CubeContext CreateCubeContext() {
+CubeContext CreateCubeContext(SDL_GPUTextureFormat aDepthFormat) {
   SDL_GPUColorTargetDescription colorTargetDescription;
   SDL_zero(colorTargetDescription);
   colorTargetDescription.format = SDL_GetGPUSwapchainTextureFormat(gContext.mDevice, gContext.mWindow);
@@ -659,15 +903,51 @@ CubeContext CreateCubeContext() {
 
   graphicsPipelineCreateInfo.target_info.num_color_targets = 1;
   graphicsPipelineCreateInfo.target_info.color_target_descriptions = &colorTargetDescription;
+  graphicsPipelineCreateInfo.target_info.depth_stencil_format = aDepthFormat;
+  graphicsPipelineCreateInfo.target_info.has_depth_stencil_target = true;
   graphicsPipelineCreateInfo.primitive_type = SDL_GPU_PRIMITIVETYPE_TRIANGLELIST;
   graphicsPipelineCreateInfo.rasterizer_state.front_face = SDL_GPU_FRONTFACE_CLOCKWISE;
   graphicsPipelineCreateInfo.rasterizer_state.cull_mode = SDL_GPU_CULLMODE_BACK;
 
+  graphicsPipelineCreateInfo.vertex_input_state.num_vertex_buffers = 1;
+  graphicsPipelineCreateInfo.vertex_input_state.num_vertex_attributes = 2;
+
+  SDL_GPUVertexAttribute attributes[2];
+
+  // Position
+  attributes[0].location = 0;
+  attributes[0].buffer_slot = 0;
+  attributes[0].format = SDL_GPU_VERTEXELEMENTFORMAT_FLOAT3;
+  attributes[0].offset = 0;
+
+  // Color
+  attributes[1].location = 1;
+  attributes[1].buffer_slot = 0;
+  attributes[1].format = SDL_GPU_VERTEXELEMENTFORMAT_FLOAT3;
+  attributes[1].offset = sizeof(float3);
+
+  graphicsPipelineCreateInfo.vertex_input_state.vertex_attributes = attributes;
+
+  SDL_GPUVertexBufferDescription bufferDescription;
+  bufferDescription.slot = 0;
+  bufferDescription.pitch = 2 * sizeof(float3);
+  bufferDescription.input_rate = SDL_GPU_VERTEXINPUTRATE_VERTEX;
+  bufferDescription.instance_step_rate = 0;
+
+  graphicsPipelineCreateInfo.vertex_input_state.vertex_buffer_descriptions = &bufferDescription;
+
+
+  // Remember to come back to this later in the tutorial, don't show it off immediately.
+  graphicsPipelineCreateInfo.depth_stencil_state.compare_op = SDL_GPU_COMPAREOP_GREATER_OR_EQUAL;
+
+  graphicsPipelineCreateInfo.depth_stencil_state.enable_depth_test = true;
+  graphicsPipelineCreateInfo.depth_stencil_state.enable_depth_write = true;
+
   graphicsPipelineCreateInfo.vertex_shader = CreateShader(
-    "Cube.vert",
+    "VertexAndIndexBuffer.vert",
     SDL_GPU_SHADERSTAGE_VERTEX,
     0,
-    2,
+    3,
     0,
     0,
     SDL_PROPERTY_TYPE_INVALID
@@ -675,9 +955,9 @@ CubeContext CreateCubeContext() {
   SDL_assert(graphicsPipelineCreateInfo.vertex_shader);
 
   graphicsPipelineCreateInfo.fragment_shader = CreateShader(
-    "Cube.frag",
+    "VertexAndIndexBuffer.frag",
     SDL_GPU_SHADERSTAGE_FRAGMENT,
-    1,
+    0,
     0,
     0,
     0,
@@ -689,7 +969,6 @@ CubeContext CreateCubeContext() {
 
   CubeContext context;
   context.mPipeline = SDL_CreateGPUGraphicsPipeline(gContext.mDevice, &graphicsPipelineCreateInfo);
-  context.mTexture = CreateAndUploadTexture(NULL, "sample");
 
   SDL_GPUSamplerCreateInfo samplerCreateInfo;
   SDL_zero(samplerCreateInfo);
@@ -698,18 +977,76 @@ CubeContext CreateCubeContext() {
   context.mSampler = SDL_CreateGPUSampler(gContext.mDevice, &samplerCreateInfo);
   SDL_assert(context.mPipeline);
 
-  context.mUniform.mPosition.x =  0.f;
-  context.mUniform.mPosition.y = -1.f;
-  context.mUniform.mPosition.z =  5.f;
-  context.mUniform.mPosition.w =  0.f;
-  context.mUniform.mScale.x = 0.5f;
-  context.mUniform.mScale.y = 0.5f;
-  context.mUniform.mScale.z = 0.5f;
-  context.mUniform.mScale.w = 0.5f;
-  context.mUniform.mRotation.x = 0.f;
-  context.mUniform.mRotation.y = 0.f;
-  context.mUniform.mRotation.z = 0.f;
-  context.mUniform.mRotation.w = 0.f;
+  {
+    static const float3 cVertexPositions[16] = {
+      /* 0 */ /* Position */ { -1.0f,  1.0f, -1.0f }, /* Color */ { 1.0f, 0.0f, 0.0f }, // top left forward
+      /* 1 */ /* Position */ {  1.0f,  1.0f, -1.0f }, /* Color */ { 0.0f, 1.0f, 0.0f }, // top right forward
+      /* 2 */ /* Position */ { -1.0f, -1.0f, -1.0f }, /* Color */ { 0.0f, 0.0f, 1.0f }, // bottom left foward
+      /* 3 */ /* Position */ {  1.0f, -1.0f, -1.0f }, /* Color */ { 1.0f, 1.0f, 1.0f }, // bottom right forward
+      /* 4 */ /* Position */ { -1.0f,  1.0f,  1.0f }, /* Color */ { 0.0f, 0.0f, 0.0f }, // top left back
+      /* 5 */ /* Position */ {  1.0f,  1.0f,  1.0f }, /* Color */ { 1.0f, 1.0f, 0.0f }, // top right back
+      /* 6 */ /* Position */ { -1.0f, -1.0f,  1.0f }, /* Color */ { 1.0f, 0.0f, 1.0f }, // bottom left back
+      /* 7 */ /* Position */ {  1.0f, -1.0f,  1.0f }, /* Color */ { 0.0f, 1.0f, 1.0f }, // bottom right back
+    };
+
+    context.mVertexBuffer = CreateAndUploadBuffer(&cVertexPositions, sizeof(cVertexPositions), SDL_GPU_BUFFERUSAGE_VERTEX);
+  }
+
+  {
+    static const Uint16 cVertexIndicies[36] = {
+      // Front Face
+      0, 1, 2,
+      1, 3, 2,
+
+      // Back Face
+      5, 4, 7,
+      4, 6, 7,
+
+      // Top Face
+      4, 5, 0,
+      5, 1, 0,
+
+      // Bottom Face
+      2, 3, 6,
+      3, 7, 6,
+
+      // Left Face:
+      4, 0, 6,
+      0, 2, 6,
+
+      // Right Face: 
+      1, 5, 3,
+      5, 7, 3,
+    };
+
+    context.mIndexBuffer = CreateAndUploadBuffer(&cVertexIndicies, sizeof(cVertexIndicies), SDL_GPU_BUFFERUSAGE_INDEX);
+  }
+
+  context.mUbo[0].mPosition.x = 2.f;
+  context.mUbo[0].mPosition.y = -1.f;
+  context.mUbo[0].mPosition.z = 5.f;
+  context.mUbo[0].mPosition.w = 0.f;
+  context.mUbo[0].mScale.x = 0.5f;
+  context.mUbo[0].mScale.y = 0.5f;
+  context.mUbo[0].mScale.z = 0.5f;
+  context.mUbo[0].mScale.w = 0.5f;
+  context.mUbo[0].mRotation.x = 0.f;
+  context.mUbo[0].mRotation.y = 0.f;
+  context.mUbo[0].mRotation.z = 0.f;
+  context.mUbo[0].mRotation.w = 0.f;
+
+  context.mUbo[1].mPosition.x = 0.f;
+  context.mUbo[1].mPosition.y = -1.f;
+  context.mUbo[1].mPosition.z = 10.f;
+  context.mUbo[1].mPosition.w = 0.f;
+  context.mUbo[1].mScale.x = 2.f;
+  context.mUbo[1].mScale.y = 2.f;
+  context.mUbo[1].mScale.z = 2.f;
+  context.mUbo[1].mScale.w = 2.f;
+  context.mUbo[1].mRotation.x = 0.f;
+  context.mUbo[1].mRotation.y = 0.f;
+  context.mUbo[1].mRotation.z = 0.f;
+  context.mUbo[1].mRotation.w = 0.f;
 
   SDL_ReleaseGPUShader(gContext.mDevice, graphicsPipelineCreateInfo.vertex_shader);
   SDL_ReleaseGPUShader(gContext.mDevice, graphicsPipelineCreateInfo.fragment_shader);
@@ -721,20 +1058,32 @@ void DrawCubeContext(CubeContext* aContext, SDL_GPUCommandBuffer* aCommandBuffer
 {
   SDL_BindGPUGraphicsPipeline(aRenderPass, aContext->mPipeline);
 
-  float4x4 model = CreateModelMatrix(aContext->mUniform.mPosition, aContext->mUniform.mScale, aContext->mUniform.mRotation);
+  float4x4 model = CreateModelMatrix(&aContext->mUbo[0]);
 
-  SDL_PushGPUVertexUniformData(aCommandBuffer, 0, &model, sizeof(model));
-  SDL_PushGPUVertexUniformData(aCommandBuffer, 1, &gContext.WorldToNDC, sizeof(gContext.WorldToNDC));
+  SDL_PushGPUVertexUniformData(aCommandBuffer, 1, &model, sizeof(model));
+  SDL_PushGPUVertexUniformData(aCommandBuffer, 2, &gContext.WorldToNDC, sizeof(gContext.WorldToNDC));
 
   {
-    SDL_GPUTextureSamplerBinding textureBinding;
-    SDL_zero(textureBinding);
-    textureBinding.texture = aContext->mTexture;
-    textureBinding.sampler = aContext->mSampler;
-    SDL_BindGPUFragmentSamplers(aRenderPass, 0, &textureBinding, 1);
+    SDL_GPUBufferBinding binding;
+    binding.buffer = aContext->mVertexBuffer;
+    binding.offset = 0;
+    SDL_BindGPUVertexBuffers(aRenderPass, 0, &binding, 1);
   }
 
-  SDL_DrawGPUPrimitives(aRenderPass, 6 /* 6 per face */ * 6 /* 6 sides of our cube */, 1, 0, 0);
+  {
+    SDL_GPUBufferBinding binding;
+    binding.buffer = aContext->mIndexBuffer;
+    binding.offset = 0;
+    SDL_BindGPUIndexBuffer(aRenderPass, &binding, SDL_GPU_INDEXELEMENTSIZE_16BIT);
+  }
+
+  // Draw the first cube
+  SDL_DrawGPUIndexedPrimitives(aRenderPass, 36, 1, 0, 0, 0);
+
+  // Draw the second cube, make sure to recalculate the model matrix for it and reupload it.
+  model = CreateModelMatrix(&aContext->mUbo[1]);
+  SDL_PushGPUVertexUniformData(aCommandBuffer, 1, &model, sizeof(model));
+  SDL_DrawGPUIndexedPrimitives(aRenderPass, 36, 1, 0, 0, 0);
 }
 
 void DestroyCubeContext(CubeContext* aContext)
@@ -742,6 +1091,80 @@ void DestroyCubeContext(CubeContext* aContext)
   SDL_ReleaseGPUGraphicsPipeline(gContext.mDevice, aContext->mPipeline);
   SDL_zero(*aContext);
 }
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Camera Movements
+void FlybyCamera(Transform* aCamera, const bool* aKeyMap, float2 aFrameMouseMove, float aSpeed, float aDt)
+{
+  Orientation orientation = GetOrientation(aCamera);
+  float3 movementDirection = { 0.f, 0.f, 0.f };
+  SDL_MouseButtonFlags mouseFlags = SDL_GetMouseState(NULL, NULL);
+
+  if (SDL_BUTTON_LMASK & mouseFlags) {
+    aCamera->mRotation.x += aFrameMouseMove.y * aSpeed * aDt * .05f;
+    aCamera->mRotation.y += aFrameMouseMove.x * aSpeed * aDt * .05f;
+  }
+
+  if (aKeyMap[SDL_SCANCODE_D]) movementDirection = Float3_Add(movementDirection, orientation.mRight);
+  if (aKeyMap[SDL_SCANCODE_A]) movementDirection = Float3_Subtract(movementDirection, orientation.mRight);
+  if (aKeyMap[SDL_SCANCODE_W]) movementDirection = Float3_Add(movementDirection, orientation.mForward);
+  if (aKeyMap[SDL_SCANCODE_S]) movementDirection = Float3_Subtract(movementDirection, orientation.mForward);
+  if (aKeyMap[SDL_SCANCODE_SPACE]) movementDirection = Float3_Add(movementDirection, orientation.mUp);
+  if (aKeyMap[SDL_SCANCODE_LSHIFT]) movementDirection = Float3_Subtract(movementDirection, orientation.mUp);
+
+  if (SDL_BUTTON_MMASK & mouseFlags) {
+
+    movementDirection = Float3_Add(movementDirection, Float3_Scalar_Multiply(orientation.mRight, aFrameMouseMove.x * -.1f));
+    movementDirection = Float3_Add(movementDirection, Float3_Scalar_Multiply(orientation.mUp, aFrameMouseMove.y * .1f));
+  }
+  
+  aCamera->mPosition = Float4_From3(Float3_Add(
+    Float3_Scalar_Multiply(movementDirection, aSpeed * aDt),
+    Float4_XYZ(aCamera->mPosition)),
+    0.0f
+  );
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Technique Code
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+typedef struct RendererContext {
+  SDL_Renderer* mRenderer;
+  SDL_Texture* mRenderTarget;
+  SDL_GPUTexture* mGPUTexture;
+} RendererContext;
+
+RendererContext CreateRendererContext() {
+  RendererContext context;
+  SDL_zero(context);
+
+  SDL_PropertiesID props = SDL_CreateProperties();
+
+  SDL_SetStringProperty(props, SDL_PROP_RENDERER_CREATE_NAME_STRING, "gpu");
+  SDL_SetPointerProperty(props, SDL_PROP_RENDERER_CREATE_GPU_DEVICE_POINTER, gContext.mDevice);
+  context.mRenderer = SDL_CreateRendererWithProperties(props);
+  SDL_DestroyProperties(props);
+
+
+  context.mRenderTarget = SDL_CreateTexture(context.mRenderer, SDL_PIXELFORMAT_BGRA32, SDL_TEXTUREACCESS_TARGET, 1280, 720);
+  context.mGPUTexture = (SDL_GPUTexture*)SDL_GetPointerProperty(SDL_GetTextureProperties(context.mRenderTarget), SDL_PROP_TEXTURE_GPU_TEXTURE_POINTER, NULL);
+
+  SDL_SetRenderTarget(context.mRenderer, context.mRenderTarget);
+
+  return context;
+}
+
+void DrawRendererContext(RendererContext* aContext, SDL_GPUCommandBuffer* aCommandBuffer, SDL_GPURenderPass* aRenderPass)
+{
+
+}
+
+void DestroyRendererContext(RendererContext* aContext)
+{
+  SDL_DestroyRenderer(aContext->mRenderer);
+  SDL_zero(*aContext);
+}
+
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Main
@@ -757,7 +1180,17 @@ int main(int argc, char** argv)
 
   CreateGpuContext(window);
 
-  CubeContext cubeContext = CreateCubeContext();
+  SDL_GPUTexture* depthTexture = NULL;
+  Uint32 depthWidth = 0;
+  Uint32 depthHeight = 0;
+  SDL_GPUTextureFormat depthFormat = GetSupportedDepthFormat();
+
+  CubeContext cubeContext = CreateCubeContext(depthFormat);
+  Transform cameraTransform = GetDefaultTransform();
+  cameraTransform.mPosition.z = -1.0f;
+  //cameraTransform.mScale.x = 1.0f;
+  //cameraTransform.mScale.y = 1.0f;
+  //cameraTransform.mScale.z = 1.0f;
 
   const float speed = 5.f;
   Uint64 last_frame_ticks_so_far = SDL_GetTicksNS();
@@ -765,44 +1198,58 @@ int main(int argc, char** argv)
   const bool* key_map = SDL_GetKeyboardState(&keys);
   bool running = true;
 
+  float2 mouseMove;
+
   while (running) {
+    mouseMove.x = 0.f;
+    mouseMove.y = 0.f;
+
     Uint64 current_frame_ticks_so_far = SDL_GetTicksNS();
     float dt = (current_frame_ticks_so_far - last_frame_ticks_so_far) / 1000000000.f;
     last_frame_ticks_so_far = current_frame_ticks_so_far;
+
     SDL_Event event;
     while (SDL_PollEvent(&event)) {
       switch (event.common.type) {
         case SDL_EVENT_QUIT:
           running = false;
           break;
+        case SDL_EVENT_MOUSE_MOTION:
+          mouseMove.x = event.motion.xrel;
+          mouseMove.y = event.motion.yrel;
+          break;
       }
+
     }
-    
+
     int w = 0, h = 0;
     SDL_GetWindowSizeInPixels(gContext.mWindow, &w, &h);
 
-    gContext.WorldToNDC = PerspectiveProjectionLHZO(
+    gContext.WorldToNDC = InfinitePerspectiveProjectionLHOZ(
       45.0f * SDL_PI_F / 180.0f,
       (float)w / (float)h,
-      20.0f, 60.0f
+      0.1f
     );
-      
-    if (key_map[SDL_SCANCODE_D])        cubeContext.mUniform.mPosition.x += speed * dt * 1.0f;
-    if (key_map[SDL_SCANCODE_A])        cubeContext.mUniform.mPosition.x -= speed * dt * 1.0f;
-    if (key_map[SDL_SCANCODE_W])        cubeContext.mUniform.mPosition.y += speed * dt * 1.0f;
-    if (key_map[SDL_SCANCODE_S])        cubeContext.mUniform.mPosition.y -= speed * dt * 1.0f;
-    if (key_map[SDL_SCANCODE_E])        cubeContext.mUniform.mPosition.z += speed * dt * 1.0f;
-    if (key_map[SDL_SCANCODE_Q])        cubeContext.mUniform.mPosition.z -= speed * dt * 1.0f;
-    if (key_map[SDL_SCANCODE_R])        cubeContext.mUniform.mScale.x += speed * dt * 1.0f;
-    if (key_map[SDL_SCANCODE_F])        cubeContext.mUniform.mScale.x -= speed * dt * 1.0f;
-    if (key_map[SDL_SCANCODE_T])        cubeContext.mUniform.mScale.y += speed * dt * 1.0f;
-    if (key_map[SDL_SCANCODE_G])        cubeContext.mUniform.mScale.y -= speed * dt * 1.0f;
-    if (key_map[SDL_SCANCODE_INSERT])   cubeContext.mUniform.mRotation.x += speed * dt * 1.0f;
-    if (key_map[SDL_SCANCODE_DELETE])   cubeContext.mUniform.mRotation.x -= speed * dt * 1.0f;
-    if (key_map[SDL_SCANCODE_HOME])     cubeContext.mUniform.mRotation.y += speed * dt * 1.0f;
-    if (key_map[SDL_SCANCODE_END])      cubeContext.mUniform.mRotation.y -= speed * dt * 1.0f;
-    if (key_map[SDL_SCANCODE_PAGEUP])   cubeContext.mUniform.mRotation.y += speed * dt * 1.0f;
-    if (key_map[SDL_SCANCODE_PAGEDOWN]) cubeContext.mUniform.mRotation.y -= speed * dt * 1.0f;
+
+    if (key_map[SDL_SCANCODE_RIGHT])    cubeContext.mUbo[0].mPosition.x += speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_LEFT])     cubeContext.mUbo[0].mPosition.x -= speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_UP])       cubeContext.mUbo[0].mPosition.y += speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_DOWN])     cubeContext.mUbo[0].mPosition.y -= speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_E])        cubeContext.mUbo[0].mPosition.z += speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_Q])        cubeContext.mUbo[0].mPosition.z -= speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_R])        cubeContext.mUbo[0].mScale.x += speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_F])        cubeContext.mUbo[0].mScale.x -= speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_T])        cubeContext.mUbo[0].mScale.y += speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_G])        cubeContext.mUbo[0].mScale.y -= speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_INSERT])   cubeContext.mUbo[0].mRotation.x += speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_DELETE])   cubeContext.mUbo[0].mRotation.x -= speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_HOME])     cubeContext.mUbo[0].mRotation.y += speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_END])      cubeContext.mUbo[0].mRotation.y -= speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_PAGEUP])   cubeContext.mUbo[0].mRotation.z += speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_PAGEDOWN]) cubeContext.mUbo[0].mRotation.z -= speed * dt * 1.0f;
+
+    FlybyCamera(&cameraTransform, key_map, mouseMove, speed, dt);
+
 
     SDL_GPUCommandBuffer* commandBuffer = SDL_AcquireGPUCommandBuffer(gContext.mDevice);
     if (!commandBuffer)
@@ -812,10 +1259,22 @@ int main(int argc, char** argv)
     }
 
     SDL_GPUTexture* swapchainTexture;
-    if (!SDL_WaitAndAcquireGPUSwapchainTexture(commandBuffer, gContext.mWindow, &swapchainTexture, NULL, NULL))
+    Uint32 swapchainWidth = 0;
+    Uint32 swapchainHeight = 0;
+    if (!SDL_WaitAndAcquireGPUSwapchainTexture(commandBuffer, gContext.mWindow, &swapchainTexture, &swapchainWidth, &swapchainHeight))
     {
       SDL_Log("WaitAndAcquireGPUSwapchainTexture failed: %s", SDL_GetError());
       continue;
+    }
+
+    if (depthWidth != swapchainWidth || depthHeight != swapchainHeight)
+    {
+      SDL_ReleaseGPUTexture(gContext.mDevice, depthTexture);
+      depthTexture = CreateTexture(swapchainWidth, swapchainHeight, SDL_GPU_TEXTUREUSAGE_DEPTH_STENCIL_TARGET, depthFormat);
+      SDL_assert(depthTexture);
+
+      depthWidth = swapchainWidth;
+      depthHeight = swapchainHeight;
     }
 
     SDL_GPUColorTargetInfo colorTargetInfo;
@@ -829,18 +1288,39 @@ int main(int argc, char** argv)
     colorTargetInfo.clear_color.b = 0.85f;
     colorTargetInfo.clear_color.a = 1.0f;
 
+
+    // Remember to come back to this later in the tutorial, don't show it off immediately.
+    SDL_GPUDepthStencilTargetInfo depthStencilTargetInfo;
+    SDL_zero(depthStencilTargetInfo);
+
+    depthStencilTargetInfo.texture = depthTexture;
+    depthStencilTargetInfo.clear_depth = 0.f;
+    depthStencilTargetInfo.clear_stencil = 0.f;
+    depthStencilTargetInfo.load_op = SDL_GPU_LOADOP_CLEAR;
+    depthStencilTargetInfo.store_op = SDL_GPU_STOREOP_DONT_CARE;
+    depthStencilTargetInfo.stencil_load_op = SDL_GPU_LOADOP_CLEAR;
+    depthStencilTargetInfo.stencil_store_op = SDL_GPU_STOREOP_DONT_CARE;
+    depthStencilTargetInfo.cycle = true; // NOTE: Introduce cycling
+
     SDL_GPURenderPass* renderPass = SDL_BeginGPURenderPass(
       commandBuffer,
       &colorTargetInfo,
       1,
-      NULL
+      &depthStencilTargetInfo
     );
+
+    float4x4 modelMatrix = CreateModelMatrix(&cameraTransform);
+    float4x4 viewMatrix = Float4x4_Inverse(&modelMatrix);
+
+    SDL_PushGPUVertexUniformData(commandBuffer, 0, &viewMatrix, sizeof(viewMatrix));
 
     DrawCubeContext(&cubeContext, commandBuffer, renderPass);
 
     SDL_EndGPURenderPass(renderPass);
     SDL_SubmitGPUCommandBuffer(commandBuffer);
   }
+
+  SDL_ReleaseGPUTexture(gContext.mDevice, depthTexture);
 
   DestroyCubeContext(&cubeContext);
 

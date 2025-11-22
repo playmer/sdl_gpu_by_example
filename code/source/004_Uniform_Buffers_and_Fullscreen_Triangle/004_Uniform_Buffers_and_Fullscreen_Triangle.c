@@ -17,6 +17,121 @@ typedef struct float2 {
   float x, y;
 } float2;
 
+typedef struct float3 {
+  float x, y, z;
+} float3;
+
+typedef struct float4 {
+  float x, y, z, w;
+} float4;
+
+//////////////////////////////////////////////////////
+// Downcasts
+
+float2 Float3_XY(float3 aValue) {
+  float2 toReturn = { aValue.x, aValue.y };
+  return toReturn;
+}
+
+float2 Float4_XY(float4 aValue) {
+  float2 toReturn = { aValue.x, aValue.y };
+  return toReturn;
+}
+
+float3 Float4_XYZ(float4 aValue) {
+  float3 toReturn = { aValue.x, aValue.y, aValue.z };
+  return toReturn;
+}
+
+//////////////////////////////////////////////////////
+// Subtraction
+
+float2 Float2_Subtract(float2 aLeft, float2 aRight) {
+  float2 toReturn = { aLeft.x - aRight.x, aLeft.y - aRight.y };
+  return toReturn;
+}
+
+float3 Float3_Subtract(float3 aLeft, float3 aRight) {
+  float3 toReturn = { aLeft.x - aRight.x, aLeft.y - aRight.y, aLeft.z - aRight.z };
+  return toReturn;
+}
+
+float4 Float4_Subtract(float4 aLeft, float4 aRight) {
+  float4 toReturn = { aLeft.x - aRight.x, aLeft.y - aRight.y, aLeft.z - aRight.z, aLeft.w - aRight.w };
+  return toReturn;
+}
+
+//////////////////////////////////////////////////////
+// Addition
+
+float2 Float2_Add(float2 aLeft, float2 aRight) {
+  float2 toReturn = { aLeft.x + aRight.x, aLeft.y + aRight.y };
+  return toReturn;
+}
+
+float3 Float3_Add(float3 aLeft, float3 aRight) {
+  float3 toReturn = { aLeft.x + aRight.x, aLeft.y + aRight.y, aLeft.z + aRight.z };
+  return toReturn;
+}
+
+float4 Float4_Add(float4 aLeft, float4 aRight) {
+  float4 toReturn = { aLeft.x + aRight.x, aLeft.y + aRight.y, aLeft.z + aRight.z, aLeft.w + aRight.w };
+  return toReturn;
+}
+
+//////////////////////////////////////////////////////
+// Scalar Addition
+
+float2 Float2_Scalar_Add(float2 aLeft, float aRight) {
+  float2 toReturn = { aLeft.x + aRight, aLeft.y + aRight };
+  return toReturn;
+}
+
+float3 Float3_Scalar_Add(float3 aLeft, float aRight) {
+  float3 toReturn = { aLeft.x + aRight, aLeft.y + aRight, aLeft.z + aRight };
+  return toReturn;
+}
+
+float4 Float4_Scalar_Add(float4 aLeft, float aRight) {
+  float4 toReturn = { aLeft.x + aRight, aLeft.y + aRight, aLeft.z + aRight, aLeft.w + aRight };
+  return toReturn;
+}
+
+//////////////////////////////////////////////////////
+// Scalar Multiplication
+
+float2 Float2_Scalar_Multiply(float2 aLeft, float aRight) {
+  float2 toReturn = { aLeft.x * aRight, aLeft.y * aRight };
+  return toReturn;
+}
+
+float3 Float3_Scalar_Multiply(float3 aLeft, float aRight) {
+  float3 toReturn = { aLeft.x * aRight, aLeft.y * aRight, aLeft.z * aRight };
+  return toReturn;
+}
+
+float4 Float4_Scalar_Multiply(float4 aLeft, float aRight) {
+  float4 toReturn = { aLeft.x * aRight, aLeft.y * aRight, aLeft.z * aRight, aLeft.w * aRight };
+  return toReturn;
+}
+
+//////////////////////////////////////////////////////
+// Scalar Divison
+
+float2 Float2_Scalar_Division(float2 aLeft, float aRight) {
+  float2 toReturn = { aLeft.x / aRight, aLeft.y / aRight };
+  return toReturn;
+}
+
+float3 Float3_Scalar_Division(float3 aLeft, float aRight) {
+  float3 toReturn = { aLeft.x / aRight, aLeft.y / aRight, aLeft.z / aRight };
+  return toReturn;
+}
+
+float4 Float4_Scalar_Division(float4 aLeft, float aRight) {
+  float4 toReturn = { aLeft.x / aRight, aLeft.y / aRight, aLeft.z / aRight, aLeft.w / aRight };
+  return toReturn;
+}
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Shared GPU Code
@@ -90,17 +205,17 @@ SDL_GPUShader* CreateShader(
   void* fileData = SDL_LoadFile(shader_path, &fileSize);
   SDL_assert(fileData);
 
-  SDL_GPUShaderCreateInfo shaderCreateInfo;
-  SDL_zero(shaderCreateInfo);
-
   SDL_PropertiesID properties = gContext.mProperties;
 
-  if (aProperties != SDL_PROPERTY_TYPE_INVALID) {
+  if (aProperties != 0) {
     properties = aProperties;
   }
 
   SDL_assert(SDL_SetStringProperty(properties, SDL_PROP_GPU_SHADER_CREATE_NAME_STRING, aShaderFilename));
 
+  SDL_GPUShaderCreateInfo shaderCreateInfo;
+  SDL_zero(shaderCreateInfo);
+  
   shaderCreateInfo.entrypoint = gContext.mShaderEntryPoint;
   shaderCreateInfo.format = gContext.mChosenBackendFormat;
   shaderCreateInfo.code = (Uint8*)fileData;

@@ -16,14 +16,17 @@ struct Output
   float4 Position : SV_Position;
 };
 
-cbuffer UBO : register(b0, space1)
+
+struct ModelUniform
 {
-    float x;
-    float y;
-    float w;
-    float h;
+  float2 mPosition;
+  float2 mScale;
 };
 
+cbuffer UBO : register(b0, space1)
+{
+  ModelUniform cModelUniform;
+};
 
 cbuffer UB1 : register(b1, space1)
 {
@@ -37,17 +40,20 @@ Output main(uint id : SV_VertexID)
 
   Output output;
   float2 vertex = cVertexPositions[vertexIndex];
+  
+  float x = cModelUniform.mPosition.x;
+  float y = cModelUniform.mPosition.y;
+  float w = cModelUniform.mScale.x;
+  float h = cModelUniform.mScale.y;
 
   float4x4 ObjectToWorld = {
-    { w / 2.0f,     0.0f, 0.0f,    x },
-    {     0.0f, h / 2.0f, 0.0f,    y },
-    {     0.0f,     0.0f, 1.0f, 0.0f },
-    {     0.0f,     0.0f, 0.0f, 1.0f },
+    { w / 2.f,     0.f, 0.f,   x },
+    {     0.f, h / 2.f, 0.f,   y },
+    {     0.f,     0.f, 1.f, 0.f },
+    {     0.f,     0.f, 0.f, 1.f },
   };
-    
-  //float4 t1 = mul(mul(ObjectToWorld, WorldToNDC), float4(vertex, 0.0f, 1.0f));
-  //float4 t1 = mul(mul(float4(vertex, 0.0f, 1.0f), WorldToNDC), ObjectToWorld);
-    float4 t1 = mul(mul(WorldToNDC, ObjectToWorld), float4(vertex, 0.0f, 1.0f));
+
+  float4 t1 = mul(mul(WorldToNDC, ObjectToWorld), float4(vertex, 0.0f, 1.0f));
 
   output.Position = t1;
   output.UV = (vertex + 1.0f) * 0.5f;

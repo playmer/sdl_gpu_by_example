@@ -97,6 +97,10 @@ Output main(uint id : SV_VertexID)
 
 ### Drawing an Oval with a Fragment Shader
 
+Fragment shaders can be used for a lot of techniques, which makes sense, they are the final arbiter control of pixel output. They can of course be used for things that don't go directly to the screen, but they're pretty fancy. If you've ever been on [shadertoy](https://www.shadertoy.com/) almost all the work of showing those images is done within this type of shader.
+
+We're not going to be doing anything wild yet, but running a fullscreen shader like we're using the Fullscreen triangle lets us get our first taste of what we can do here. For now, we'll draw a simple oval in the Fragment shader, passing it's position through the vertex shader.
+
 ## An Aside on Buffers
 
 Almost everything we do in graphics requires data. Sometimes this can be generated or stored in-shader, we did the most simplistic version of this in the previous chapter to do pull-style vertex rendering. We just created some constant arrays and based on the VertexID, we were able to index into those arrays for our Vertex positions and colors. 
@@ -167,7 +171,7 @@ cbuffer UBO : register(b0, space3)
 };
 ```
 
-For our `main`, we'll need to adjust our parameters to take in the value we passed in from the Vertex Shader.
+For our `main`, we'll need to adjust our parameters to take in the new position value we passed in from the Vertex Shader. Then we can calculate if our fragment is drawing our oval, or the "background".
 
 ```hlsl
 float4 main(float2 aTextureCoordinates : TEXCOORD0, float2 aOvalPosition : TEXCOORD1) : SV_Target0
@@ -178,14 +182,12 @@ float4 main(float2 aTextureCoordinates : TEXCOORD0, float2 aOvalPosition : TEXCO
     { 0.0f, 0.0f, 0.0f },
   };
   
-  float distanceFromCenter = length(aTextureCoordinates - aOvalPosition);
+  float distanceFromFragment = length(aTextureCoordinates - aOvalPosition);
 
-  return distanceFromCenter < .1f ?
+  return distanceFromFragment < .1f ?
     float4(cColors[0], 1.0f) :
     float4(cColors[1], 1.0f);
 }
 ```
 
-Here we're doing something interesting, we're determining the length between the 
-
-
+Since we're just trying to draw an oval, we can simply calculate the distance between the fragment/pixel (represented by `aTextureCoordinates`) we're drawing to and the position of the oval. Once we do that, we need to see how big the oval is, we'll choose 0.1f as it'll be a nice portion of the screen given we're drawing in NDC. If our distance is less than that length, then we're within the oval and should select it's color, here that's `cColors[0]`, which we take in via our uniform buffer.
