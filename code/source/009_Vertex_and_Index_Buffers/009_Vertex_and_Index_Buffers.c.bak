@@ -530,7 +530,7 @@ SDL_GPUShader* CreateShader(
   SDL_PropertiesID aProperties)
 {
   char shader_path[4096];
-  SDL_snprintf(shader_path, SDL_arraysize(shader_path), "Assets/Shaders/%s.%s", aShaderFilename, gContext.mChosenBackendFormatExtension);
+  SDL_snprintf(shader_path, SDL_arraysize(shader_path), "Assets/Shaders/%s/%s.%s", TARGET_NAME, aShaderFilename, gContext.mChosenBackendFormatExtension);
 
   size_t fileSize = 0;
   void* fileData = SDL_LoadFile(shader_path, &fileSize);
@@ -752,8 +752,6 @@ typedef struct CubeUbo {
 
 typedef struct CubeContext {
   SDL_GPUGraphicsPipeline* mPipeline;
-  SDL_GPUTexture* mTexture;
-  SDL_GPUSampler* mSampler;
   SDL_GPUBuffer* mVertexBuffer;
   SDL_GPUBuffer* mIndexBuffer;
   CubeUbo mUbo[2];
@@ -767,9 +765,9 @@ CubeContext CreateCubeContext(SDL_GPUTextureFormat aDepthFormat) {
   SDL_GPUGraphicsPipelineCreateInfo graphicsPipelineCreateInfo;
   SDL_zero(graphicsPipelineCreateInfo);
 
-  graphicsPipelineCreateInfo.target_info.num_color_targets = 1;
-  graphicsPipelineCreateInfo.target_info.color_target_descriptions = &colorTargetDescription;
-  graphicsPipelineCreateInfo.target_info.depth_stencil_format = aDepthFormat;
+  graphicsPipelineCreateInfo.target_info.num_color_targets = 1;                                  /*setting num_color_targets */
+  graphicsPipelineCreateInfo.target_info.color_target_descriptions = &colorTargetDescription;    /*setting color_target_descriptions */
+  graphicsPipelineCreateInfo.target_info.depth_stencil_format = aDepthFormat;                    /*setting depth_stencil_format */
   graphicsPipelineCreateInfo.target_info.has_depth_stencil_target = true;
   graphicsPipelineCreateInfo.primitive_type = SDL_GPU_PRIMITIVETYPE_TRIANGLELIST;
   graphicsPipelineCreateInfo.rasterizer_state.front_face = SDL_GPU_FRONTFACE_CLOCKWISE;
@@ -790,7 +788,7 @@ CubeContext CreateCubeContext(SDL_GPUTextureFormat aDepthFormat) {
   attributes[1].location = 1;
   attributes[1].buffer_slot = 0;
   attributes[1].format = SDL_GPU_VERTEXELEMENTFORMAT_FLOAT3;
-  attributes[1].offset = 0;
+  attributes[1].offset = sizeof(float3);
 
   graphicsPipelineCreateInfo.vertex_input_state.vertex_attributes = attributes;
 
@@ -804,13 +802,13 @@ CubeContext CreateCubeContext(SDL_GPUTextureFormat aDepthFormat) {
 
 
   // Remember to come back to this later in the tutorial, don't show it off immediately.
-  graphicsPipelineCreateInfo.depth_stencil_state.compare_op = SDL_GPU_COMPAREOP_LESS_OR_EQUAL;
+  graphicsPipelineCreateInfo.depth_stencil_state.compare_op = SDL_GPU_COMPAREOP_GREATER_OR_EQUAL;
 
   graphicsPipelineCreateInfo.depth_stencil_state.enable_depth_test = true;
   graphicsPipelineCreateInfo.depth_stencil_state.enable_depth_write = true;
 
   graphicsPipelineCreateInfo.vertex_shader = CreateShader(
-    "Cube.vert",
+    "VertexAndIndexBuffer.vert",
     SDL_GPU_SHADERSTAGE_VERTEX,
     0,
     2,
@@ -821,9 +819,9 @@ CubeContext CreateCubeContext(SDL_GPUTextureFormat aDepthFormat) {
   SDL_assert(graphicsPipelineCreateInfo.vertex_shader);
 
   graphicsPipelineCreateInfo.fragment_shader = CreateShader(
-    "Cube.frag",
+    "VertexAndIndexBuffer.frag",
     SDL_GPU_SHADERSTAGE_FRAGMENT,
-    1,
+    0,
     0,
     0,
     0,
@@ -835,13 +833,6 @@ CubeContext CreateCubeContext(SDL_GPUTextureFormat aDepthFormat) {
 
   CubeContext context;
   context.mPipeline = SDL_CreateGPUGraphicsPipeline(gContext.mDevice, &graphicsPipelineCreateInfo);
-  context.mTexture = CreateAndUploadTexture(NULL, "sample");
-
-  SDL_GPUSamplerCreateInfo samplerCreateInfo;
-  SDL_zero(samplerCreateInfo);
-  samplerCreateInfo.address_mode_u = SDL_GPU_SAMPLERADDRESSMODE_REPEAT;
-  samplerCreateInfo.address_mode_v = SDL_GPU_SAMPLERADDRESSMODE_REPEAT;
-  context.mSampler = SDL_CreateGPUSampler(gContext.mDevice, &samplerCreateInfo);
   SDL_assert(context.mPipeline);
 
   {
@@ -886,7 +877,7 @@ CubeContext CreateCubeContext(SDL_GPUTextureFormat aDepthFormat) {
       5, 7, 3,
     };
 
-    context.mIndexBuffer = CreateAndUploadBuffer(&cVertexIndicies, sizeof(cVertexIndicies), SDL_GPU_BUFFERUSAGE_VERTEX);
+    context.mIndexBuffer = CreateAndUploadBuffer(&cVertexIndicies, sizeof(cVertexIndicies), SDL_GPU_BUFFERUSAGE_INDEX);
   }
 
   context.mUbo[0].mPosition.x = 0.f;
@@ -931,14 +922,6 @@ void DrawCubeContext(CubeContext* aPipeline, SDL_GPUCommandBuffer* aCommandBuffe
   SDL_PushGPUVertexUniformData(aCommandBuffer, 1, &gContext.WorldToNDC, sizeof(gContext.WorldToNDC));
 
   {
-    SDL_GPUTextureSamplerBinding textureBinding;
-    SDL_zero(textureBinding);
-    textureBinding.texture = aPipeline->mTexture;
-    textureBinding.sampler = aPipeline->mSampler;
-    SDL_BindGPUFragmentSamplers(aRenderPass, 0, &textureBinding, 1);
-  }
-
-  {
     SDL_GPUBufferBinding binding;
     binding.buffer = aPipeline->mVertexBuffer;
     binding.offset = 0;
@@ -953,18 +936,20 @@ void DrawCubeContext(CubeContext* aPipeline, SDL_GPUCommandBuffer* aCommandBuffe
   }
 
   // Draw the first cube
-  SDL_DrawGPUPrimitives(aRenderPass, 6 /* 6 per face */ * 6 /* 6 sides of our cube */, 1, 0, 0);
+  SDL_DrawGPUIndexedPrimitives(aRenderPass, 36, 1, 0, 0, 0);
 
   // Draw the second cube, make sure to recalculate the model matrix for it and reupload it.
   model = CreateModelMatrix(aPipeline->mUbo[1].mPosition, aPipeline->mUbo[1].mScale, aPipeline->mUbo[1].mRotation);
   SDL_PushGPUVertexUniformData(aCommandBuffer, 0, &model, sizeof(model));
-  SDL_DrawGPUPrimitives(aRenderPass, 6 /* 6 per face */ * 6 /* 6 sides of our cube */, 1, 0, 0);
+  SDL_DrawGPUIndexedPrimitives(aRenderPass, 36, 1, 0, 0, 0);
 }
 
-void DestroyCubeContext(CubeContext* aPipeline)
+void DestroyCubeContext(CubeContext* aContext)
 {
-  SDL_ReleaseGPUGraphicsPipeline(gContext.mDevice, aPipeline->mPipeline);
-  SDL_zero(*aPipeline);
+  SDL_ReleaseGPUBuffer(gContext.mDevice, aContext->mVertexBuffer);
+  SDL_ReleaseGPUBuffer(gContext.mDevice, aContext->mIndexBuffer);
+  SDL_ReleaseGPUGraphicsPipeline(gContext.mDevice, aContext->mPipeline);
+  SDL_zero(*aContext);
 }
 
 
@@ -977,7 +962,7 @@ int main(int argc, char** argv)
   (void)argv;
   SDL_assert(SDL_Init(SDL_INIT_VIDEO));
 
-  SDL_Window* window = SDL_CreateWindow("SDL GPU Example", 1280, 720, 0);
+  SDL_Window* window = SDL_CreateWindow(TARGET_NAME, 1280, 720, 0);
   SDL_assert(window);
 
   CreateGpuContext(window);
@@ -1032,8 +1017,8 @@ int main(int argc, char** argv)
     if (key_map[SDL_SCANCODE_DELETE])   cubeContext.mUbo[0].mRotation.x -= speed * dt * 1.0f;
     if (key_map[SDL_SCANCODE_HOME])     cubeContext.mUbo[0].mRotation.y += speed * dt * 1.0f;
     if (key_map[SDL_SCANCODE_END])      cubeContext.mUbo[0].mRotation.y -= speed * dt * 1.0f;
-    if (key_map[SDL_SCANCODE_PAGEUP])   cubeContext.mUbo[0].mRotation.y += speed * dt * 1.0f;
-    if (key_map[SDL_SCANCODE_PAGEDOWN]) cubeContext.mUbo[0].mRotation.y -= speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_PAGEUP])   cubeContext.mUbo[0].mRotation.z += speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_PAGEDOWN]) cubeContext.mUbo[0].mRotation.z -= speed * dt * 1.0f;
 
     SDL_GPUCommandBuffer* commandBuffer = SDL_AcquireGPUCommandBuffer(gContext.mDevice);
     if (!commandBuffer)
@@ -1053,7 +1038,9 @@ int main(int argc, char** argv)
 
     if (depthWidth != swapchainWidth || depthHeight != swapchainHeight)
     {
-      SDL_ReleaseGPUTexture(gContext.mDevice, depthTexture);
+      if (depthTexture) {
+        SDL_ReleaseGPUTexture(gContext.mDevice, depthTexture);
+      }
       depthTexture = CreateTexture(swapchainWidth, swapchainHeight, SDL_GPU_TEXTUREUSAGE_DEPTH_STENCIL_TARGET, depthFormat);
       SDL_assert(depthTexture);
 
@@ -1078,8 +1065,8 @@ int main(int argc, char** argv)
     SDL_zero(depthStencilTargetInfo);
 
     depthStencilTargetInfo.texture = depthTexture;
-    depthStencilTargetInfo.clear_depth = 1.f;
-    depthStencilTargetInfo.clear_stencil = 1.f;
+    depthStencilTargetInfo.clear_depth = 0.f;
+    depthStencilTargetInfo.clear_stencil = 0.f;
     depthStencilTargetInfo.load_op = SDL_GPU_LOADOP_CLEAR;
     depthStencilTargetInfo.store_op = SDL_GPU_STOREOP_DONT_CARE;
     depthStencilTargetInfo.stencil_load_op = SDL_GPU_LOADOP_CLEAR;
@@ -1098,6 +1085,8 @@ int main(int argc, char** argv)
     SDL_EndGPURenderPass(renderPass);
     SDL_SubmitGPUCommandBuffer(commandBuffer);
   }
+
+  SDL_ReleaseGPUTexture(gContext.mDevice, depthTexture);
 
   DestroyCubeContext(&cubeContext);
 

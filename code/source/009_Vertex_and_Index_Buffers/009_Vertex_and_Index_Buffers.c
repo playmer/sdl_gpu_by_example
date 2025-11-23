@@ -1038,7 +1038,10 @@ int main(int argc, char** argv)
 
     if (depthWidth != swapchainWidth || depthHeight != swapchainHeight)
     {
-      SDL_ReleaseGPUTexture(gContext.mDevice, depthTexture);
+      if (depthTexture) {
+        SDL_ReleaseGPUTexture(gContext.mDevice, depthTexture);
+      }
+      
       depthTexture = CreateTexture(swapchainWidth, swapchainHeight, SDL_GPU_TEXTUREUSAGE_DEPTH_STENCIL_TARGET, depthFormat);
       SDL_assert(depthTexture);
 

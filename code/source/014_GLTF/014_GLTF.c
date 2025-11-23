@@ -851,9 +851,7 @@ typedef struct Scene {
   SDL_GPUBuffer* mTangents;
   SDL_GPUBuffer* mIndices;
 
-  Mesh** mRootMeshes;
   Mesh* mMeshes;
-  Uint32* mChildren;
   size_t mRootMeshesCount;
   size_t mMeshesCount;
   //SDL_GPUBuffer* mTextureCoordinates; // float2
@@ -861,12 +859,13 @@ typedef struct Scene {
 
 void ApplyMeshTransformToChildren(Scene* aScene, Mesh* aMesh)
 {
+  Mesh* meshChildren = aScene->mMeshes + aMesh->mChildrenOffset;
   for (size_t i = 0; i < aMesh->mChildrenCount; ++i)
   {
-    Mesh* aChildMesh = aScene->mMeshes + aScene->mChildren[aMesh->mChildrenOffset + i];
-    aChildMesh->mCurrentTransform = Float4x4_Multiply(&aMesh->mCurrentTransform, &aChildMesh->mTransform);
-    //aChildMesh->mCurrentTransform = Float4x4_Multiply(&aChildMesh->mTransform, &aMesh->mCurrentTransform);
-    ApplyMeshTransformToChildren(aScene, aChildMesh);
+    Mesh* childMesh = meshChildren + i;
+    childMesh->mCurrentTransform = Float4x4_Multiply(&aMesh->mCurrentTransform, &childMesh->mTransform);
+    //childMesh->mCurrentTransform = Float4x4_Multiply(&childMesh->mTransform, &aMesh->mCurrentTransform);
+    ApplyMeshTransformToChildren(aScene, childMesh);
   }
 }
 
@@ -874,7 +873,7 @@ void RecalculateSceneTransform(Scene* aScene)
 {
   for (size_t i = 0; i < aScene->mRootMeshesCount; ++i)
   {
-    Mesh* mesh = aScene->mRootMeshes[i];
+    Mesh* mesh = aScene->mMeshes + i;
     mesh->mCurrentTransform = mesh->mTransform;
     ApplyMeshTransformToChildren(aScene, mesh);
   }
@@ -899,15 +898,11 @@ void GenerateGPUMesh(cgltf_node* aNode, Scene* aScene, SceneProcessing* aScenePr
 {
   aMesh->mChildrenOffset = aSceneProcessing->mCurrentChildrenIndex;
   aMesh->mChildrenCount = aNode->children_count;
-  Uint32* meshChildren = aScene->mChildren + aMesh->mChildrenOffset;
+  Mesh* meshChildren = aScene->mMeshes + aMesh->mChildrenOffset;
   aSceneProcessing->mCurrentChildrenIndex += aNode->children_count;
 
   for (size_t i = 0; i < aNode->children_count; ++i) {
-    meshChildren[i] = aSceneProcessing->mCurrentMeshIndex++;
-
-    SDL_assert(meshChildren[i] < aScene->mMeshesCount);
-    
-    GenerateGPUMesh(aNode->children[i], aScene, aSceneProcessing, &aScene->mMeshes[meshChildren[i]], aTransferPtr);
+    GenerateGPUMesh(aNode->children[i], aScene, aSceneProcessing, meshChildren + i, aTransferPtr);
   }
 
   aMesh->mTransform = IdentityMatrix();
@@ -997,18 +992,15 @@ Scene GenerateGPUScene(cgltf_data* aData, SceneInfo aSceneInfo)
   {
     Uint8* transferPtr = SDL_MapGPUTransferBuffer(gContext.mDevice, transferBuffer, false);
 
-    scene.mChildren = SDL_calloc(aSceneInfo.mTotalNodes, sizeof(Uint32));
-
     scene.mMeshesCount = aSceneInfo.mTotalNodes;
     scene.mMeshes = SDL_calloc(scene.mMeshesCount, sizeof(Mesh));
 
     scene.mRootMeshesCount = aSceneInfo.mRootNodes;
-    scene.mRootMeshes = SDL_calloc(scene.mRootMeshesCount, sizeof(Mesh*));
+
+    processing.mCurrentChildrenIndex += scene.mRootMeshesCount;
 
     for (size_t i = 0; i < aData->scene->nodes_count; ++i) {
-      Uint32 meshIndex = processing.mCurrentMeshIndex++;
-      scene.mRootMeshes[i] = scene.mMeshes + meshIndex;
-      GenerateGPUMesh(aData->scene->nodes[i], &scene, &processing, scene.mMeshes + meshIndex, transferPtr);
+      GenerateGPUMesh(aData->scene->nodes[i], &scene, &processing, scene.mMeshes + i, transferPtr);
     }
 
     SDL_UnmapGPUTransferBuffer(gContext.mDevice, transferBuffer);
@@ -1126,20 +1118,14 @@ ModelContext CreateModelContext(SDL_GPUTextureFormat aDepthFormat) {
   SDL_GPUGraphicsPipelineCreateInfo graphicsPipelineCreateInfo;
   SDL_zero(graphicsPipelineCreateInfo);
 
-  graphicsPipelineCreateInfo.target_info.num_color_targets = 1;
-  graphicsPipelineCreateInfo.target_info.color_target_descriptions = &colorTargetDescription;
-  graphicsPipelineCreateInfo.target_info.depth_stencil_format = aDepthFormat;
+  graphicsPipelineCreateInfo.target_info.num_color_targets = 1;                                  /*setting num_color_targets */
+  graphicsPipelineCreateInfo.target_info.color_target_descriptions = &colorTargetDescription;    /*setting color_target_descriptions */
+  graphicsPipelineCreateInfo.target_info.depth_stencil_format = aDepthFormat;                    /*setting depth_stencil_format */
   graphicsPipelineCreateInfo.target_info.has_depth_stencil_target = true;
   graphicsPipelineCreateInfo.primitive_type = SDL_GPU_PRIMITIVETYPE_TRIANGLELIST;
   graphicsPipelineCreateInfo.rasterizer_state.front_face = SDL_GPU_FRONTFACE_COUNTER_CLOCKWISE;
   //graphicsPipelineCreateInfo.rasterizer_state.cull_mode = SDL_GPU_CULLMODE_BACK;
   graphicsPipelineCreateInfo.rasterizer_state.cull_mode = SDL_GPU_CULLMODE_NONE;
-
-
-  graphicsPipelineCreateInfo.depth_stencil_state.compare_op = SDL_GPU_COMPAREOP_GREATER_OR_EQUAL;
-
-  graphicsPipelineCreateInfo.depth_stencil_state.enable_depth_test = true;
-  graphicsPipelineCreateInfo.depth_stencil_state.enable_depth_write = true;
 
 
   SDL_GPUVertexAttribute attributes[3];
@@ -1183,7 +1169,7 @@ ModelContext CreateModelContext(SDL_GPUTextureFormat aDepthFormat) {
   graphicsPipelineCreateInfo.vertex_input_state.num_vertex_buffers = SDL_arraysize(bufferDescription);
 
   // Remember to come back to this later in the tutorial, don't show it off immediately.
-  graphicsPipelineCreateInfo.depth_stencil_state.compare_op = SDL_GPU_COMPAREOP_LESS_OR_EQUAL;
+  graphicsPipelineCreateInfo.depth_stencil_state.compare_op = SDL_GPU_COMPAREOP_GREATER_OR_EQUAL;
 
   graphicsPipelineCreateInfo.depth_stencil_state.enable_depth_test = true;
   graphicsPipelineCreateInfo.depth_stencil_state.enable_depth_write = true;
@@ -1389,8 +1375,8 @@ int main(int argc, char** argv)
     if (key_map[SDL_SCANCODE_DELETE])   cubeContext.mUbo[0].mRotation.x -= speed * dt * 1.0f;
     if (key_map[SDL_SCANCODE_HOME])     cubeContext.mUbo[0].mRotation.y += speed * dt * 1.0f;
     if (key_map[SDL_SCANCODE_END])      cubeContext.mUbo[0].mRotation.y -= speed * dt * 1.0f;
-    if (key_map[SDL_SCANCODE_PAGEUP])   cubeContext.mUbo[0].mRotation.y += speed * dt * 1.0f;
-    if (key_map[SDL_SCANCODE_PAGEDOWN]) cubeContext.mUbo[0].mRotation.y -= speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_PAGEUP])   cubeContext.mUbo[0].mRotation.z += speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_PAGEDOWN]) cubeContext.mUbo[0].mRotation.z -= speed * dt * 1.0f;
 
     SDL_GPUCommandBuffer* commandBuffer = SDL_AcquireGPUCommandBuffer(gContext.mDevice);
     if (!commandBuffer)
@@ -1438,8 +1424,8 @@ int main(int argc, char** argv)
     SDL_zero(depthStencilTargetInfo);
 
     depthStencilTargetInfo.texture = depthTexture;
-    depthStencilTargetInfo.clear_depth = 1.f;
-    depthStencilTargetInfo.clear_stencil = 1.f;
+    depthStencilTargetInfo.clear_depth = 0.f;
+    depthStencilTargetInfo.clear_stencil = 0.f;
     depthStencilTargetInfo.load_op = SDL_GPU_LOADOP_CLEAR;
     depthStencilTargetInfo.store_op = SDL_GPU_STOREOP_DONT_CARE;
     depthStencilTargetInfo.stencil_load_op = SDL_GPU_LOADOP_CLEAR;
