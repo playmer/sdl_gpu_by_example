@@ -747,9 +747,6 @@ SDL_GPUBuffer* CreateAndUploadBuffer(const void* aData, size_t aSize, SDL_GPUBuf
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // CGLTF Code
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//typedef struct ModelInfo {
-//} ModelInfo;
-
 typedef struct SceneInfo {
   Uint32 mIndicesCount;
   Uint32 mPositionBytes;
@@ -757,88 +754,8 @@ typedef struct SceneInfo {
   Uint32 mTangentBytes;
   Uint32 mTotalNodes;
   Uint32 mRootNodes;
-
-  //ModelInfo* mInfos;
-  //size_t mModelCount;
 } SceneInfo;
 
-const char* cgltf_attribute_type_to_str(cgltf_attribute_type aType)
-{
-  switch (aType)
-  {
-    case cgltf_attribute_type_invalid: return "cgltf_attribute_type_invalid";
-    case cgltf_attribute_type_position: return "cgltf_attribute_type_position";
-    case cgltf_attribute_type_normal: return "cgltf_attribute_type_normal";
-    case cgltf_attribute_type_tangent: return "cgltf_attribute_type_tangent";
-    case cgltf_attribute_type_texcoord: return "cgltf_attribute_type_texcoord";
-    case cgltf_attribute_type_color: return "cgltf_attribute_type_color";
-    case cgltf_attribute_type_joints: return "cgltf_attribute_type_joints";
-    case cgltf_attribute_type_weights: return "cgltf_attribute_type_weights";
-    case cgltf_attribute_type_custom: return "cgltf_attribute_type_custom";
-    case cgltf_attribute_type_max_enum: return "cgltf_attribute_type_max_enum";
-  }
-
-  return "unknown_attribute_type";
-} cgltf_attribute_type;
-
-
-void PrintMaterial(const cgltf_material* aMaterial, const char* aTabs)
-{
-  if (!aMaterial) {
-    return;
-  }
-
-  SDL_Log("%sMaterial (%s):", aTabs, aMaterial->name);
-  SDL_Log("%s", aTabs);
-
-  SDL_Log("%s\thas_pbr_metallic_roughness: %s", aTabs, aMaterial->has_pbr_metallic_roughness ? "true" : "false");
-  SDL_Log("%s\thas_pbr_specular_glossiness: %s", aTabs, aMaterial->has_pbr_specular_glossiness ? "true" : "false");
-  SDL_Log("%s\thas_clearcoat: %s", aTabs, aMaterial->has_clearcoat ? "true" : "false");
-  SDL_Log("%s\thas_ior: %s", aTabs, aMaterial->has_ior ? "true" : "false");
-  SDL_Log("%s\thas_specular: %s", aTabs, aMaterial->has_specular ? "true" : "false");
-  SDL_Log("%s\thas_sheen: %s", aTabs, aMaterial->has_sheen ? "true" : "false");
-  SDL_Log("%s\thas_transmission: %s", aTabs, aMaterial->has_transmission ? "true" : "false");
-  SDL_Log("%s\thas_volume: %s", aTabs, aMaterial->has_volume ? "true" : "false");
-  SDL_Log("%s\thas_emissive_strength: %s", aTabs, aMaterial->has_emissive_strength ? "true" : "false");
-  SDL_Log("%s\thas_iridescence: %s", aTabs, aMaterial->has_iridescence ? "true" : "false");
-  SDL_Log("%s\thas_diffuse_transmission: %s", aTabs, aMaterial->has_diffuse_transmission ? "true" : "false");
-  SDL_Log("%s\thas_anisotropy: %s", aTabs, aMaterial->has_anisotropy ? "true" : "false");
-  SDL_Log("%s\thas_dispersion: %s", aTabs, aMaterial->has_dispersion ? "true" : "false");
-  /*
-  cgltf_pbr_metallic_roughness pbr_metallic_roughness;
-  cgltf_pbr_specular_glossiness pbr_specular_glossiness;
-  cgltf_clearcoat clearcoat;
-  cgltf_ior ior;
-  cgltf_specular specular;
-  cgltf_sheen sheen;
-  cgltf_transmission transmission;
-  cgltf_volume volume;
-  cgltf_emissive_strength emissive_strength;
-  cgltf_iridescence iridescence;
-  cgltf_diffuse_transmission diffuse_transmission;
-  cgltf_anisotropy anisotropy;
-  cgltf_dispersion dispersion;
-  cgltf_texture_view normal_texture;
-  cgltf_texture_view occlusion_texture;
-  cgltf_texture_view emissive_texture;
-
-  cgltf_alpha_mode alpha_mode;
-
-
-  cgltf_extras extras;
-
-
-
-  cgltf_size extensions_count;
-  cgltf_extension* extensions;
-  */
-  SDL_Log("%s\temissive_factor: [%f, %f, %f]", aTabs, aMaterial->emissive_factor[0], aMaterial->emissive_factor[1], aMaterial->emissive_factor[2]);
-
-  SDL_Log("%s\talpha_cutoff: %f", aTabs, aMaterial->alpha_cutoff);
-
-  SDL_Log("%s\tdouble_sided: %s", aTabs, aMaterial->double_sided ? "true" : "false");
-  SDL_Log("%s\tunlit: %s", aTabs, aMaterial->unlit ? "true" : "false");
-}
 
 void ProcessNodeInfo(cgltf_node* aNode, SceneInfo* aSceneInfo)
 {
@@ -903,12 +820,8 @@ SceneInfo GetSceneInfo(cgltf_data* aData)
 
   sceneInfo.mRootNodes = aData->scene->nodes_count;
 
-  //sceneInfo.mInfos = SDL_calloc(aData->scene->nodes_count, sizeof(ModelInfo));
-  //sceneInfo.mModelCount = aData->scene->nodes_count;
-
   for (size_t i = 0; i < aData->scene->nodes_count; ++i) {
     sceneInfo.mTotalNodes++;
-    //ProcessNodeInfo(aData->scene->nodes[i], sceneInfo.mInfos + i);
     ProcessNodeInfo(aData->scene->nodes[i], &sceneInfo);
   }
 
@@ -931,9 +844,6 @@ typedef struct Mesh {
   Uint32 mTangentOffset;
   Uint32 mIndexOffset;
 } Mesh;
-
-
-
 
 typedef struct Scene {
   SDL_GPUBuffer* mPositions;
@@ -969,11 +879,6 @@ void RecalculateSceneTransform(Scene* aScene)
     ApplyMeshTransformToChildren(aScene, mesh);
   }
 }
-
-//Model GenerateGPUModel(cgltf_data* aData, ModelInfo aModelInfo)
-//{
-//
-//}
 
 typedef struct SceneProcessing {
   Uint32 mPositionOffset;
@@ -1175,194 +1080,10 @@ Scene GenerateGPUScene(cgltf_data* aData, SceneInfo aSceneInfo)
 
 
 
-Scene GetModel(cgltf_data* aData)
-{
-  {
-    SceneInfo sceneInfo = GetSceneInfo(aData);
-    return GenerateGPUScene(aData, sceneInfo);
-  }
-
-  /*
-
-  Uint32 indicesCount = 0;
-  Uint32 positionBytes = 0;
-  Uint32 normalBytes = 0;
-  Uint32 tangentBytes = 0;
-
-  {
-    for (size_t i = 0; i < data->nodes_count; ++i) {
-      cgltf_node* node = &data->nodes[i];
-      cgltf_mesh* mesh = node->mesh;
-      if (mesh == NULL) {
-        continue;
-      }
-
-      for (size_t j = 0; j < mesh->primitives_count; ++j) {
-        cgltf_primitive* primitive = &mesh->primitives[j];
-
-        indicesCount += primitive->indices->count;
-
-        for (size_t k = 0; k < primitive->attributes_count; ++k) {
-          cgltf_attribute* attribute = &primitive->attributes[k];
-          switch (attribute->type) {
-          case cgltf_attribute_type_position: positionBytes += attribute->data->count * sizeof(float3); break;
-          case cgltf_attribute_type_normal:   normalBytes += attribute->data->count * sizeof(float3);   break;
-          case cgltf_attribute_type_tangent:  tangentBytes += attribute->data->count * sizeof(float4);  break;
-          }
-        }
-      }
-    }
-  }
-
-
-  SDL_GPUTransferBuffer* transferBuffer = NULL;
-  Model info;
-  SDL_zero(info);
-
-  Uint32 indexBytes = indicesCount * sizeof(Uint32);
-
-  info.mPositions = CreateGPUBuffer(positionBytes, SDL_GPU_BUFFERUSAGE_VERTEX, "Positions");
-  info.mNormals = CreateGPUBuffer(normalBytes, SDL_GPU_BUFFERUSAGE_VERTEX, "Normals");
-  info.mTangents = CreateGPUBuffer(tangentBytes, SDL_GPU_BUFFERUSAGE_VERTEX, "Tangents");
-  info.mIndices = CreateGPUBuffer(indexBytes, SDL_GPU_BUFFERUSAGE_INDEX, "Indices");
-  info.mIndicesCount = indicesCount;
-
-  Uint32 positionOffset = 0;
-  Uint32 normalOffset = positionBytes;
-  Uint32 tangentOffset = normalOffset + normalBytes;
-  Uint32 indiceOffset = tangentOffset + tangentBytes;
-
-  // Copy all the data into the transfer buffer;
-  {
-    Uint32 positionOffsetSoFar = positionOffset;
-    Uint32 normalOffsetSoFar = normalOffset;
-    Uint32 tangentOffsetSoFar = tangentOffset;
-    Uint32 indiceOffsetSoFar = indiceOffset;
-
-    SDL_GPUTransferBufferCreateInfo transferCreateInfo;
-    SDL_zero(transferCreateInfo);
-    SDL_SetStringProperty(gContext.mProperties, SDL_PROP_GPU_TEXTURE_CREATE_NAME_STRING, "ModelTransferBuffer");
-    transferCreateInfo.usage = SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD;
-    transferCreateInfo.size = positionBytes + normalBytes + tangentBytes + indexBytes;
-    transferCreateInfo.props = gContext.mProperties;
-
-    transferBuffer = SDL_CreateGPUTransferBuffer(gContext.mDevice, &transferCreateInfo);
-    Uint8* transferPtr = SDL_MapGPUTransferBuffer(gContext.mDevice, transferBuffer, false);
-
-
-    //cgltf_size cgltf_accessor_unpack_floats(const cgltf_accessor * accessor, cgltf_float * out, cgltf_size float_count);
-    //cgltf_size cgltf_accessor_unpack_indices(const cgltf_accessor * accessor, void* out, cgltf_size out_component_size, cgltf_size index_count);
-
-    for (size_t i = 0; i < data->nodes_count; ++i) {
-      cgltf_mesh* mesh = data->nodes[i].mesh;
-      if (mesh == NULL) {
-        continue;
-      }
-
-      for (size_t j = 0; j < mesh->primitives_count; ++j) {
-        cgltf_primitive* primitive = &mesh->primitives[j];
-
-        cgltf_accessor_unpack_indices(primitive->indices, (void*)(transferPtr + indiceOffsetSoFar), sizeof(Uint32), primitive->indices->count);
-        indiceOffsetSoFar += primitive->indices->count * sizeof(Uint32);
-        
-        for (size_t k = 0; k < primitive->attributes_count; ++k) {
-          cgltf_attribute* attribute = &primitive->attributes[k];
-          switch (attribute->type) {
-            case cgltf_attribute_type_position: {
-              positionOffsetSoFar += cgltf_accessor_unpack_floats(attribute->data, (cgltf_float*)(transferPtr + positionOffsetSoFar), attribute->data->count * 3) * sizeof(float);
-              break;
-            }
-            case cgltf_attribute_type_normal: {
-              normalOffsetSoFar += cgltf_accessor_unpack_floats(attribute->data, (cgltf_float*)(transferPtr + normalOffsetSoFar), attribute->data->count * 3) * sizeof(float);
-              break;
-            }
-            case cgltf_attribute_type_tangent: {
-              tangentOffsetSoFar += cgltf_accessor_unpack_floats(attribute->data, (cgltf_float*)(transferPtr + tangentOffsetSoFar), attribute->data->count * 4) * sizeof(float);
-              break;
-            }
-          }
-        }
-      }
-    }
-
-    SDL_UnmapGPUTransferBuffer(gContext.mDevice, transferBuffer);
-  }
-
-
-  // Upload to the appropriate buffers
-  {
-    SDL_GPUCommandBuffer* commandBuffer = SDL_AcquireGPUCommandBuffer(gContext.mDevice);
-    SDL_assert(commandBuffer);
-    SDL_GPUCopyPass* copyPass = SDL_BeginGPUCopyPass(commandBuffer);
-    SDL_assert(copyPass);
-
-
-    SDL_GPUTransferBufferLocation source;
-    source.offset = 0;
-    source.transfer_buffer = transferBuffer;
-
-    // Positions
-    {
-      source.offset = positionOffset;
-
-      SDL_GPUBufferRegion destination;
-      destination.buffer = info.mPositions;
-      destination.offset = 0;
-      destination.size = positionBytes;
-
-      SDL_UploadToGPUBuffer(copyPass, &source, &destination, false);
-    }
-
-    // Normals
-    {
-      source.offset = normalOffset;
-
-      SDL_GPUBufferRegion destination;
-      destination.buffer = info.mNormals;
-      destination.offset = 0;
-      destination.size = normalBytes;
-
-      SDL_UploadToGPUBuffer(copyPass, &source, &destination, false);
-    }
-
-    // Tangents
-    {
-      source.offset = tangentOffset;
-
-      SDL_GPUBufferRegion destination;
-      destination.buffer = info.mTangents;
-      destination.offset = 0;
-      destination.size = tangentBytes;
-
-      SDL_UploadToGPUBuffer(copyPass, &source, &destination, false);
-    }
-
-    // Indices
-    {
-      source.offset = indiceOffset;
-
-      SDL_GPUBufferRegion destination;
-      destination.buffer = info.mIndices;
-      destination.offset = 0;
-      destination.size = indexBytes;
-
-      SDL_UploadToGPUBuffer(copyPass, &source, &destination, false);
-    }
-
-    SDL_EndGPUCopyPass(copyPass);
-    SDL_SubmitGPUCommandBuffer(commandBuffer);
-
-    SDL_ReleaseGPUTransferBuffer(gContext.mDevice, transferBuffer);
-  }
-
-  return info;
-  */
-}
 
 Scene LoadGltfModel(const char* aModelName) {
   char model_path[4096];
   SDL_snprintf(model_path, SDL_arraysize(model_path), "Assets/Models/%s", aModelName);
-
 
   cgltf_options options;
   SDL_zero(options);
@@ -1376,70 +1097,8 @@ Scene LoadGltfModel(const char* aModelName) {
 
   SDL_Log("Model: %s", model_path);
 
-  Scene info = GetModel(data);
-
-
-  SDL_Log("\tMeshes:");
-
-  //size_t elementsNeeded[4] = 0;
-
-  for (size_t i = 0; i < data->nodes_count; ++i) {
-    SDL_Log("\t\t%s", data->nodes[i].name);
-
-    cgltf_mesh* mesh = data->nodes[i].mesh;
-    if (mesh == NULL) {
-      continue;
-    }
-
-    SDL_Log("\t\t\tPrimitives:");   
-
-    for (size_t j = 0; j < mesh->primitives_count; ++j) {
-      cgltf_primitive* primitive = &mesh->primitives[j];
-
-      PrintMaterial(primitive->material, "\t\t\t\t");
-
-      SDL_Log("\t\t\t\tAttributes:");
-
-      for (size_t k = 0; k < primitive->attributes_count; ++k) {
-        cgltf_attribute* attribute = &primitive->attributes[k];
-        SDL_Log("\t\t\t\t\t%s: i:{%d} n: %s", cgltf_attribute_type_to_str(attribute->type), attribute->index, attribute->name);
-      }
-    }
-
-    //SDL_Log("\tTextures:");
-    //for (size_t i = 0; i < mesh->text; ++i) {
-    //  SDL_Log("\t\t%s", data->meshes[i].name);
-    //}
-  }
-
-
-  //SDL_Log("\tMeshes:");
-  //
-  //for (size_t i = 0; i < data->meshes_count; ++i) {
-  //  SDL_Log("\t\t%s", data->meshes[i].name);
-  //}
-  //
-  //SDL_Log("\tBufferViews:");
-  //
-  //for (size_t i = 0; i < data->buffer_views_count; ++i) {
-  //  SDL_Log("\t\t%d", data->buffer_views[i].type);
-  //}
-  //
-  SDL_Log("\tMaterials:");
-  
-  for (size_t i = 0; i < data->materials_count; ++i) {
-    SDL_Log("\t\t%s", data->materials[i].name);
-
-    cgltf_material* material = &data->materials[i];
-    //material->normal_texture
-
-    SDL_Log("\t\t\tTextures:");
-    //for (size_t j = 0; j < material->; ++j) {
-    //  SDL_Log("\t\t\t\t%s", data->meshes[j].name);
-    //}
-  }
-
-  return info;
+  SceneInfo sceneInfo = GetSceneInfo(data);
+  return GenerateGPUScene(data, sceneInfo);
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1624,9 +1283,9 @@ void DrawModelContext(ModelContext* aContext, SDL_GPUCommandBuffer* aCommandBuff
       binding[2].buffer = aContext->mModel.mTangents;
       binding[2].offset = mesh->mTangentOffset;
       SDL_BindGPUVertexBuffers(aRenderPass, 0, binding, SDL_arraysize(binding));
-
+    
     }
-
+    
     {
       SDL_GPUBufferBinding binding;
       binding.buffer = aContext->mModel.mIndices;
@@ -1648,13 +1307,6 @@ void DrawModelContext(ModelContext* aContext, SDL_GPUCommandBuffer* aCommandBuff
 
     SDL_DrawGPUIndexedPrimitives(aRenderPass, mesh->mIndicesCount, 1, 0, 0, 0);
   }
-
-  // Draw the first cube
-
-  // Draw the second cube, make sure to recalculate the model matrix for it and reupload it.
-  //model = CreateModelMatrix(aContext->mUbo[1].mPosition, aContext->mUbo[1].mScale, aContext->mUbo[1].mRotation);
-  //SDL_PushGPUVertexUniformData(aCommandBuffer, 0, &model, sizeof(model));
-  //SDL_DrawGPUPrimitives(aRenderPass, aContext->mModel.mVertices, 1, 0, 0);
 }
 
 void DestroyModelContext(ModelContext* aContext)
