@@ -388,9 +388,49 @@ float4x4 RotationMatrix(float4 aPosition) {
   return Float4x4_Multiply(&zRotation, &xyRotation);
 }
 
+float4x4 RotationMatrixFromQuaternion(float4 aQuaternion) {
+  float x2 = aQuaternion.x * aQuaternion.x;
+  float y2 = aQuaternion.y * aQuaternion.y;
+  float z2 = aQuaternion.z * aQuaternion.z;
+
+  float xy = aQuaternion.x * aQuaternion.y;
+  float xz = aQuaternion.x * aQuaternion.z;
+  float yz = aQuaternion.y * aQuaternion.z;
+
+  float wx = aQuaternion.w * aQuaternion.x;
+  float wy = aQuaternion.w * aQuaternion.y;
+  float wz = aQuaternion.w * aQuaternion.z;
+
+  float4x4 toReturn = IdentityMatrix();
+
+  toReturn.data[0][0] = 1.0f - 2.0f * (y2 - z2);
+  toReturn.data[0][1] =        2.0f * (xy + wz);
+  toReturn.data[0][2] =        2.0f * (xz - wy);
+
+  toReturn.data[1][0] =        2.0f * (xy - wz);
+  toReturn.data[1][1] = 1.0f - 2.0f * (x2 - z2);
+  toReturn.data[1][2] =        2.0f * (yz + wx);
+
+  toReturn.data[2][0] =        2.0f * (xz + wy);
+  toReturn.data[2][1] =        2.0f * (yz - wx);
+  toReturn.data[2][2] = 1.0f - 2.0f * (x2 - y2);
+
+  return toReturn;
+}
+
 float4x4 CreateModelMatrix(float4 aPosition, float4 aScale, float4 aRotation) {
   float4x4 translation = TranslationMatrix(aPosition);
   float4x4 rotation = RotationMatrix(aRotation);
+  float4x4 scale = ScaleMatrix(aScale);
+
+  float4x4 scale_rotation = Float4x4_Multiply(&rotation, &scale);
+
+  return Float4x4_Multiply(&translation, &scale_rotation);
+}
+
+float4x4 CreateModelMatrixWithQuaternion(float4 aPosition, float4 aScale, float4 aRotation) {
+  float4x4 translation = TranslationMatrix(aPosition);
+  float4x4 rotation = RotationMatrixFromQuaternion(aRotation);
   float4x4 scale = ScaleMatrix(aScale);
 
   float4x4 scale_rotation = Float4x4_Multiply(&rotation, &scale);
@@ -863,7 +903,12 @@ void ApplyMeshTransformToChildren(Scene* aScene, Mesh* aMesh)
   for (size_t i = 0; i < aMesh->mChildrenCount; ++i)
   {
     Mesh* childMesh = meshChildren + i;
+
+    float4x4 temp = childMesh->mCurrentTransform;
     childMesh->mCurrentTransform = Float4x4_Multiply(&aMesh->mCurrentTransform, &childMesh->mTransform);
+    //childMesh->mCurrentTransform.columns[3].x += aMesh->mCurrentTransform.columns[3].x;
+    //childMesh->mCurrentTransform.columns[3].y += aMesh->mCurrentTransform.columns[3].y;
+    //childMesh->mCurrentTransform.columns[3].z += aMesh->mCurrentTransform.columns[3].z;
     //childMesh->mCurrentTransform = Float4x4_Multiply(&childMesh->mTransform, &aMesh->mCurrentTransform);
     ApplyMeshTransformToChildren(aScene, childMesh);
   }
@@ -874,6 +919,7 @@ void RecalculateSceneTransform(Scene* aScene)
   for (size_t i = 0; i < aScene->mRootMeshesCount; ++i)
   {
     Mesh* mesh = aScene->mMeshes + i;
+    float4x4 temp = mesh->mCurrentTransform;
     mesh->mCurrentTransform = mesh->mTransform;
     ApplyMeshTransformToChildren(aScene, mesh);
   }
@@ -905,11 +951,27 @@ void GenerateGPUMesh(cgltf_node* aNode, Scene* aScene, SceneProcessing* aScenePr
     GenerateGPUMesh(aNode->children[i], aScene, aSceneProcessing, meshChildren + i, aTransferPtr);
   }
 
-  aMesh->mTransform = IdentityMatrix();
+  cgltf_node_transform_local(aNode, (float*)&aMesh->mTransform.data[0]);
+  cgltf_node_transform_world(aNode, (float*)&aMesh->mCurrentTransform.data[0]);
 
-  if (aNode->has_matrix) {
-    SDL_memcpy(aMesh->mTransform.data, aNode->matrix, sizeof(aNode->matrix));
-  }
+  //if (aNode->has_translation || aNode->has_scale || aNode->has_rotation) {
+  //  float4 position;
+  //  float4 scale;
+  //  float4 rotation;
+  //  SDL_memcpy(&position, &aNode->translation, sizeof(aNode->translation));
+  //  SDL_memcpy(&scale, &aNode->scale, sizeof(aNode->scale));
+  //  SDL_memcpy(&rotation, &aNode->rotation, sizeof(aNode->rotation));
+  //
+  //  float4x4 test;
+  //  SDL_zero(test);
+  //  cgltf_node_transform_local(aNode, (float*) &test.data[0]);
+  //  aMesh->mTransform = CreateModelMatrixWithQuaternion(position, scale, rotation);
+  //  SDL_Log("woo");
+  //}
+  //else {
+  //  // Even if there's no provided matrix, cgltf will hand us an identity matrix, so copy it if there's no provided TRS attributes.
+  //  SDL_memcpy(aMesh->mTransform.data, aNode->matrix, sizeof(aNode->matrix));
+  //}
 
   aMesh->mPositionOffset = aSceneProcessing->mPositionOffsetSoFar - aSceneProcessing->mPositionOffset;
   aMesh->mNormalOffset = aSceneProcessing->mNormalOffsetSoFar - aSceneProcessing->mNormalOffset;
@@ -1217,9 +1279,9 @@ ModelContext CreateModelContext(SDL_GPUTextureFormat aDepthFormat) {
   context.mUbo[0].mPosition.y = -1.f;
   context.mUbo[0].mPosition.z = 5.f;
   context.mUbo[0].mPosition.w = 1.f;
-  context.mUbo[0].mScale.x = 0.01f;
-  context.mUbo[0].mScale.y = 0.01f;
-  context.mUbo[0].mScale.z = 0.01f;
+  context.mUbo[0].mScale.x = 1.0f;
+  context.mUbo[0].mScale.y = 1.0f;
+  context.mUbo[0].mScale.z = 1.0f;
   context.mUbo[0].mScale.w = 1.0f;
   context.mUbo[0].mRotation.x = 0.f;
   context.mUbo[0].mRotation.y = 0.f;
@@ -1287,7 +1349,9 @@ void DrawModelContext(ModelContext* aContext, SDL_GPUCommandBuffer* aCommandBuff
       SDL_BindGPUFragmentSamplers(aRenderPass, 0, &textureBinding, 1);
     }
 
-    float4x4 meshMatrix = Float4x4_Multiply(&model, &mesh->mTransform);
+    //float4x4 meshMatrix = Float4x4_Multiply(&mesh->mCurrentTransform, &model);
+    float4x4 meshMatrix = Float4x4_Multiply(&model, &mesh->mCurrentTransform);
+    //float4x4 meshMatrix = model;
 
     SDL_PushGPUVertexUniformData(aCommandBuffer, 0, &meshMatrix, sizeof(meshMatrix));
 
