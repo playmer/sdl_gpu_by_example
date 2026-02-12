@@ -792,6 +792,7 @@ typedef struct SceneInfo {
   Uint32 mPositionBytes;
   Uint32 mNormalBytes;
   Uint32 mTangentBytes;
+  Uint32 mTexcoordBytes[16];
   Uint32 mTotalNodes;
   Uint32 mRootNodes;
 } SceneInfo;
@@ -820,6 +821,9 @@ void ProcessNodeInfo(cgltf_node* aNode, SceneInfo* aSceneInfo)
 
     for (size_t k = 0; k < primitive->attributes_count; ++k) {
       cgltf_attribute* attribute = &primitive->attributes[k];
+
+      //primitive->material->
+
       switch (attribute->type) {
         case cgltf_attribute_type_position: {
           SDL_assert(attribute->data->type == cgltf_type_vec3);
@@ -837,6 +841,14 @@ void ProcessNodeInfo(cgltf_node* aNode, SceneInfo* aSceneInfo)
           SDL_assert(attribute->data->type == cgltf_type_vec4);
           SDL_assert(attribute->data->component_type == cgltf_component_type_r_32f);
           aSceneInfo->mTangentBytes += attribute->data->count * sizeof(float4);
+          break;
+        }
+        case cgltf_attribute_type_texcoord: {
+          SDL_assert(attribute->data->type == cgltf_type_vec2);
+          SDL_assert(attribute->data->component_type == cgltf_component_type_r_32f);
+
+          int texcoordIndex = SDL_atoi(attribute->name + 9);
+          aSceneInfo->mTexcoordBytes[texcoordIndex] += attribute->data->count * sizeof(float2);
           break;
         }
       }
@@ -883,12 +895,23 @@ typedef struct Mesh {
   Uint32 mNormalOffset;
   Uint32 mTangentOffset;
   Uint32 mIndexOffset;
+
+  Uint8 mBaseColorTextureCoordinates;
+  Uint8 mMetallicRoughnessTextureCoordinates;
+
+  Uint8 mDiffuseTextureCoordinates;
+  Uint8 mSpecularGlossinessTextureCoordinates;
+
+  Uint8 mNormalTextureCoordinates;
+  Uint8 mOcclusionTextureCoordinates;
+  Uint8 mEmissveTextureCoordinates;
 } Mesh;
 
 typedef struct Scene {
   SDL_GPUBuffer* mPositions;
   SDL_GPUBuffer* mNormals;
   SDL_GPUBuffer* mTangents;
+  SDL_GPUBuffer* mTexcoords[16];
   SDL_GPUBuffer* mIndices;
 
   Mesh* mMeshes;
@@ -938,6 +961,51 @@ typedef struct SceneProcessing {
   Uint32 mCurrentChildrenIndex;
 } SceneProcessing;
 
+SDL_GPUFilter GltfFilterToSDL(cgltf_filter_type aFilter)
+{
+  switch (aFilter) {
+    case cgltf_filter_type_nearest: return SDL_GPU_FILTER_NEAREST;
+    case cgltf_filter_type_linear: return SDL_GPU_FILTER_LINEAR;
+    case cgltf_filter_type_nearest_mipmap_nearest: return SDL_GPU_FILTER_NEAREST;
+    case cgltf_filter_type_linear_mipmap_nearest: return SDL_GPU_FILTER_LINEAR;
+    case cgltf_filter_type_nearest_mipmap_linear: return SDL_GPU_FILTER_NEAREST;
+    case cgltf_filter_type_linear_mipmap_linear: return SDL_GPU_FILTER_LINEAR;
+
+    default:
+    case cgltf_filter_type_undefined: {
+      SDL_Log("Using unknown filter, defaulting to SDL_GPU_FILTER_NEAREST");
+      return SDL_GPU_FILTER_NEAREST;
+    }
+  }
+}
+
+SDL_GPUSamplerAddressMode GltfAddressModeToSDL(cgltf_wrap_mode aWrap)
+{
+  switch (aWrap) {
+    case cgltf_wrap_mode_clamp_to_edge: return SDL_GPU_SAMPLERADDRESSMODE_CLAMP_TO_EDGE;
+    case cgltf_wrap_mode_mirrored_repeat: return SDL_GPU_SAMPLERADDRESSMODE_MIRRORED_REPEAT;
+    case cgltf_wrap_mode_repeat: return SDL_GPU_SAMPLERADDRESSMODE_REPEAT;
+
+    default: {
+      SDL_Log("Using unknown address mode, defaulting to SDL_GPU_SAMPLERADDRESSMODE_REPEAT");
+      return SDL_GPU_SAMPLERADDRESSMODE_REPEAT;
+    }
+  }
+}
+
+SDL_GPUSampler* CreateSamplerFromGltf(cgltf_sampler* aSampler)
+{
+  SDL_GPUSamplerCreateInfo samplerCreateInfo;
+  SDL_zero(samplerCreateInfo);
+
+  samplerCreateInfo.mag_filter = GltfFilterToSDL(aSampler->mag_filter);
+  samplerCreateInfo.min_filter = GltfFilterToSDL(aSampler->min_filter);
+  samplerCreateInfo.address_mode_u = GltfAddressModeToSDL(aSampler->wrap_s);
+  samplerCreateInfo.address_mode_v = GltfAddressModeToSDL(aSampler->wrap_t);
+
+  return SDL_CreateGPUSampler(gContext.mDevice, &samplerCreateInfo);
+}
+
 size_t transferBufferSize = 0;
 
 void GenerateGPUMesh(cgltf_node* aNode, Scene* aScene, SceneProcessing* aSceneProcessing, Mesh* aMesh, Uint8* aTransferPtr)
@@ -953,25 +1021,6 @@ void GenerateGPUMesh(cgltf_node* aNode, Scene* aScene, SceneProcessing* aScenePr
 
   cgltf_node_transform_local(aNode, (float*)&aMesh->mTransform.data[0]);
   cgltf_node_transform_world(aNode, (float*)&aMesh->mCurrentTransform.data[0]);
-
-  //if (aNode->has_translation || aNode->has_scale || aNode->has_rotation) {
-  //  float4 position;
-  //  float4 scale;
-  //  float4 rotation;
-  //  SDL_memcpy(&position, &aNode->translation, sizeof(aNode->translation));
-  //  SDL_memcpy(&scale, &aNode->scale, sizeof(aNode->scale));
-  //  SDL_memcpy(&rotation, &aNode->rotation, sizeof(aNode->rotation));
-  //
-  //  float4x4 test;
-  //  SDL_zero(test);
-  //  cgltf_node_transform_local(aNode, (float*) &test.data[0]);
-  //  aMesh->mTransform = CreateModelMatrixWithQuaternion(position, scale, rotation);
-  //  SDL_Log("woo");
-  //}
-  //else {
-  //  // Even if there's no provided matrix, cgltf will hand us an identity matrix, so copy it if there's no provided TRS attributes.
-  //  SDL_memcpy(aMesh->mTransform.data, aNode->matrix, sizeof(aNode->matrix));
-  //}
 
   aMesh->mPositionOffset = aSceneProcessing->mPositionOffsetSoFar - aSceneProcessing->mPositionOffset;
   aMesh->mNormalOffset = aSceneProcessing->mNormalOffsetSoFar - aSceneProcessing->mNormalOffset;
@@ -1025,6 +1074,15 @@ Scene GenerateGPUScene(cgltf_data* aData, SceneInfo aSceneInfo)
   scene.mPositions = CreateGPUBuffer(aSceneInfo.mPositionBytes, SDL_GPU_BUFFERUSAGE_VERTEX, "Positions");
   scene.mNormals = CreateGPUBuffer(aSceneInfo.mNormalBytes, SDL_GPU_BUFFERUSAGE_VERTEX, "Normals");
   scene.mTangents = CreateGPUBuffer(aSceneInfo.mTangentBytes, SDL_GPU_BUFFERUSAGE_VERTEX, "Tangents");
+
+  for (size_t i = 0; i < 16; ++i) {
+    if (aSceneInfo.mTexcoordBytes[i] == 0) {
+      continue;
+    }
+
+    scene.mTexcoords[i] = CreateGPUBuffer(aSceneInfo.mTexcoordBytes[i], SDL_GPU_BUFFERUSAGE_VERTEX, "Tangents");
+  }
+
   scene.mIndices = CreateGPUBuffer(indexBytes, SDL_GPU_BUFFERUSAGE_INDEX, "Indices");
 
   SDL_GPUTransferBuffer* transferBuffer = NULL;
