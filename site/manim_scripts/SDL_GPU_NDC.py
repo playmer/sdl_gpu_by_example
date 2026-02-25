@@ -1,0 +1,54 @@
+from manim import *
+
+class SDL_GPU_NDC(Scene):
+    def construct(self):
+        # the location of the ticks depends on the x_range and y_range.
+        grid = Axes(
+            x_range=[-1, 1, 0.05],  # step size determines num_decimal_places.
+            y_range=[-1, 1, 0.05],
+            x_length=5.5,
+            y_length=5.5,
+            #axis_config={
+            #    "numbers_to_include": np.arange(0, 1 + 0.1, 0.1),
+            #    "font_size": 24,
+            #},
+            tips=False,
+        )
+
+        # Labels for the x-axis and y-axis.
+        y_label = grid.get_y_axis_label("y")
+        x_label = grid.get_x_axis_label("x")
+        grid_labels = VGroup(x_label, y_label)
+
+        graphs = VGroup()
+      
+        # Extra lines and labels for point (1,1)
+        graphs += grid.get_horizontal_line(grid @ (1, 1, 0), color=BLUE)
+        graphs += grid.get_vertical_line(grid @ (1, 1, 0), color=BLUE)
+        graphs += Dot(point=grid @ (1, 1, 0), color=YELLOW)
+        graphs += Tex("(1, 1)").scale(0.75).next_to(grid @ (1, 1, 0))
+
+        graphs += grid.get_horizontal_line(grid @ (-1, -1, 0), color=BLUE)
+        graphs += grid.get_vertical_line(grid @ (-1, -1, 0), color=BLUE)
+        graphs += Dot(point=grid @ (-1, -1, 0), color=YELLOW)
+        graphs += Tex("(-1, -1)").scale(0.75).next_to(grid @ (-1, -1, 0), direction=LEFT)
+        
+        graphs += grid.get_horizontal_line(grid @ (-1, 1, 0), color=BLUE)
+        graphs += grid.get_vertical_line(grid @ (-1, 1, 0), color=BLUE)
+        graphs += Dot(point=grid @ (-1, 1, 0), color=YELLOW)
+        graphs += Tex("(-1, 1)").scale(0.75).next_to(grid @ (-1, 1, 0), direction=LEFT)
+        
+        graphs += grid.get_horizontal_line(grid @ (1, -1, 0), color=BLUE)
+        graphs += grid.get_vertical_line(grid @ (1, -1, 0), color=BLUE)
+        graphs += Dot(point=grid @ (1, -1, 0), color=YELLOW)
+        graphs += Tex("(1, -1)").scale(0.75).next_to(grid @ (1, -1, 0))
+
+      
+        title = Title(
+            # spaces between braces to prevent SyntaxError
+            r"SDL GPU Normalized Device Coordinates (NDC)",
+            include_underline=False,
+            font_size=40,
+        )
+
+        self.add(title, graphs, grid, grid_labels)

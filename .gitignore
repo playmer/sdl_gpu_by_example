@@ -5,3 +5,5 @@ Cargo.toml
 examples/
 examples.zip
 .vs/
+media/
+__pycache__
