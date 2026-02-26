@@ -734,7 +734,7 @@ SDL_GPUTextureFormat GetSupportedDepthFormat()
 }
 
 
-SDL_GPUBuffer* CreateAndUploadBuffer(const void* aData, size_t aSize, SDL_GPUBufferUsageFlags aUsage)
+SDL_GPUBuffer* CreateAndUploadBuffer(const void* aData, Uint32 aSize, SDL_GPUBufferUsageFlags aUsage)
 {
   SDL_GPUBufferCreateInfo bufferCreateInfo;
   SDL_zero(bufferCreateInfo);
@@ -851,6 +851,7 @@ void ProcessNodeInfo(cgltf_node* aNode, SceneInfo* aSceneInfo)
           aSceneInfo->mTexcoordBytes[texcoordIndex] += attribute->data->count * sizeof(float2);
           break;
         }
+        default: break;
       }
     }
   }
@@ -870,7 +871,7 @@ SceneInfo GetSceneInfo(cgltf_data* aData)
     return sceneInfo;
   }
 
-  sceneInfo.mRootNodes = aData->scene->nodes_count;
+  sceneInfo.mRootNodes = (Uint32)aData->scene->nodes_count;
 
   for (size_t i = 0; i < aData->scene->nodes_count; ++i) {
     sceneInfo.mTotalNodes++;
@@ -1011,9 +1012,9 @@ size_t transferBufferSize = 0;
 void GenerateGPUMesh(cgltf_node* aNode, Scene* aScene, SceneProcessing* aSceneProcessing, Mesh* aMesh, Uint8* aTransferPtr)
 {
   aMesh->mChildrenOffset = aSceneProcessing->mCurrentChildrenIndex;
-  aMesh->mChildrenCount = aNode->children_count;
+  aMesh->mChildrenCount = (Uint32)aNode->children_count;
   Mesh* meshChildren = aScene->mMeshes + aMesh->mChildrenOffset;
-  aSceneProcessing->mCurrentChildrenIndex += aNode->children_count;
+  aSceneProcessing->mCurrentChildrenIndex += (Uint32)aNode->children_count;
 
   for (size_t i = 0; i < aNode->children_count; ++i) {
     GenerateGPUMesh(aNode->children[i], aScene, aSceneProcessing, meshChildren + i, aTransferPtr);
@@ -1035,9 +1036,9 @@ void GenerateGPUMesh(cgltf_node* aNode, Scene* aScene, SceneProcessing* aScenePr
   for (size_t j = 0; j < mesh_file->primitives_count; ++j) {
     cgltf_primitive* primitive = &mesh_file->primitives[j];
 
-    aMesh->mIndicesCount = primitive->indices->count;
+    aMesh->mIndicesCount = (Uint32)primitive->indices->count;
     cgltf_accessor_unpack_indices(primitive->indices, (void*)(aTransferPtr + aSceneProcessing->mIndexOffsetSoFar), sizeof(Uint32), primitive->indices->count);
-    aSceneProcessing->mIndexOffsetSoFar += primitive->indices->count * sizeof(Uint32);
+    aSceneProcessing->mIndexOffsetSoFar += (Uint32)primitive->indices->count * sizeof(Uint32);
 
     SDL_assert(aSceneProcessing->mIndexOffsetSoFar <= transferBufferSize);
 
@@ -1048,6 +1049,7 @@ void GenerateGPUMesh(cgltf_node* aNode, Scene* aScene, SceneProcessing* aScenePr
         case cgltf_attribute_type_position: attributeCount = &aSceneProcessing->mPositionOffsetSoFar; break;
         case cgltf_attribute_type_normal: attributeCount = &aSceneProcessing->mNormalOffsetSoFar; break;
         case cgltf_attribute_type_tangent: attributeCount = &aSceneProcessing->mTangentOffsetSoFar; break;
+        default: continue;
       }
 
       if (!attributeCount) {
