@@ -9,5 +9,29 @@
         "vector": "cpp",
         "xstring": "cpp",
         "xutility": "cpp"
-    }
+    },
+    "cSpell.words": [
+        "arraysize",
+        "artifacting",
+        "cbuffer",
+        "dxil",
+        "Hemsley",
+        "hlsl",
+        "imgui",
+        "LOADOP",
+        "PRIMITIVETYPE",
+        "RGBA",
+        "shadercross",
+        "SHADERFORMAT",
+        "SHADERSTAGE",
+        "shadertoy",
+        "SPIR",
+        "SPIRV",
+        "STOREOP",
+        "Swapchain",
+        "Swapchains",
+        "TRIANGLELIST",
+        "tweakable",
+        "VSYNC"
+    ]
 }

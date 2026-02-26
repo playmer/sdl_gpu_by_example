@@ -1,7 +1,14 @@
 import os
+import platform
 import subprocess
 import sys
 
+os_type = platform.system()
+
+if os_type == "Windows":
+    differ = 'C:/Program Files/WinMerge/WinMergeU.exe'
+else:
+    differ = 'meld'
 
 examples = [ f.path for f in os.scandir('source') if f.is_dir() ]
 
@@ -22,6 +29,4 @@ previous = chosen - 1
 prev = example_dict[int(sys.argv[1]) - 1]
 curr = example_dict[int(sys.argv[1])]
 
-winmerge = "C:/Program Files/WinMerge/WinMergeU.exe"
-
-subprocess.Popen([winmerge, prev, curr], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+subprocess.Popen([differ, prev, curr], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)

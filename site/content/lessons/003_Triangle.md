@@ -41,7 +41,7 @@ Pipelines are how we configure everything else not encapsulated in a RenderPass.
 
 We should first mention the Input Assembler which is something that's technically always happening, but we won't interact with much for some time. Essentially it takes data we describe in the Pipeline, and sets it up to be used in the subsequent stages.
 
-All that said, SDL GPU doesn't give us access to every programmable stage you see above, many aren't relevant or performant today and some are too new to have been added for compatability reasons. What it does give us access to are the classics, Vertex Shaders and Fragment Shaders. It also has Compute Shaders to boot, but they're not part of the Render Pipeline, though we'll find they're still very useful for rendering later on. With regards to our concerns here, we'll write Vertex Shaders to output individual vertices, and Fragment Shaders to output colors.
+All that said, SDL GPU doesn't give us access to every programmable stage you see above, many aren't relevant or performant today and some are too new to have been added for compatibility reasons. What it does give us access to are the classics, Vertex Shaders and Fragment Shaders. It also has Compute Shaders to boot, but they're not part of the Render Pipeline, though we'll find they're still very useful for rendering later on. With regards to our concerns here, we'll write Vertex Shaders to output individual vertices, and Fragment Shaders to output colors.
 
 > Note: If you've heard of Mesh Shaders, they effectively replace all of the geometry related stages. What we do in Vertex shaders would likely be sort of the base functionality of learning Mesh Shaders. That said, they're designed to be smarter around data management, letting you implement techniques that we'll have to split between Compute and Vertex shaders when we get there.
 
@@ -167,9 +167,9 @@ Output main(uint id : SV_VertexID)
 }
 ```
 
-Right off the bat we see two interesting things, the return value is using our `Output` struct, and we're taking a paramter and it's marked with a built-in semantic. When we mark inputs with semantics, this means that we're asking the shader runtime to let us use that built-in variable. In this case `SV_VertexID` represents the ID/index of the vertex we're currently processing in this shader. Remember that the Vertex Shader will run for every vertex you request to draw, so in this case it's purely an ID and not an index, as we're not traversing any buffers.
+Right off the bat we see two interesting things, the return value is using our `Output` struct, and we're taking a parameter and it's marked with a built-in semantic. When we mark inputs with semantics, this means that we're asking the shader runtime to let us use that built-in variable. In this case `SV_VertexID` represents the ID/index of the vertex we're currently processing in this shader. Remember that the Vertex Shader will run for every vertex you request to draw, so in this case it's purely an ID and not an index, as we're not traversing any buffers.
 
-Next we compute the index into our constant buffers for position and color by using modulo to ensure we're always looking within our 3 vertx/colors. The values at that index will be used to fill in our `Output` instance. Notice that we're passing this vertex position into a `float4` along with two other values. Because the existing position is a `float2`, this means we're extending it to be a `float4`, with the latter values filing in for `z` and `w`.
+Next we compute the index into our constant buffers for position and color by using modulo to ensure we're always looking within our 3 vertex/colors. The values at that index will be used to fill in our `Output` instance. Notice that we're passing this vertex position into a `float4` along with two other values. Because the existing position is a `float2`, this means we're extending it to be a `float4`, with the latter values filing in for `z` and `w`.
 
 Now you might wonder why we're using modulo here, since we know we're only going to try rendering 3 vertices. Honestly, you'd be right to think it's unneeded. We're not going to need this for this chapter. But we'll be extending this shader in future chapters, and it's a good habit to get into, as you'll probably not always be rendering only one thing if you're using Vertex Pulling like this.
 
@@ -190,7 +190,7 @@ float4 main(float3 color : TEXCOORD0) : SV_Target0
 }
 ```
 
-Once again like the Vertex Shader, we're taking an argument, this time TEXCOORD0, which as discussed above, is the color we passed from the Vertex Shaders. Based on the position of the pixel in relation to our vertices, it'll be be more or less Red/Green/Blue. And what we return is the color, including an Alpha (transparency) value, for now we're just setting that to 1.0f, which is fully opaque. We'll note that the return value is a float4, but we know that we've got to set an intrinsic so the shader compiler knows what we're actually returning and where to place it. Well when you're not returning a struct like above, you put the intrinsic after the function signature, and before the block, so the instrinsic binding to our `float4` return value is `SV_Target0`, which is to say this value is being written to the 0th Color target, which again, we remember setting up in our RenderPass in the previous chapter.
+Once again like the Vertex Shader, we're taking an argument, this time TEXCOORD0, which as discussed above, is the color we passed from the Vertex Shaders. Based on the position of the pixel in relation to our vertices, it'll be be more or less Red/Green/Blue. And what we return is the color, including an Alpha (transparency) value, for now we're just setting that to 1.0f, which is fully opaque. We'll note that the return value is a float4, but we know that we've got to set an intrinsic so the shader compiler knows what we're actually returning and where to place it. Well when you're not returning a struct like above, you put the intrinsic after the function signature, and before the block, so the intrinsic binding to our `float4` return value is `SV_Target0`, which is to say this value is being written to the 0th Color target, which again, we remember setting up in our RenderPass in the previous chapter.
 
 Now before finishing up with the C side of all of this, let's briefly go over how you'll need to compile your shaders, should you not be using the template.
 
@@ -206,9 +206,9 @@ The anatomy of a call into `SDL_shadercross` is as such:
 ```bash
 SDL_shadercross <InputShader> -g --source <SourceFormat> --dest <DestinationFormat> --stage <ShaderStage> --output <OutputShader>
 ```
-The `SourceFormat` will always be HLSL for also, but you can also pass SPIRV into it. Obviously it must match the format of the `InputShader`. Similarly `DestinationFormat` is the format we're compiling for, and it's waht the `OutputShader` will come out as. And you must also let the tool know which `ShaderStage` you're compiling this shader for. Finally one addition here that hasn't been mentioned is the `-g` flag. This ensures the compiler emits debug info into the compiled shader. This isn't something you'd want to use in a released game or for a release build, but it's useful for debugging and trying to figure out why you're seeing what you're seeing.
+The `SourceFormat` will always be HLSL for also, but you can also pass SPIRV into it. Obviously it must match the format of the `InputShader`. Similarly `DestinationFormat` is the format we're compiling for, and it's what the `OutputShader` will come out as. And you must also let the tool know which `ShaderStage` you're compiling this shader for. Finally one addition here that hasn't been mentioned is the `-g` flag. This ensures the compiler emits debug info into the compiled shader. This isn't something you'd want to use in a released game or for a release build, but it's useful for debugging and trying to figure out why you're seeing what you're seeing.
 
-When we automate this, we generally generate shaders for all backends of SDL_GPU, but if you'd like to simplify things for yourself, you can choose to only do the ones availible to you, or choose one among those and only compile that one. Just ensure you adjust your call to SDL_CreateGPUDevice to only take the ones you're compiling.
+When we automate this, we generally generate shaders for all backends of SDL_GPU, but if you'd like to simplify things for yourself, you can choose to only do the ones available to you, or choose one among those and only compile that one. Just ensure you adjust your call to SDL_CreateGPUDevice to only take the ones you're compiling.
 
 Lets see what compiling the vertex shader for all of our backends looks like.
 
@@ -225,7 +225,7 @@ SDL_shadercross Triangle.frag.hlsl -g --source HLSL --dest SPIRV --stage fragmen
 SDL_shadercross Triangle.frag.hlsl -g --source HLSL --dest MSL --stage fragment --output Triangle.frag.msl
 SDL_shadercross Triangle.frag.hlsl -g --source HLSL --dest DXIL --stage fragment --output Triangle.frag.dxil
 ```
-And a theoretical, but nonexistant, compute shader
+And a theoretical, but nonexistent, compute shader
 
 ```bash
 SDL_shadercross Triangle.comp.hlsl -g --source HLSL --dest SPIRV --stage compute --output Triangle.comp.spv
@@ -254,7 +254,7 @@ SDL_GPUShader* CreateShader(
   SDL_PropertiesID aProperties)
 ```
 
-We want this to be relatively generic, so we'll take the name of the file we're loading, which will be something like `ShaderName.shaderstage`. In theory, we could parse that final bit and determine the shaderstage, but it's a waste of time, we know what it is, so we'll just pass it in along with the name. Next we need to declare our inputs to this shader. The finer details of these will be in the docs for `SDL_CreateGPUShader`, but we'll go over them as time moves on and we use each of these. Suffice it to say, the next four arguments are used to make those declarations. Thankfully just telling SDL the counts will suffice. Finally we'll take a properties object, because while we'll ensure we always set a name by using the global properties object we made, we may find that we want to, in the future, make it possible to set customized properties. There's other ways to do this as well, but this feels like a reasonable interface for what we need. You'll see something fairly similar if you start reading the SDL_gpu_examples repo.
+We want this to be relatively generic, so we'll take the name of the file we're loading, which will be something like `ShaderName.<shader stage>`. In theory, we could parse that final bit and determine the shader stage, but it's a waste of time, we know what it is, so we'll just pass it in along with the name. Next we need to declare our inputs to this shader. The finer details of these will be in the docs for `SDL_CreateGPUShader`, but we'll go over them as time moves on and we use each of these. Suffice it to say, the next four arguments are used to make those declarations. Thankfully just telling SDL the counts will suffice. Finally we'll take a properties object, because while we'll ensure we always set a name by using the global properties object we made, we may find that we want to, in the future, make it possible to set customized properties. There's other ways to do this as well, but this feels like a reasonable interface for what we need. You'll see something fairly similar if you start reading the SDL_gpu_examples repo.
 
 Thankfully actually creating a shader is relatively easy, so lets go over all the steps, starting with loading one of the files we compiled above.
 
@@ -394,7 +394,7 @@ void DrawTriangleContext(TriangleContext* aPipeline, SDL_GPURenderPass* aRenderP
   SDL_DrawGPUPrimitives(aRenderPass, 3, 1, 0, 0);
 }
 ```
-We'll need the RenderPass main is configuring, but fundamentally what we're doing here is incredibly simple. We need to bind the pipeline we just created, so that SDL_GPU will know that future draws to this renderpass will use it. Next we can just make a single call to `SDL_DrawGPUPrimitives`. We really only care about the first 3 parameters here. Like the bind, we need to pass the RenderPass, as it's what we're using to make the draw. The important bit is that we're drawing only 3 vertices, we're hardcoded in the vertex shader that it only expects to be called 3 times, to complement this, we're also telling it we're only rendering one instance of this thing. 
+We'll need the RenderPass main is configuring, but fundamentally what we're doing here is incredibly simple. We need to bind the pipeline we just created, so that SDL_GPU will know that future draws to this RenderPass will use it. Next we can just make a single call to `SDL_DrawGPUPrimitives`. We really only care about the first 3 parameters here. Like the bind, we need to pass the RenderPass, as it's what we're using to make the draw. The important bit is that we're drawing only 3 vertices, we're hardcoded in the vertex shader that it only expects to be called 3 times, to complement this, we're also telling it we're only rendering one instance of this thing. 
 
 This is what gets down to the crux of what we're doing in that shader by hardcoding those positions and colors. Telling the Draw to "draw" 3 vertices doesn't mean we're passing data in from the CPU and to use those, although it might. It really just means it's going to invoke the vertex shader `num_vertices * num_instances` number of times. If we've bound buffers, then there _is_ more work to be done, and discussions to be had, but we can put off how that works for some time.
 

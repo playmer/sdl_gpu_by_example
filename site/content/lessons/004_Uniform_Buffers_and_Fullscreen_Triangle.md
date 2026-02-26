@@ -7,7 +7,7 @@ chapter_status: Not Finished
 collections: ["lessons"]
 ---
 
-Now lets do something a little more practical, we're going to learn a trick on how to extend this triangle to display over the entire screen. This technique is a miniscule optimization and slight quality improvement that gets used when you start learning about fullscreen effects. The GPU has to compute one less vertex, and there's no chance of artifacting along the center diagonal line if we were using a quad. 
+Now lets do something a little more practical, we're going to learn a trick on how to extend this triangle to display over the entire screen. This technique is a miniscule optimization and slight quality improvement that gets used when you start learning about fullscreen effects. The GPU has to compute one less vertex, and there's no chance of artifacting (visual distortions) along the center diagonal line if we were using a quad. 
 
 We'll also discuss Uniform Buffers and how to transfer data between the CPU and GPU, in future chapters we'll go over different types of buffers with many use cases.
 

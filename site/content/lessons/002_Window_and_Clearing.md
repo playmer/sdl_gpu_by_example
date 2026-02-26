@@ -42,7 +42,7 @@ SDL_assert(window);
 
 To briefly explain, for most Game-like applications, you're going to use a couple top-level loops:
  - Frame loop: In here, you do everything needed within the frame. Typically when you're quitting, you break out of this loop somehow. Typically by setting a bool to false/true.
- - Event loop: This is typically at the top in the Frame loop. It's where you call into the platform to receive all the events that have occured since the previous iteration of the frame loop, and then process them.
+ - Event loop: This is typically at the top in the Frame loop. It's where you call into the platform to receive all the events that have occurred since the previous iteration of the frame loop, and then process them.
  
  The specific formulations of the above vary, but we'll just being using the typical formulation you'd find in most beginner games:
 
@@ -75,7 +75,7 @@ Now, finally, we can discuss the GPU API.
 - [`SDL_CreateWindow`](https://wiki.libsdl.org/SDL3/SDL_CreateWindow)
   - One of the most common functions when you use SDL, along with SDL_Init, it's probably closest to the function that "every" SDL application calls. There's a fair bit of flexibility in Window creation, and we won't cover most of it as it's not particularly relevant to rendering.
 - [`SDL_CreateWindowWithProperties`](https://wiki.libsdl.org/SDL3/SDL_CreateWindowWithProperties)
-  - Technically we only alluded to this, we'll almost certainly discuss this or functions like it later. Essentially these substitue the arguments of the function with an SDL_Properties object, to allow functions to be extended in the future without needing to create entirely new symbols.
+  - Technically we only alluded to this, we'll almost certainly discuss this or functions like it later. Essentially these substitute the arguments of the function with an SDL_Properties object, to allow functions to be extended in the future without needing to create entirely new symbols.
 - [`SDL_DestroyWindow`](https://wiki.libsdl.org/SDL3/SDL_DestroyWindow)
   - Simply the converse of [`SDL_CreateWindow`](https://wiki.libsdl.org/SDL3/SDL_CreateWindow), it just brings the Window and related resources down.
 - [`The Events Subsystem`](https://wiki.libsdl.org/SDL3/CategoryEvents)
@@ -106,10 +106,10 @@ For now, we'll tell [`SDL_CreateGPUDevice`](https://wiki.libsdl.org/SDL3/SDL_Cre
 {{card}}
 __NOTE__
 
-If you're not getting a device created, it's likely that there's an issue with your drivers, your Vulkan SDK installation (on MacOS), or your GPU not supporting it. You can try to pass `NULL` as the final parameter to see if any of the backends are supported on your device, but note that this may cause issues or discrepencies when we cover debugging topics.
+If you're not getting a device created, it's likely that there's an issue with your drivers, your Vulkan SDK installation (on MacOS), or your GPU not supporting it. You can try to pass `NULL` as the final parameter to see if any of the backends are supported on your device, but note that this may cause issues or discrepancies when we cover debugging topics.
 {{card-end}}
 
-Now that we have a device, we can call [`SDL_ClaimWindowForGPUDevice`](https://wiki.libsdl.org/SDL3/SDL_ClaimWindowForGPUDevice) to do what it says in the name: associate the GPUDevice and the Window. Just know that to render to our Window, we need to claim it for our Device. This is how, later on, we'll be able to retreive swapchains textures (essentially the texture that the Window displays) and render to them.
+Now that we have a device, we can call [`SDL_ClaimWindowForGPUDevice`](https://wiki.libsdl.org/SDL3/SDL_ClaimWindowForGPUDevice) to do what it says in the name: associate the GPUDevice and the Window. Just know that to render to our Window, we need to claim it for our Device. This is how, later on, we'll be able to retrieve swapchain textures (essentially the texture that the Window displays) and render to them.
 
 Lets take a look at some initialization that we won't need just yet, but will help out in future examples. Fundamentally, we're just going to cache some checks on which formats SDL wanted shaders in, and create a properties object that we'll use to populate debug names when we start writing functions to create GPU resources.
 
@@ -169,7 +169,7 @@ void DestroyGpuContext(GpuContext* aContext) {
 
 So now we have a GpuContext struct we can pass around, it holds all of the stuff relevant to the Device for the sake of creating resources, and tearing them and it down. There's certainly more functionality we can add here, but we can revisit it later if it's helpful.
 
-In terms of the functionality that we just added, as mentioned above, we've created an SDL properties object. This is a way to tell SDL about extra functionality we want. Often this is backend/platform specific information, but sometimes it's simply for extended initialization, as more can be added as needed, and it won't break SDLs API guarentees.
+In terms of the functionality that we just added, as mentioned above, we've created an SDL properties object. This is a way to tell SDL about extra functionality we want. Often this is backend/platform specific information, but sometimes it's simply for extended initialization, as more can be added as needed, and it won't break SDLs API guarantees.
 
 {{collapsible-card "Covered in this Section"}}
 - [`SDL_CreateGPUDevice`](https://wiki.libsdl.org/SDL3/SDL_CreateGPUDevice)
@@ -215,12 +215,12 @@ Not too bad, but you'll notice we didn't use `SDL_assert`. These two operations 
 
 A command buffer is how we record commands to instruct the GPU what to do. This includes things like uploading data in a Copy Pass, executing generic work on the GPUs many cores in a Compute Pass, and of course executing graphics related work in a Render Pass. We'll get into more details as this series moves along, but the command buffer is how we'll be doing the actual communication with the GPU. SDL_GPU handles the management of these, which you'll appreciate coming from something like Vulkan.
 
-Once you have a command buffer, we can request a Swapchain texture. As mentioned ealier, this is the texture that is tied to, and gets displayed on the Window. By default SDL_GPU allocates 3 of them, that said this can be changed, as well as how precisely we wait for them, and if we wait at all. We'll try to cover some of these at a later time, for now this is a fairly simple way to handle acquisitions and submissions. The extra parameters which we've passed `NULL` to are simply to aquire the width and height of the given texture. This will become useful later, but we don't need it for now.
+Once you have a command buffer, we can request a Swapchain texture. As mentioned earlier, this is the texture that is tied to, and gets displayed on the Window. By default SDL_GPU allocates 3 of them, that said this can be changed, as well as how precisely we wait for them, and if we wait at all. We'll try to cover some of these at a later time, for now this is a fairly simple way to handle acquisitions and submissions. The extra parameters which we've passed `NULL` to are simply to acquire the width and height of the given texture. This will become useful later, but we don't need it for now.
 
 
 #### The Render Pass
 
-Now we can finally finish out the chapter by doing one of the "simplest" graphics applications, clearing the screen. Or, more specifically, clearing the swapchain texture we aquired and then displaying that texture onto the screen.
+Now we can finally finish out the chapter by doing one of the "simplest" graphics applications, clearing the screen. Or, more specifically, clearing the swapchain texture we acquired and then displaying that texture onto the screen.
 
 This requires a RenderPass, which is how we instruct the GPU to run through the vertex pipeline into the shading pipeline, out to an image. We'll go over that in more details in subsequent chapters, but you can think of this as the Pass which does most of the actual graphics work. There's also Copy and Compute Passes we have access to in SDL_GPU, and those essentially do what they sound like, letting you copy to/from GPU memory, and doing general purpose computing work respectively.
 
@@ -259,7 +259,7 @@ We did it! You should be seeing a window with a blue background!
   - texture: The is the texture we're rendering to, the "target".
   - load_op: How the Render Pass should be treating the contents of the texture before you start executing it. By your choice, it can either keep the previous contents, clear to a color (what we're doing to get that blue color), or tell it that we don't care. If we don't care the API doesn't either, you can't rely on the image looking like anything in particular.
   - store_op: The converse, how the Render Pass treats that same texture as it ends. Typically you'll just want to store here. You can also tell it not to care, or do some "Resolve" variations. Being honest, I don't know what that's for. When I do, I'll update this, and also write an example about it.
-  - clear_color: As you might expect, this is just a small struct with rgba floats in it to clear the Render Target to when we pass [`SDL_GPU_LOADOP_CLEAR`](https://wiki.libsdl.org/SDL3/SDL_GPU_LOADOP_CLEAR).
+  - clear_color: As you might expect, this is just a small struct with RGBA (Red/Green/Blue/Alpha) floats in it to clear the Render Target to when we pass [`SDL_GPU_LOADOP_CLEAR`](https://wiki.libsdl.org/SDL3/SDL_GPU_LOADOP_CLEAR).
 
 As you may notice from the parameters of [`SDL_BeginGPURenderPass`](https://wiki.libsdl.org/SDL3/SDL_BeginGPURenderPass) as well as the discussion above, you can actually pass an array of Color Targets. We'll be going through some very simple fullscreen effects in the next chapter, but when we get further along and learn more about textures, we can play around with this functionality with more interesting fullscreen effects. Similarly we'll get to the [`SDL_GPUDepthStencilTargetInfo`](https://wiki.libsdl.org/SDL3/SDL_GPUDepthStencilTargetInfo) parameter later on when we start playing with 3D. 
 
