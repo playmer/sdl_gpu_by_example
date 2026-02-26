@@ -21,6 +21,6 @@ find_and_compile_shaders(${ShaderCrossExe} 003_Triangle Shaders ${ShadersOutputD
 get_target_property(targetSources 003_Triangle SOURCES)
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${targetSources})
 
-set_property(TARGET 003_Triangle PROPERTY VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}")
+set_property(TARGET 003_Triangle PROPERTY DEBUGGER_WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}")
 
 test_example_as_cpp_if_toplevel(003_Triangle)

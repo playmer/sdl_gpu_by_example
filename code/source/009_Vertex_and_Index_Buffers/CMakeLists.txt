@@ -21,6 +21,6 @@ find_and_compile_shaders(${ShaderCrossExe} 009_Vertex_and_Index_Buffers Shaders 
 get_target_property(targetSources 009_Vertex_and_Index_Buffers SOURCES)
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${targetSources})
 
-set_property(TARGET 009_Vertex_and_Index_Buffers PROPERTY VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}")
+set_property(TARGET 009_Vertex_and_Index_Buffers PROPERTY DEBUGGER_WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}")
 
 test_example_as_cpp_if_toplevel(009_Vertex_and_Index_Buffers)

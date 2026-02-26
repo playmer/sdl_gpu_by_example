@@ -21,6 +21,6 @@ find_and_compile_shaders(${ShaderCrossExe} 007_The_Cube_and_Math Shaders ${Shade
 get_target_property(targetSources 007_The_Cube_and_Math SOURCES)
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${targetSources})
 
-set_property(TARGET 007_The_Cube_and_Math PROPERTY VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}")
+set_property(TARGET 007_The_Cube_and_Math PROPERTY DEBUGGER_WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}")
 
 test_example_as_cpp_if_toplevel(007_The_Cube_and_Math)
