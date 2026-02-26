@@ -167,6 +167,14 @@ macro(set_up_example_top_level)
         if(NOT CMAKE_VS_GLOBALS MATCHES "(^|;)EnforceProcessCountAcrossBuilds=")
             list(APPEND CMAKE_VS_GLOBALS EnforceProcessCountAcrossBuilds=true)
         endif()
+        
+        set(CMAKE_XCODE_GENERATE_SCHEME ON)
+
+        set(CMAKE_XCODE_SCHEME_ENABLE_GPU_SHADER_VALIDATION ON)
+        set(CMAKE_XCODE_SCHEME_ENABLE_GPU_API_VALIDATION ON)
+        set(CMAKE_XCODE_SCHEME_ENABLE_GPU_FRAME_CAPTURE_MODE ON)
+
+        set(CMAKE_DEBUGGER_WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}")
 
         set(ShadersOutputDir ${PROJECT_SOURCE_DIR}/Assets/Shaders)
 

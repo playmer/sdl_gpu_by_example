@@ -832,7 +832,7 @@ SDL_GPUTextureFormat GetSupportedDepthFormat()
 }
 
 
-SDL_GPUBuffer* CreateAndUploadBuffer(const void* aData, size_t aSize, SDL_GPUBufferUsageFlags aUsage)
+SDL_GPUBuffer* CreateAndUploadBuffer(const void* aData, Uint32 aSize, SDL_GPUBufferUsageFlags aUsage)
 {
   SDL_GPUBufferCreateInfo bufferCreateInfo;
   SDL_zero(bufferCreateInfo);

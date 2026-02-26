@@ -21,6 +21,4 @@ find_and_compile_shaders(${ShaderCrossExe} 008_Depth Shaders ${ShadersOutputDir}
 get_target_property(targetSources 008_Depth SOURCES)
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${targetSources})
 
-set_property(TARGET 008_Depth PROPERTY DEBUGGER_WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}")
-
 test_example_as_cpp_if_toplevel(008_Depth)

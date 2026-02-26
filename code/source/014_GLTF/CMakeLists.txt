@@ -21,5 +21,3 @@ find_and_compile_shaders(${ShaderCrossExe} 014_GLTF Shaders ${ShadersOutputDir})
 
 get_target_property(targetSources 014_GLTF SOURCES)
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${targetSources})
-
-set_property(TARGET 014_GLTF PROPERTY DEBUGGER_WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}")

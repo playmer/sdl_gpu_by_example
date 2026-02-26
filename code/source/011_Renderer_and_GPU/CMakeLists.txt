@@ -21,6 +21,4 @@ find_and_compile_shaders(${ShaderCrossExe} 011_Renderer_and_GPU Shaders ${Shader
 get_target_property(targetSources 011_Renderer_and_GPU SOURCES)
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${targetSources})
 
-set_property(TARGET 011_Renderer_and_GPU PROPERTY DEBUGGER_WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}")
-
 test_example_as_cpp_if_toplevel(011_Renderer_and_GPU)

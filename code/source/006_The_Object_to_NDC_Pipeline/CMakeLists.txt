@@ -21,6 +21,4 @@ find_and_compile_shaders(${ShaderCrossExe} 006_The_Object_to_NDC_Pipeline Shader
 get_target_property(targetSources 006_The_Object_to_NDC_Pipeline SOURCES)
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${targetSources})
 
-set_property(TARGET 006_The_Object_to_NDC_Pipeline PROPERTY DEBUGGER_WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}")
-
 test_example_as_cpp_if_toplevel(006_The_Object_to_NDC_Pipeline)

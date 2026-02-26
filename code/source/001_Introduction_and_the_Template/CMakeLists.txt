@@ -63,7 +63,6 @@ source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${targetSources})
 #
 # This is helpful as we'll always assume we're executing our code from the root of the repo,
 # and path our assets accordingly.
-set_property(TARGET 001_Introduction_and_the_Template PROPERTY DEBUGGER_WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}")
 
 set_vs_startup_project_if_toplevel(001_Introduction_and_the_Template)
 

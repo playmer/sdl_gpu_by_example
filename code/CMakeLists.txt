@@ -4,7 +4,6 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
 include(CMake/TopLevel.cmake)
 
-
 message(STATUS "ShadersOutputDir = ${ShadersOutputDir}")
 
 # When using the Visual Studio generator, if you were to open the project in VS, this would
