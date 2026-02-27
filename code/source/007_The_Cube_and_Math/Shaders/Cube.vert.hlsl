@@ -40,7 +40,7 @@ static const float3 cVertexPositions[8] = {
     /* 7 */ {  1.0f, -1.0f,  1.0f }, // bottom right back
 };
 
-static const uint cVertexIndicies[36] = {
+static const uint cVertexIndices[36] = {
   // Front Face
   0, 1, 2,
   1, 3, 2,
@@ -84,8 +84,8 @@ cbuffer UB1 : register(b1, space1)
 
 Output main(uint id : SV_VertexID)
 {
-  uint vertexIndex = cVertexIndicies[id % 36];
-  uint uvIndex = cVertexIndicies[id % 6];
+  uint vertexIndex = cVertexIndices[id % 36];
+  uint uvIndex = cVertexIndices[id % 6];
 
   Output output;
   float3 vertex = cVertexPositions[vertexIndex];

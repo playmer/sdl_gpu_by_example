@@ -80,6 +80,24 @@ float4 Float4_Add(float4 aLeft, float4 aRight) {
 }
 
 //////////////////////////////////////////////////////
+// Multiplication
+
+float2 Float2_Multiply(float2 aLeft, float2 aRight) {
+  float2 toReturn = { aLeft.x * aRight.x, aLeft.y * aRight.y };
+  return toReturn;
+}
+
+float3 Float3_Multiply(float3 aLeft, float3 aRight) {
+  float3 toReturn = { aLeft.x * aRight.x, aLeft.y * aRight.y, aLeft.z * aRight.z };
+  return toReturn;
+}
+
+float4 Float4_Multiply(float4 aLeft, float4 aRight) {
+  float4 toReturn = { aLeft.x * aRight.x, aLeft.y * aRight.y, aLeft.z * aRight.z, aLeft.w * aRight.w };
+  return toReturn;
+}
+
+//////////////////////////////////////////////////////
 // Scalar Addition
 
 float2 Float2_Scalar_Add(float2 aLeft, float aRight) {
@@ -215,7 +233,7 @@ SDL_GPUShader* CreateShader(
 
   SDL_GPUShaderCreateInfo shaderCreateInfo;
   SDL_zero(shaderCreateInfo);
-  
+
   shaderCreateInfo.entrypoint = gContext.mShaderEntryPoint;
   shaderCreateInfo.format = gContext.mChosenBackendFormat;
   shaderCreateInfo.code = (Uint8*)fileData;

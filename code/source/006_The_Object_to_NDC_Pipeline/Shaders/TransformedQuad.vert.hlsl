@@ -5,7 +5,7 @@ static const float2 cVertexPositions[4] = {
     {-1.0f,  1.0f},
 };
 
-static const uint cVertexIndicies[6] = {
+static const uint cVertexIndices[6] = {
   0, 1, 2,
   0, 3, 1
 };
@@ -35,8 +35,8 @@ cbuffer UB1 : register(b1, space1)
 
 Output main(uint id : SV_VertexID)
 {
-  uint indiciesIndex = id % 6;
-  uint vertexIndex = cVertexIndicies[indiciesIndex];
+  uint indicesIndex = id % 6;
+  uint vertexIndex = cVertexIndices[indicesIndex];
 
   Output output;
   float2 vertex = cVertexPositions[vertexIndex];

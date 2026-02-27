@@ -54,9 +54,9 @@ There's many languages specifically for shaders, and even general purpose progra
 
 ## Vertices, Briefly
 
-For this chapter, to not _completely_ overload on information, we're only thinking about triangles, which are each made up of three Vertices, essentially positions on a 2D plane for now, that will look like this in code:
+For this chapter, to not _completely_ overload on information, we're only thinking about triangles, which are each made up of three Vertices, for now simply positions on a 2D plane, that will look like this in code:
 
-```
+```cpp
 typedef struct float2 {
     float x, y;
 }
@@ -64,7 +64,7 @@ typedef struct float2 {
 
 In practice, we're actually going to want several more of these position/vector types:
 
-```
+```cpp
 typedef struct float3 {
     float x, y, z;
 }
@@ -122,7 +122,7 @@ Our first set of geometry will be a triangle that looks roughly like this:
 
 With each number at the points representing a vertex in an array. We're specifically laying out the geometry clockwise, which won't come up in this particular example, but will be relevant later in the cube example.
 
-```hlsl
+```cpp
 static const float2 cVertexPositions[3] = {
     { 0.0f,  1.0f},
     { 1.0f, -1.0f},
@@ -132,7 +132,7 @@ static const float2 cVertexPositions[3] = {
 
 We're going to give each coordinate a color as well, so it'll stand out a little more. We'll be able to pass this data from the vertex shader to the pixel shader, we'll go into more detail in a moment. 
 
-```hlsl
+```cpp
 static const float3 cColors[3] = {
     { 1.0f, 0.0f, 0.0f },
     { 0.0f, 1.0f, 0.0f },
@@ -144,7 +144,7 @@ Now we've discussed that Vertex Shaders have to output geometry, we do this thro
 
 So, to return multiple values, you create a struct that contains those values. The shader needs to know which field means what and the method by which we do this are called "Semantics" in HLSL. 
 
-```hlsl
+```cpp
 struct Output
 {
   float4 Position : SV_Position;
@@ -155,7 +155,7 @@ Here we're telling our shader compiler that we're outputting the vertex position
 
 Now let's take a look at our main function, it's fairly simple.
 
-```hlsl
+```cpp
 Output main(uint id : SV_VertexID)
 {
   uint vertexIndex = id % 3;
@@ -183,7 +183,7 @@ As we process each pixel we'll be running our Fragment shader over each pixel th
 
 The classic example of this is color, we glossed over this a bit above, but each Vertex was indeed passing a different color to the fragment shader. So this means that over the surface of the triangle, we'll be seeing the pixels interpolate between those three colors. In terms of the shader, as mentioned, it's incredibly simple:
 
-```hlsl
+```cpp
 float4 main(float3 color : TEXCOORD0) : SV_Target0
 {
     return float4(color, 1.0f);
@@ -442,6 +442,8 @@ And finally, we can clean up!
 
 If you run the program, you should see a nice, friendly triangle.
 
-TODO: Insert image.
+{{img "/sdl_gpu_by_example/site/static_data/assets/images/003_Triangle_and_Fullscreen_Triangle_1.png" "A window on Windows, with the colors interpolated between red, green, and blue."}}
 
-Next up, lets talk about a practical application for a single triangle, as well as a discussion of how to pass some small data into the GPU for use by the shaders.
+As mentioned, the colors are interpolated across the surface of the triangle. As you get closer to one vertex, the value it outputs to the fragment shader is favored more and the others less. We'll go over this in more detail in a future lesson.
+
+Next up, lets talk about some math, and a practical application for a single triangle, as well as a discussion of how to pass some small data into the GPU for use by the shaders.

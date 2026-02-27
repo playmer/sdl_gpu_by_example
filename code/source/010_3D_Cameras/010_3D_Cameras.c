@@ -986,7 +986,7 @@ CubeContext CreateCubeContext(SDL_GPUTextureFormat aDepthFormat) {
   }
 
   {
-    static const Uint16 cVertexIndicies[36] = {
+    static const Uint16 cVertexIndices[36] = {
       // Front Face
       0, 1, 2,
       1, 3, 2,
@@ -1012,7 +1012,7 @@ CubeContext CreateCubeContext(SDL_GPUTextureFormat aDepthFormat) {
       5, 7, 3,
     };
 
-    context.mIndexBuffer = CreateAndUploadBuffer(&cVertexIndicies, sizeof(cVertexIndicies), SDL_GPU_BUFFERUSAGE_INDEX);
+    context.mIndexBuffer = CreateAndUploadBuffer(&cVertexIndices, sizeof(cVertexIndices), SDL_GPU_BUFFERUSAGE_INDEX);
   }
 
   context.mUbo[0].mPosition.x = 2.f;

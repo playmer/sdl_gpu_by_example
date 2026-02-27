@@ -5,7 +5,7 @@ static const float2 cVertexPositions[4] = {
   {-1.0f,  1.0f},
 };
 
-static const uint cVertexIndicies[6] = {
+static const uint cVertexIndices[6] = {
   0, 1, 2,
   0, 3, 1
 };
@@ -29,15 +29,12 @@ cbuffer UBO : register(b0, space1)
 
 Output main(uint id : SV_VertexID)
 {
-  uint indiciesIndex = id % 6;
-  uint vertexIndex = cVertexIndicies[indiciesIndex];
+  uint indicesIndex = id % 6;
+  uint vertexIndex = cVertexIndices[indicesIndex];
   
   float2 vertex = cVertexPositions[vertexIndex];
-  float2 scaledVertex = float2(vertex.x * cModelUniform.mScale.x, vertex.y * cModelUniform.mScale.y);
-  float2 translatedVertex = float2(
-    scaledVertex.x + cModelUniform.mPosition.x,
-    scaledVertex.y + cModelUniform.mPosition.y
-  );
+  float2 scaledVertex = vertex * cModelUniform.mScale;
+  float2 translatedVertex = scaledVertex + cModelUniform.mPosition;
   
   Output output;
   output.Position = float4(translatedVertex, 0.0f,1.0f);

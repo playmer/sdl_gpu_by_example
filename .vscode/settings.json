@@ -19,6 +19,7 @@
         "hlsl",
         "imgui",
         "LOADOP",
+        "pmatrix",
         "PRIMITIVETYPE",
         "RGBA",
         "shadercross",

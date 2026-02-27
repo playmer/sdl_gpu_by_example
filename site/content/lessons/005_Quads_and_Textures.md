@@ -55,7 +55,7 @@ static const float2 cVertexPositions[4] = {
   { 1.0f, -1.0f},
 };
 
-static const uint cVertexIndicies[6] = {
+static const uint cVertexIndices[6] = {
   0, 1, 2, // Triangle 1
   1, 3, 2  // Triangle 2
 };
