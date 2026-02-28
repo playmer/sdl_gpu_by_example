@@ -243,9 +243,13 @@ impl TocGenerator {
             };
 
             if item.level == 1 {
-                panic!("Processing a header with name {} and id {}, this header has a heading of 1, which is disallowed in content. Anything above 1 is allowed. Headers must start at 2, and only increase one at a time.",
-                    item.text, 
-                    item.url);
+                 if item.text != "$" {
+                    panic!("Processing a header with name {} and id {}, this header has a heading of 1, which is disallowed in content. Anything above 1 is allowed. Headers must start at 2, and only increase one at a time.",
+                        item.text, 
+                        item.url);
+                 }
+                 
+                 return;
             }
 
             println!("\t{}, {}", self.last_level, item.level);
@@ -289,7 +293,17 @@ impl TocGenerator {
     }
 }
 
+fn process_math<'a>(transformed_events: &mut Vec<Event<'a>>, parser: &mut Parser<'a>, math: CowStr<'_>) {
+    let storage = pulldown_latex::Storage::new();
+    let parser = pulldown_latex::Parser::new(&math, &storage);
+    let mut mathml = String::new();
+    let config = Default::default();
 
+    match pulldown_latex::push_mathml(&mut mathml, parser, config) {
+        Ok(()) => transformed_events.push(Event::Html(CowStr::Boxed(mathml.into_boxed_str()))),
+        Err(e) => eprintln!("Error while rendering: {}", e),
+    }
+}
 
 pub fn parse_markdown_to_html(title: &str, content: &str) -> (String, Option<Value>) {
     // Set up options and parser. Strikethroughs are not part of the CommonMark standard
@@ -315,6 +329,12 @@ pub fn parse_markdown_to_html(title: &str, content: &str) -> (String, Option<Val
             }
             Event::Start(Tag::CodeBlock(kind)) => {
                 highlighter.highlight_code_block(&mut transformed_events, &mut parser, kind);
+            }
+            Event::DisplayMath(math) => {
+                process_math(&mut transformed_events, &mut parser, math);
+            }
+            Event::InlineMath(math) => {
+                process_math(&mut transformed_events, &mut parser, math);
             }
             event => {
                 transformed_events.push(event);

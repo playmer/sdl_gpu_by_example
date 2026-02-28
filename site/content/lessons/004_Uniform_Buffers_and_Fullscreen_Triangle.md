@@ -61,23 +61,7 @@ When only a translation is what you need, you typically reach for a piecewise ad
 
 ##### Math
 
-$$
-\begin{pmatrix}
-x_1 \\
-y_1
-\end{pmatrix}
-+
-\begin{pmatrix}
-x_2 \\
-y_2
-\end{pmatrix}
-=
-
-\begin{pmatrix}
-x_1 + x_2 \\
-y_1 + y_2
-\end{pmatrix}
-$$
+$$ \begin{pmatrix} x_1 y_1 \end{pmatrix} + \begin{pmatrix} x_2 \\ y_2 \end{pmatrix} = \begin{pmatrix} x_1 + x_2 \\ y_1 + y_2 \end{pmatrix} $$
 
 ##### Code
 
@@ -92,22 +76,7 @@ float2 Float2_Add(float2 aLeft, float2 aRight) {
 
 ##### Math
 
-$$
-\begin{pmatrix}
-x_1 \\
-y_1
-\end{pmatrix}
-+
-\begin{pmatrix}
-x_2 \\
-y_2
-\end{pmatrix}
-=
-\begin{pmatrix}
-x_1 + x_2 \\
-y_1 + y_2
-\end{pmatrix}
-$$
+$$ \begin{pmatrix} x_1 \\ y_1 \end{pmatrix} + \begin{pmatrix} x_2 \\ y_2 \end{pmatrix} = \begin{pmatrix} x_1 + x_2 \\ y_1 + y_2 \end{pmatrix} $$
 
 ##### Code
 
@@ -123,23 +92,8 @@ float2 Float2_Subtract(float2 aLeft, float2 aRight) {
 Similarly to addition you might reach for a piecewise multiplication for scaling a point in multiple directions.
 
 ##### Math
-$$
-\begin{pmatrix}
-x_1 \\
-y_1
-\end{pmatrix}
-*
-\begin{pmatrix}
-x_2 \\
-y_2
-\end{pmatrix}
-=
 
-\begin{pmatrix}
-x_1 * x_2 \\
-y_1 * y_2
-\end{pmatrix}
-$$
+$$ \begin{pmatrix} x_1 \\ y_1 \end{pmatrix} * \begin{pmatrix} x_2 \\ y_2 \end{pmatrix} = \begin{pmatrix} x_1 * x_2 \\ y_1 * y_2 \end{pmatrix} $$
 
 ##### Code
 
@@ -158,20 +112,8 @@ Similarly, it's not uncommon to want to apply a single scalar value, in our case
 #### Addition
 
 ##### Math
-$$
-a
-+
-\begin{pmatrix}
-x \\
-y
-\end{pmatrix}
-=
 
-\begin{pmatrix}
-a + x \\
-a + y
-\end{pmatrix}
-$$
+$$ a + \begin{pmatrix} x \\ y \end{pmatrix} = \begin{pmatrix} a + x \\ a + y \end{pmatrix} $$
 
 ##### Code
 
@@ -185,20 +127,8 @@ float2 Float2_Scalar_Add(float2 aLeft, float aRight) {
 #### Multiplication
 
 ##### Math
-$$
-a
-*
-\begin{pmatrix}
-x \\
-y
-\end{pmatrix}
-=
 
-\begin{pmatrix}
-a * x \\
-a * y
-\end{pmatrix}
-$$
+$$ a * \begin{pmatrix} x \\ y \end{pmatrix} = \begin{pmatrix} a * x \\ a * y \end{pmatrix} $$
 
 ##### Code
 
@@ -213,20 +143,7 @@ float2 Float2_Scalar_Multiply(float2 aLeft, float aRight) {
 
 ##### Math
 
-$$
-a
-*
-\begin{pmatrix}
-x \\
-y
-\end{pmatrix}
-=
-
-\begin{pmatrix}
-a * x \\
-a * y
-\end{pmatrix}
-$$
+$$ a * \begin{pmatrix} x \\ y \end{pmatrix} = \begin{pmatrix} a * x \\ a * y \end{pmatrix} $$
 
 ##### Code
 
