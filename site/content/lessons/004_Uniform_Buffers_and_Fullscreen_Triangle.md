@@ -3,7 +3,7 @@ title: Uniform Buffers and a Fullscreen Triangle
 description: More interesting rendering will require learning buffers, we'll begin with the simplest type to use, Uniform Buffers. As well as an example of why you might actually use a single triangle later on in your Graphics journey.
 template: lesson_template.html
 example_status: Finished
-chapter_status: Not Finished
+chapter_status: Finished
 collections: ["lessons"]
 ---
 
@@ -44,7 +44,7 @@ We could do all sorts of things in terms of making this a bit fancy, but they te
 
 Points are fundamentally just a position within the coordinate space you're working in. When we discuss a Vertex, fairly universally, one of their properties is that it contains a position, which is indeed a Point. We already saw this in the previous lesson, where the vertices of our triangle was really just 3 float2s. As alluded to, vertices eventually start to contain much more data than just their position. 
 
-We often manipulate the positions in various ways using transformations we'll learn about in future lessons. The most common you have to look forward to are translations, scales, and rotations.
+We often manipulate the positions in various ways using transformations we'll learn about in future lessons. The most common you have to look forward to are translations, scales, and rotations. Translations and scale are easily represented by 
 
 
 ### Some basic operations
@@ -251,7 +251,7 @@ Fragment shaders can be used for a lot of techniques, which makes sense, they ar
 
 We're not going to be doing anything wild yet, but running a fullscreen shader like we're using the Fullscreen triangle lets us get our first taste of what we can do here. For now, we'll draw a simple oval in the Fragment shader, passing it's position through the vertex shader.
 
-## An Aside on Buffers
+### An Aside on Buffers
 
 Almost everything we do in graphics requires data. Sometimes this can be generated or stored in-shader, we did the most simplistic version of this in the previous chapter to do pull-style vertex rendering. We just created some constant arrays and based on the VertexID, we were able to index into those arrays for our Vertex positions and colors. 
 
@@ -337,5 +337,112 @@ float4 main(float2 aTextureCoordinates : TEXCOORD0, float2 aOvalPosition : TEXCO
 }
 ```
 
-Since we're just trying to draw an oval, we can simply calculate the distance between the fragment/pixel (represented by `aTextureCoordinates`) we're drawing to and the position of the oval. Once we do that, we need to see how big the oval is, we'll choose 0.1f as it'll be a nice portion of the screen given we're drawing in NDC. If our distance is less than that length, then we're within the oval and should select it's color, here that's `cColors[0]`, which we take in via our uniform buffer.
+Since we're just trying to draw an oval, we can simply calculate the distance between the fragment/pixel (represented by `aTextureCoordinates`) we're drawing to and the position of the oval. Once we do that, we need to see how big the oval is, we'll choose 0.1f as it'll be a nice portion of the screen given we're drawing in NDC space, which remember, is a unit 2 box from [1,1,1] to [-1,-1,-1]. If our distance is less than that length, then we're within the oval and should select it's color, here that's `cColors[0]`, which we take in via our uniform buffer.
 
+Now we can review the changes needed on the CPU side to get the data for our render.
+
+### Setting up on the CPU
+
+So now we'll need to poke some data over to the GPU. We've decided on some relatively simple data, one being just a position, around which to draw the oval, and the other to be the color of the oval. We'll adjust our context struct to contain the position as a `float2` called `mOffset`, and we'll just choose some colors to index into and store that index as `mColorIndex`.
+
+```c
+typedef struct FullscreenContext {
+  SDL_GPUGraphicsPipeline* mPipeline;
+  float2 mOffset;
+  int mColorIndex;
+} FullscreenContext;
+```
+Lets also adjust our init and event loop to set this data. before our event loop we'll want to get the keyboard state, set the ticks time before entering the loop, and set an adjustable speed to move things per second.
+
+```c
+FullscreenContext fullscreenContext = CreateFullscreenContext();
+
+const float speed = 1.f;
+Uint64 last_frame_ticks_so_far = SDL_GetTicksNS();	
+int keys;
+const bool* key_map = SDL_GetKeyboardState(&keys);
+```
+
+We'll be using that `key_map` to adjust our position, and the ticks to calculate a basic delta time between frames to keep the movement speed relatively consistent. I should probably mention that this isn't really what you'd want to do in a real game, and there's [many](https://www.gafferongames.com/post/fix_your_timestep/) [different](https://lotusspring.substack.com/p/upgrade-your-timestep) [resources](https://jakubtomsu.github.io/posts/input_in_fixed_timestep/) [for](https://github.com/GameMakerDiscord/fix-your-timestep) [learning](https://www.reddit.com/r/gamedev/comments/pi9uyq/is_fixing_your_timestep_still_a_thing/) [what](https://gamedev.stackexchange.com/questions/1589/when-should-i-use-a-fixed-or-variable-time-step) to do. So at the beginning of our loop, we'll calculate the time since the last frame in seconds, and update the last frame time to now:
+
+```c
+while (running) {
+  Uint64 current_frame_ticks_so_far = SDL_GetTicksNS();
+  float dt = (current_frame_ticks_so_far - last_frame_ticks_so_far) / 1000000000.f;
+  last_frame_ticks_so_far = current_frame_ticks_so_far;
+```
+
+For figuring out what color to send over, rather than having something wildly user configurable, we'll just swap between 3 colors, and look at events for doing the swap:
+
+```c
+case SDL_EVENT_KEY_DOWN:
+  switch (event.key.scancode) {
+    case SDL_SCANCODE_1: fullscreenContext.mColorIndex = 0; break;
+    case SDL_SCANCODE_2: fullscreenContext.mColorIndex = 1; break;
+    case SDL_SCANCODE_3: fullscreenContext.mColorIndex = 2; break;
+    default: break;
+  }
+  break;
+```
+
+And after processing events, we'll look at the WASD keyboard state to adjust the position of the oval. We're effectively doing a translation here through a `Float2_Add`, but we're just doing it manually because it's less code and more clear.
+
+```c
+if (key_map[SDL_SCANCODE_D]) fullscreenContext.mOffset.x += speed * dt * 1.0f;
+if (key_map[SDL_SCANCODE_A]) fullscreenContext.mOffset.x -= speed * dt * 1.0f;
+if (key_map[SDL_SCANCODE_W]) fullscreenContext.mOffset.y += speed * dt * 1.0f;
+if (key_map[SDL_SCANCODE_S]) fullscreenContext.mOffset.y -= speed * dt * 1.0f;
+```
+
+Now lets make adjustments to our GPU initialization and rendering code to get to the final stretch.
+
+
+### GPU Init for Uniform Buffers
+
+In terms of initialization, almost the only things we have to do is to tell both our shaders that we'll now be passing them uniform buffers, and to set an initial value of the oval position to make it look reasonable on startup.
+
+```c
+graphicsPipelineCreateInfo.<stage>_shader = CreateShader(
+    "FullscreenTriangle.<stage>",
+    SDL_GPU_SHADERSTAGE_<STAGE>,
+    0,
+    1, // We're passing a uniform buffer to both the fragment and shader stage now!
+    0,
+    0,
+    SDL_PROPERTY_TYPE_INVALID
+
+...
+
+FullscreenContext pipeline;
+SDL_zero(pipeline);
+pipeline.mPipeline = SDL_CreateGPUGraphicsPipeline(gContext.mDevice, &graphicsPipelineCreateInfo);
+pipeline.mOffset.x = 0.5f;
+pipeline.mOffset.y = 0.5f;
+SDL_assert(pipeline.mPipeline);
+```
+
+`0.5` should center the oval, given we're treating the position as being in texture space.
+
+And now all we have to do is actually pass the data to the shaders, which really only requires a call to the appropriate `SDL_PushGPU<Stage>UniformData` function:
+
+```c
+void DrawFullscreenContext(FullscreenContext* aPipeline, SDL_GPUCommandBuffer* aCommandBuffer, SDL_GPURenderPass* aRenderPass)
+{
+  SDL_FColor colors[] = {
+    {1, 0, 0, 1},
+    {0, 1, 0, 1},
+    {0, 0, 1, 1}
+  };
+
+  SDL_BindGPUGraphicsPipeline(aRenderPass, aPipeline->mPipeline);
+  SDL_PushGPUVertexUniformData(aCommandBuffer, 0, &aPipeline->mOffset, sizeof(float2));
+  SDL_PushGPUFragmentUniformData(aCommandBuffer, 0, &colors[aPipeline->mColorIndex], sizeof(SDL_FColor));
+  SDL_DrawGPUPrimitives(aRenderPass, 3, 1, 0, 0);
+}
+```
+
+Incredibly similar to the drawing function of the last chapter, but this time we pass some small bits of data to each shader stage. In our case, we're pushing data in both the Vertex and Fragment stages and they're both in slot 0. The Vertex stage is getting a float2, whereas the Fragment stage is getting an `SDL_FColor`, which would map to `float4` in our terms. Correspondingly we pass a point to the `mOffset` for the Vertex stage, and use the `mColorIndex` to index into our little static R, G, B array of color data to pass the appropriate color for the Fragment Stage.
+
+And that's it, if you run now, you should get a screen that lets you move around and adjust the color of the oval!
+
+{{img "/sdl_gpu_by_example/site/static_data/assets/images/004_Uniform_Buffers_and_Fullscreen_Triangle.png" "A window on MacOS, with a black background and a blue oval approximatedly centered on the screen."}}

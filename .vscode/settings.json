@@ -22,6 +22,7 @@
         "pmatrix",
         "PRIMITIVETYPE",
         "RGBA",
+        "SCANCODE",
         "shadercross",
         "SHADERFORMAT",
         "SHADERSTAGE",
