@@ -59,11 +59,11 @@ For these operations, we'll define them as piecewise operation between component
 
 When only a translation is what you need, you typically reach for a piecewise addition, with one argument being a point, and the other being a direction and magnitude vector.
 
-##### Math
+Math:
 
 $$ \begin{pmatrix} x_1 y_1 \end{pmatrix} + \begin{pmatrix} x_2 \\ y_2 \end{pmatrix} = \begin{pmatrix} x_1 + x_2 \\ y_1 + y_2 \end{pmatrix} $$
 
-##### Code
+Code:
 
 ```c
 float2 Float2_Add(float2 aLeft, float2 aRight) {
@@ -74,11 +74,11 @@ float2 Float2_Add(float2 aLeft, float2 aRight) {
 
 #### Subtraction
 
-##### Math
+Math:
 
 $$ \begin{pmatrix} x_1 \\ y_1 \end{pmatrix} + \begin{pmatrix} x_2 \\ y_2 \end{pmatrix} = \begin{pmatrix} x_1 + x_2 \\ y_1 + y_2 \end{pmatrix} $$
 
-##### Code
+Code:
 
 ```c
 float2 Float2_Subtract(float2 aLeft, float2 aRight) {
@@ -91,11 +91,11 @@ float2 Float2_Subtract(float2 aLeft, float2 aRight) {
 
 Similarly to addition you might reach for a piecewise multiplication for scaling a point in multiple directions.
 
-##### Math
+Math:
 
 $$ \begin{pmatrix} x_1 \\ y_1 \end{pmatrix} * \begin{pmatrix} x_2 \\ y_2 \end{pmatrix} = \begin{pmatrix} x_1 * x_2 \\ y_1 * y_2 \end{pmatrix} $$
 
-##### Code
+Code:
 
 ```c
 float2 Float2_Multiply(float2 aLeft, float2 aRight) {
@@ -111,11 +111,11 @@ Similarly, it's not uncommon to want to apply a single scalar value, in our case
 
 #### Addition
 
-##### Math
+Math:
 
 $$ a + \begin{pmatrix} x \\ y \end{pmatrix} = \begin{pmatrix} a + x \\ a + y \end{pmatrix} $$
 
-##### Code
+Code:
 
 ```c
 float2 Float2_Scalar_Add(float2 aLeft, float aRight) {
@@ -126,11 +126,11 @@ float2 Float2_Scalar_Add(float2 aLeft, float aRight) {
 
 #### Multiplication
 
-##### Math
+Math:
 
 $$ a * \begin{pmatrix} x \\ y \end{pmatrix} = \begin{pmatrix} a * x \\ a * y \end{pmatrix} $$
 
-##### Code
+Code:
 
 ```c
 float2 Float2_Scalar_Multiply(float2 aLeft, float aRight) {
@@ -141,11 +141,11 @@ float2 Float2_Scalar_Multiply(float2 aLeft, float aRight) {
 
 #### Division
 
-##### Math
+Math:
 
 $$ a * \begin{pmatrix} x \\ y \end{pmatrix} = \begin{pmatrix} a * x \\ a * y \end{pmatrix} $$
 
-##### Code
+Code:
 
 ```c
 float2 Float2_Scalar_Division(float2 aLeft, float aRight) {
