@@ -26,6 +26,39 @@
             {{/each}}
           </ul>
         </li>
+        {{#if table_of_contents.children}}
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#" id="navbarTocDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+            Table of Contents
+          </a>
+          <ul class="dropdown-menu" aria-labelledby="navbarTocDropdown">
+            <li><a class="dropdown-item" href="{{this.url}}">&nbsp;{{current_content.title}}</a>
+              {{#each table_of_contents.children}}
+                <li><a class="dropdown-item" href="{{this.url}}">&nbsp;&nbsp;{{this.name}}</a>
+                {{#if this.children}}
+                  {{#each this.children}}
+                    <li><a class="dropdown-item" href="{{this.url}}">&nbsp;&nbsp;&nbsp;{{this.name}}</a>
+                    {{#if this.children}}
+                      {{#each this.children}}
+                        <li><a class="dropdown-item" href="{{this.url}}">&nbsp;&nbsp;&nbsp;&nbsp;{{this.name}}</a>
+                        {{#if this.children}}
+                          {{#each this.children}}
+                            <li><a class="dropdown-item" href="{{this.url}}">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{{this.name}}</a>
+                            {{#if this.children}}
+                              {{#each this.children}}
+                                <li><a class="dropdown-item" href="{{this.url}}">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{{this.name}}</a>
+                              {{/each}}
+                            {{/if}}
+                          {{/each}}
+                        {{/if}}
+                      {{/each}}
+                    {{/if}}
+                  {{/each}}
+                {{/if}}
+              {{/each}}
+          </ul>
+        </li>
+        {{/if}}
       </ul>
     </div>
   </div>
