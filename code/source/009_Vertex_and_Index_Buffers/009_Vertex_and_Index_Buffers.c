@@ -581,8 +581,10 @@ SDL_GPUBuffer* CreateGPUBuffer(Uint32 aSize, SDL_GPUBufferUsageFlags aUsage, con
   return buffer;
 }
 
-SDL_GPUTexture* CreateTexture(Uint32 aWidth, Uint32 aHeight, SDL_GPUTextureUsageFlags aUsage, SDL_GPUTextureFormat aFormat)
+SDL_GPUTexture* CreateTexture(Uint32 aWidth, Uint32 aHeight, SDL_GPUTextureUsageFlags aUsage, SDL_GPUTextureFormat aFormat, const char* aName)
 {
+  SDL_SetStringProperty(gContext.mProperties, SDL_PROP_GPU_TEXTURE_CREATE_NAME_STRING, aName);
+  
   SDL_GPUTextureCreateInfo textureCreateInfo;
   SDL_zero(textureCreateInfo);
   textureCreateInfo.width = aWidth;
@@ -629,7 +631,7 @@ SDL_GPUTexture* CreateAndUploadTexture(SDL_GPUCopyPass* aCopyPass, const char* a
     copyPass = SDL_BeginGPUCopyPass(commandBuffer);
   }
 
-  SDL_GPUTexture* texture = CreateTexture(surface->w, surface->h, SDL_GPU_TEXTUREUSAGE_SAMPLER, SDL_GPU_TEXTUREFORMAT_R8G8B8A8_UNORM);
+  SDL_GPUTexture* texture = CreateTexture(surface->w, surface->h, SDL_GPU_TEXTUREUSAGE_SAMPLER, SDL_GPU_TEXTUREFORMAT_R8G8B8A8_UNORM, aTextureName);
   SDL_assert(texture);
 
   // Copy to GPU
@@ -1042,7 +1044,7 @@ int main(int argc, char** argv)
         SDL_ReleaseGPUTexture(gContext.mDevice, depthTexture);
       }
       
-      depthTexture = CreateTexture(swapchainWidth, swapchainHeight, SDL_GPU_TEXTUREUSAGE_DEPTH_STENCIL_TARGET, depthFormat);
+      depthTexture = CreateTexture(swapchainWidth, swapchainHeight, SDL_GPU_TEXTUREUSAGE_DEPTH_STENCIL_TARGET, depthFormat, "DepthTexture");
       SDL_assert(depthTexture);
 
       depthWidth = swapchainWidth;
