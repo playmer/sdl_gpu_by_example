@@ -87,6 +87,24 @@ float4 Float4_Add(float4 aLeft, float4 aRight) {
 }
 
 //////////////////////////////////////////////////////
+// Multiplication
+
+float2 Float2_Multiply(float2 aLeft, float2 aRight) {
+  float2 toReturn = { aLeft.x * aRight.x, aLeft.y * aRight.y };
+  return toReturn;
+}
+
+float3 Float3_Multiply(float3 aLeft, float3 aRight) {
+  float3 toReturn = { aLeft.x * aRight.x, aLeft.y * aRight.y, aLeft.z * aRight.z };
+  return toReturn;
+}
+
+float4 Float4_Multiply(float4 aLeft, float4 aRight) {
+  float4 toReturn = { aLeft.x * aRight.x, aLeft.y * aRight.y, aLeft.z * aRight.z, aLeft.w * aRight.w };
+  return toReturn;
+}
+
+//////////////////////////////////////////////////////
 // Scalar Addition
 
 float2 Float2_Scalar_Add(float2 aLeft, float aRight) {
@@ -313,10 +331,26 @@ SDL_GPUBuffer* CreateGPUBuffer(Uint32 aSize, SDL_GPUBufferUsageFlags aUsage, con
   return buffer;
 }
 
+SDL_GPUTransferBuffer* CreateTransferBuffer(Uint32 aSize, SDL_GPUTransferBufferUsage aUsage, const char* aName)
+{
+  SDL_SetStringProperty(gContext.mProperties, SDL_PROP_GPU_TRANSFERBUFFER_CREATE_NAME_STRING, aName);
+
+  SDL_GPUTransferBufferCreateInfo transferBufferCreateInfo;
+  SDL_zero(transferBufferCreateInfo);
+  transferBufferCreateInfo.props = gContext.mProperties;
+  transferBufferCreateInfo.size = aSize;
+  transferBufferCreateInfo.usage = aUsage;
+
+  SDL_GPUTransferBuffer* transferBuffer = SDL_CreateGPUTransferBuffer(gContext.mDevice, &transferBufferCreateInfo);
+  SDL_assert(transferBuffer);
+
+  return transferBuffer;
+}
+
 SDL_GPUTexture* CreateTexture(Uint32 aWidth, Uint32 aHeight, SDL_GPUTextureUsageFlags aUsage, SDL_GPUTextureFormat aFormat, const char* aName)
 {
   SDL_SetStringProperty(gContext.mProperties, SDL_PROP_GPU_TEXTURE_CREATE_NAME_STRING, aName);
-  
+
   SDL_GPUTextureCreateInfo textureCreateInfo;
   SDL_zero(textureCreateInfo);
   textureCreateInfo.width = aWidth;
@@ -329,9 +363,9 @@ SDL_GPUTexture* CreateTexture(Uint32 aWidth, Uint32 aHeight, SDL_GPUTextureUsage
 }
 
 SDL_GPUTexture* CreateAndUploadTexture(SDL_GPUCopyPass* aCopyPass, const char* aTextureName) {
-  char texture_path[4096];
-  SDL_snprintf(texture_path, SDL_arraysize(texture_path), "Assets/Images/%s.bmp", aTextureName);
-  SDL_Surface* surface = SDL_LoadBMP(texture_path);
+  char texturePath[4096];
+  SDL_snprintf(texturePath, SDL_arraysize(texturePath), "Assets/Images/%s.bmp", aTextureName);
+  SDL_Surface* surface = SDL_LoadBMP(texturePath);
   if (surface->format != SDL_PIXELFORMAT_RGBA32)
   {
     SDL_Surface* temp = SDL_ConvertSurface(surface, SDL_PIXELFORMAT_RGBA32);
@@ -339,20 +373,15 @@ SDL_GPUTexture* CreateAndUploadTexture(SDL_GPUCopyPass* aCopyPass, const char* a
     surface = temp;
   }
 
-  SDL_GPUTransferBufferCreateInfo transferCreateInfo;
-  SDL_zero(transferCreateInfo);
-  SDL_SetStringProperty(gContext.mProperties, SDL_PROP_GPU_TEXTURE_CREATE_NAME_STRING, aTextureName);
-  transferCreateInfo.usage = SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD;
-  transferCreateInfo.props = gContext.mProperties;
-  
-  {
-    const SDL_PixelFormatDetails* formatDetails = SDL_GetPixelFormatDetails(surface->format);
-    transferCreateInfo.size = surface->h * surface->pitch;
-  }
+  Uint32 textureSize = surface->h * surface->pitch;
 
-  SDL_GPUTransferBuffer* transferBuffer = SDL_CreateGPUTransferBuffer(gContext.mDevice, &transferCreateInfo);
+  char tranferBufferName[4096];
+  SDL_snprintf(tranferBufferName, SDL_arraysize(tranferBufferName), "CreateAndUploadTexture Transfer Buffer for %s", aTextureName);
+
+  SDL_GPUTransferBuffer* transferBuffer = CreateTransferBuffer(textureSize, SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD, tranferBufferName);
+
   void* transferPtr = SDL_MapGPUTransferBuffer(gContext.mDevice, transferBuffer, false);
-  memcpy(transferPtr, surface->pixels, transferCreateInfo.size);
+  memcpy(transferPtr, surface->pixels, textureSize);
   SDL_UnmapGPUTransferBuffer(gContext.mDevice, transferBuffer);
 
   SDL_GPUCommandBuffer* commandBuffer = NULL;
@@ -494,6 +523,8 @@ void DrawQuadContext(QuadContext* aPipeline, SDL_GPUCommandBuffer* aCommandBuffe
 
 void DestroyQuadContext(QuadContext* aPipeline)
 {
+  SDL_ReleaseGPUSampler(gContext.mDevice, aPipeline->mSampler);
+  SDL_ReleaseGPUTexture(gContext.mDevice, aPipeline->mTexture);
   SDL_ReleaseGPUGraphicsPipeline(gContext.mDevice, aPipeline->mPipeline);
   SDL_zero(*aPipeline);
 }

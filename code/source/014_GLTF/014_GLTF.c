@@ -624,6 +624,22 @@ SDL_GPUBuffer* CreateGPUBuffer(Uint32 aSize, SDL_GPUBufferUsageFlags aUsage, con
   return buffer;
 }
 
+SDL_GPUTransferBuffer* CreateTransferBuffer(Uint32 aSize, SDL_GPUTransferBufferUsage aUsage, const char* aName)
+{
+  SDL_SetStringProperty(gContext.mProperties, SDL_PROP_GPU_TRANSFERBUFFER_CREATE_NAME_STRING, aName);
+
+  SDL_GPUTransferBufferCreateInfo transferBufferCreateInfo;
+  SDL_zero(transferBufferCreateInfo);
+  transferBufferCreateInfo.props = gContext.mProperties;
+  transferBufferCreateInfo.size = aSize;
+  transferBufferCreateInfo.usage = aUsage;
+
+  SDL_GPUTransferBuffer* transferBuffer = SDL_CreateGPUTransferBuffer(gContext.mDevice, &transferBufferCreateInfo);
+  SDL_assert(transferBuffer);
+
+  return transferBuffer;
+}
+
 SDL_GPUTexture* CreateTexture(Uint32 aWidth, Uint32 aHeight, SDL_GPUTextureUsageFlags aUsage, SDL_GPUTextureFormat aFormat, const char* aName)
 {
   SDL_SetStringProperty(gContext.mProperties, SDL_PROP_GPU_TEXTURE_CREATE_NAME_STRING, aName);
@@ -640,9 +656,9 @@ SDL_GPUTexture* CreateTexture(Uint32 aWidth, Uint32 aHeight, SDL_GPUTextureUsage
 }
 
 SDL_GPUTexture* CreateAndUploadTexture(SDL_GPUCopyPass* aCopyPass, const char* aTextureName) {
-  char texture_path[4096];
-  SDL_snprintf(texture_path, SDL_arraysize(texture_path), "Assets/Images/%s.bmp", aTextureName);
-  SDL_Surface* surface = SDL_LoadBMP(texture_path);
+  char texturePath[4096];
+  SDL_snprintf(texturePath, SDL_arraysize(texturePath), "Assets/Images/%s.bmp", aTextureName);
+  SDL_Surface* surface = SDL_LoadBMP(texturePath);
   if (surface->format != SDL_PIXELFORMAT_RGBA32)
   {
     SDL_Surface* temp = SDL_ConvertSurface(surface, SDL_PIXELFORMAT_RGBA32);
@@ -650,20 +666,15 @@ SDL_GPUTexture* CreateAndUploadTexture(SDL_GPUCopyPass* aCopyPass, const char* a
     surface = temp;
   }
 
-  SDL_GPUTransferBufferCreateInfo transferCreateInfo;
-  SDL_zero(transferCreateInfo);
-  SDL_SetStringProperty(gContext.mProperties, SDL_PROP_GPU_TEXTURE_CREATE_NAME_STRING, aTextureName);
-  transferCreateInfo.usage = SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD;
-  transferCreateInfo.props = gContext.mProperties;
+  Uint32 textureSize = surface->h * surface->pitch;
 
-  {
-    const SDL_PixelFormatDetails* formatDetails = SDL_GetPixelFormatDetails(surface->format);
-    transferCreateInfo.size = surface->h * surface->pitch;
-  }
+  char tranferBufferName[4096];
+  SDL_snprintf(tranferBufferName, SDL_arraysize(tranferBufferName), "CreateAndUploadTexture Transfer Buffer for %s", aTextureName);
 
-  SDL_GPUTransferBuffer* transferBuffer = SDL_CreateGPUTransferBuffer(gContext.mDevice, &transferCreateInfo);
+  SDL_GPUTransferBuffer* transferBuffer = CreateTransferBuffer(textureSize, SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD, tranferBufferName);
+
   void* transferPtr = SDL_MapGPUTransferBuffer(gContext.mDevice, transferBuffer, false);
-  memcpy(transferPtr, surface->pixels, transferCreateInfo.size);
+  memcpy(transferPtr, surface->pixels, textureSize);
   SDL_UnmapGPUTransferBuffer(gContext.mDevice, transferBuffer);
 
   SDL_GPUCommandBuffer* commandBuffer = NULL;
@@ -735,9 +746,10 @@ SDL_GPUTextureFormat GetSupportedDepthFormat()
   return SDL_GPU_TEXTUREFORMAT_INVALID;
 }
 
-
-SDL_GPUBuffer* CreateAndUploadBuffer(const void* aData, Uint32 aSize, SDL_GPUBufferUsageFlags aUsage)
+SDL_GPUBuffer* CreateAndUploadBuffer(const void* aData, Uint32 aSize, SDL_GPUBufferUsageFlags aUsage, const char* aName)
 {
+  SDL_SetStringProperty(gContext.mProperties, SDL_PROP_GPU_BUFFER_CREATE_NAME_STRING, aName);
+
   SDL_GPUBufferCreateInfo bufferCreateInfo;
   SDL_zero(bufferCreateInfo);
 
@@ -749,19 +761,16 @@ SDL_GPUBuffer* CreateAndUploadBuffer(const void* aData, Uint32 aSize, SDL_GPUBuf
   SDL_assert(buffer);
 
   {
-    SDL_GPUTransferBufferCreateInfo transferBufferCreateInfo;
-    SDL_zero(transferBufferCreateInfo);
-    transferBufferCreateInfo.props = gContext.mProperties;
-    transferBufferCreateInfo.size = aSize;
-    transferBufferCreateInfo.usage = SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD;
+    char tranfer_buffer_name[4096];
+    SDL_snprintf(tranfer_buffer_name, SDL_arraysize(tranfer_buffer_name), "CreateAndUploadBuffer Transfer Buffer for %s", aName);
 
-    SDL_GPUTransferBuffer* transferBuffer = SDL_CreateGPUTransferBuffer(gContext.mDevice, &transferBufferCreateInfo);
-    SDL_assert(transferBuffer);
+    SDL_GPUTransferBuffer* transferBuffer = CreateTransferBuffer(aSize, SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD, tranfer_buffer_name);
 
-    void* mappedBuffer = SDL_MapGPUTransferBuffer(gContext.mDevice, transferBuffer, false);
-    SDL_memcpy(mappedBuffer, aData, aSize);
-
-    SDL_UnmapGPUTransferBuffer(gContext.mDevice, transferBuffer);
+    {
+      void* mappedBuffer = SDL_MapGPUTransferBuffer(gContext.mDevice, transferBuffer, false);
+      SDL_memcpy(mappedBuffer, aData, aSize);
+      SDL_UnmapGPUTransferBuffer(gContext.mDevice, transferBuffer);
+    }
 
     SDL_GPUCommandBuffer* commandBuffer = SDL_AcquireGPUCommandBuffer(gContext.mDevice);
     SDL_assert(commandBuffer);
@@ -781,6 +790,7 @@ SDL_GPUBuffer* CreateAndUploadBuffer(const void* aData, Uint32 aSize, SDL_GPUBuf
 
     SDL_EndGPUCopyPass(copyPass);
     SDL_SubmitGPUCommandBuffer(commandBuffer);
+    SDL_ReleaseGPUTransferBuffer(gContext.mDevice, transferBuffer);
   }
 
   return buffer;
@@ -1194,9 +1204,6 @@ Scene GenerateGPUScene(cgltf_data* aData, SceneInfo aSceneInfo)
   return scene;
 }
 
-
-
-
 Scene LoadGltfModel(const char* aModelName) {
   char model_path[4096];
   SDL_snprintf(model_path, SDL_arraysize(model_path), "Assets/Models/%s", aModelName);
@@ -1242,9 +1249,9 @@ ModelContext CreateModelContext(SDL_GPUTextureFormat aDepthFormat) {
   SDL_GPUGraphicsPipelineCreateInfo graphicsPipelineCreateInfo;
   SDL_zero(graphicsPipelineCreateInfo);
 
-  graphicsPipelineCreateInfo.target_info.num_color_targets = 1;                                  /*setting num_color_targets */
-  graphicsPipelineCreateInfo.target_info.color_target_descriptions = &colorTargetDescription;    /*setting color_target_descriptions */
-  graphicsPipelineCreateInfo.target_info.depth_stencil_format = aDepthFormat;                    /*setting depth_stencil_format */
+  graphicsPipelineCreateInfo.target_info.num_color_targets = 1;
+  graphicsPipelineCreateInfo.target_info.color_target_descriptions = &colorTargetDescription;
+  graphicsPipelineCreateInfo.target_info.depth_stencil_format = aDepthFormat;
   graphicsPipelineCreateInfo.target_info.has_depth_stencil_target = true;
   graphicsPipelineCreateInfo.primitive_type = SDL_GPU_PRIMITIVETYPE_TRIANGLELIST;
   graphicsPipelineCreateInfo.rasterizer_state.front_face = SDL_GPU_FRONTFACE_COUNTER_CLOCKWISE;

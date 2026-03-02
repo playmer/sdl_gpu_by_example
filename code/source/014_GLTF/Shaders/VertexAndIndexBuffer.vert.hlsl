@@ -7,8 +7,7 @@ struct Input
 
 struct Output
 {
-  float2 TextureCoordinates : TEXCOORD0;
-  float3 Color : TEXCOORD1;
+  float3 Color : TEXCOORD0;
   float4 Position : SV_Position;
 };
 
@@ -26,7 +25,6 @@ Output main(Input input)
 {
   Output output;
   output.Position = mul(WorldToNDC, mul(ObjectToWorld, float4(input.Position, 1.0f)));
-  output.TextureCoordinates = (input.Position.xy + 1.0f) * 0.5f;
   output.Color = input.Normal;
   return output;
 }

@@ -6,7 +6,7 @@ struct Output
   float4 Color : SV_Target0;
 };
 
-Output main(float2 aTextureCoordinates : TEXCOORD0, float3 aColor : TEXCOORD1)
+Output main(float3 aColor : TEXCOORD0)
 {
   Output output;
   output.Color = float4(aColor, 1.0f);
