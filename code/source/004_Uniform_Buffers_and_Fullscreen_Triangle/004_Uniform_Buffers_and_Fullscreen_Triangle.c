@@ -261,7 +261,7 @@ SDL_GPUShader* CreateShader(
 /// FullscreenContext
 typedef struct FullscreenContext {
   SDL_GPUGraphicsPipeline* mPipeline;
-  float2 mOffset;
+  float2 mPositon;
   int mColorIndex;
 } FullscreenContext;
 
@@ -304,8 +304,8 @@ FullscreenContext CreateFullscreenContext() {
   FullscreenContext pipeline;
   SDL_zero(pipeline);
   pipeline.mPipeline = SDL_CreateGPUGraphicsPipeline(gContext.mDevice, &graphicsPipelineCreateInfo);
-  pipeline.mOffset.x = 0.5f;
-  pipeline.mOffset.y = 0.5f;
+  pipeline.mPositon.x = 0.5f;
+  pipeline.mPositon.y = 0.5f;
   SDL_assert(pipeline.mPipeline);
 
   SDL_ReleaseGPUShader(gContext.mDevice, graphicsPipelineCreateInfo.vertex_shader);
@@ -323,7 +323,7 @@ void DrawFullscreenContext(FullscreenContext* aPipeline, SDL_GPUCommandBuffer* a
   };
 
   SDL_BindGPUGraphicsPipeline(aRenderPass, aPipeline->mPipeline);
-  SDL_PushGPUVertexUniformData(aCommandBuffer, 0, &aPipeline->mOffset, sizeof(float2));
+  SDL_PushGPUVertexUniformData(aCommandBuffer, 0, &aPipeline->mPositon, sizeof(float2));
   SDL_PushGPUFragmentUniformData(aCommandBuffer, 0, &colors[aPipeline->mColorIndex], sizeof(SDL_FColor));
   SDL_DrawGPUPrimitives(aRenderPass, 3, 1, 0, 0);
 }
@@ -378,10 +378,10 @@ int main(int argc, char** argv)
       }
     }
 
-    if (key_map[SDL_SCANCODE_D]) fullscreenContext.mOffset.x += speed * dt * 1.0f;
-    if (key_map[SDL_SCANCODE_A]) fullscreenContext.mOffset.x -= speed * dt * 1.0f;
-    if (key_map[SDL_SCANCODE_W]) fullscreenContext.mOffset.y += speed * dt * 1.0f;
-    if (key_map[SDL_SCANCODE_S]) fullscreenContext.mOffset.y -= speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_D]) fullscreenContext.mPositon.x += speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_A]) fullscreenContext.mPositon.x -= speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_W]) fullscreenContext.mPositon.y += speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_S]) fullscreenContext.mPositon.y -= speed * dt * 1.0f;
 
 
     SDL_GPUCommandBuffer* commandBuffer = SDL_AcquireGPUCommandBuffer(gContext.mDevice);

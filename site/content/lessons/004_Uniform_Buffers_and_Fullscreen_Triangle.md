@@ -343,12 +343,12 @@ Now we can review the changes needed on the CPU side to get the data for our ren
 
 ### Setting up on the CPU
 
-So now we'll need to poke some data over to the GPU. We've decided on some relatively simple data, one being just a position, around which to draw the oval, and the other to be the color of the oval. We'll adjust our context struct to contain the position as a `float2` called `mOffset`, and we'll just choose some colors to index into and store that index as `mColorIndex`.
+So now we'll need to poke some data over to the GPU. We've decided on some relatively simple data, one being just a position, around which to draw the oval, and the other to be the color of the oval. We'll adjust our context struct to contain the position as a `float2` called `mPosition`, and we'll just choose some colors to index into and store that index as `mColorIndex`.
 
 ```c
 typedef struct FullscreenContext {
   SDL_GPUGraphicsPipeline* mPipeline;
-  float2 mOffset;
+  float2 mPosition;
   int mColorIndex;
 } FullscreenContext;
 ```
@@ -388,10 +388,10 @@ case SDL_EVENT_KEY_DOWN:
 And after processing events, we'll look at the WASD keyboard state to adjust the position of the oval. We're effectively doing a translation here through a `Float2_Add`, but we're just doing it manually because it's less code and more clear.
 
 ```c
-if (key_map[SDL_SCANCODE_D]) fullscreenContext.mOffset.x += speed * dt * 1.0f;
-if (key_map[SDL_SCANCODE_A]) fullscreenContext.mOffset.x -= speed * dt * 1.0f;
-if (key_map[SDL_SCANCODE_W]) fullscreenContext.mOffset.y += speed * dt * 1.0f;
-if (key_map[SDL_SCANCODE_S]) fullscreenContext.mOffset.y -= speed * dt * 1.0f;
+if (key_map[SDL_SCANCODE_D]) fullscreenContext.mPosition.x += speed * dt * 1.0f;
+if (key_map[SDL_SCANCODE_A]) fullscreenContext.mPosition.x -= speed * dt * 1.0f;
+if (key_map[SDL_SCANCODE_W]) fullscreenContext.mPosition.y += speed * dt * 1.0f;
+if (key_map[SDL_SCANCODE_S]) fullscreenContext.mPosition.y -= speed * dt * 1.0f;
 ```
 
 Now lets make adjustments to our GPU initialization and rendering code to get to the final stretch.
@@ -416,8 +416,8 @@ graphicsPipelineCreateInfo.<stage>_shader = CreateShader(
 FullscreenContext pipeline;
 SDL_zero(pipeline);
 pipeline.mPipeline = SDL_CreateGPUGraphicsPipeline(gContext.mDevice, &graphicsPipelineCreateInfo);
-pipeline.mOffset.x = 0.5f;
-pipeline.mOffset.y = 0.5f;
+pipeline.mPosition.x = 0.5f;
+pipeline.mPosition.y = 0.5f;
 SDL_assert(pipeline.mPipeline);
 ```
 
@@ -435,13 +435,13 @@ void DrawFullscreenContext(FullscreenContext* aPipeline, SDL_GPUCommandBuffer* a
   };
 
   SDL_BindGPUGraphicsPipeline(aRenderPass, aPipeline->mPipeline);
-  SDL_PushGPUVertexUniformData(aCommandBuffer, 0, &aPipeline->mOffset, sizeof(float2));
+  SDL_PushGPUVertexUniformData(aCommandBuffer, 0, &aPipeline->mPosition, sizeof(float2));
   SDL_PushGPUFragmentUniformData(aCommandBuffer, 0, &colors[aPipeline->mColorIndex], sizeof(SDL_FColor));
   SDL_DrawGPUPrimitives(aRenderPass, 3, 1, 0, 0);
 }
 ```
 
-Incredibly similar to the drawing function of the last chapter, but this time we pass some small bits of data to each shader stage. In our case, we're pushing data in both the Vertex and Fragment stages and they're both in slot 0. The Vertex stage is getting a float2, whereas the Fragment stage is getting an `SDL_FColor`, which would map to `float4` in our terms. Correspondingly we pass a point to the `mOffset` for the Vertex stage, and use the `mColorIndex` to index into our little static R, G, B array of color data to pass the appropriate color for the Fragment Stage.
+Incredibly similar to the drawing function of the last chapter, but this time we pass some small bits of data to each shader stage. In our case, we're pushing data in both the Vertex and Fragment stages and they're both in slot 0. The Vertex stage is getting a float2, whereas the Fragment stage is getting an `SDL_FColor`, which would map to `float4` in our terms. Correspondingly we pass a point to the `mPosition` for the Vertex stage, and use the `mColorIndex` to index into our little static R, G, B array of color data to pass the appropriate color for the Fragment Stage.
 
 And that's it, if you run now, you should get a screen that lets you move around and adjust the color of the oval!
 
