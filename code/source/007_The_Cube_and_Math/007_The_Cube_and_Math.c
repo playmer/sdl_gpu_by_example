@@ -590,7 +590,7 @@ SDL_GPUTransferBuffer* CreateTransferBuffer(Uint32 aSize, SDL_GPUTransferBufferU
   return transferBuffer;
 }
 
-SDL_GPUTexture* CreateTexture(Uint32 aWidth, Uint32 aHeight, SDL_GPUTextureUsageFlags aUsage, SDL_GPUTextureFormat aFormat, const char* aName)
+SDL_GPUTexture* CreateTexture(Uint32 aWidth, Uint32 aHeight, Uint32 layers, Uint32 levels, SDL_GPUTextureUsageFlags aUsage, SDL_GPUTextureFormat aFormat, const char* aName)
 {
   SDL_SetStringProperty(gContext.mProperties, SDL_PROP_GPU_TEXTURE_CREATE_NAME_STRING, aName);
 
@@ -598,10 +598,11 @@ SDL_GPUTexture* CreateTexture(Uint32 aWidth, Uint32 aHeight, SDL_GPUTextureUsage
   SDL_zero(textureCreateInfo);
   textureCreateInfo.width = aWidth;
   textureCreateInfo.height = aHeight;
-  textureCreateInfo.layer_count_or_depth = 1;
-  textureCreateInfo.num_levels = 1;
+  textureCreateInfo.layer_count_or_depth = layers;
+  textureCreateInfo.num_levels = levels;
   textureCreateInfo.usage = aUsage;
   textureCreateInfo.format = aFormat;
+  textureCreateInfo.props = gContext.mProperties;
   return SDL_CreateGPUTexture(gContext.mDevice, &textureCreateInfo);
 }
 
@@ -635,7 +636,7 @@ SDL_GPUTexture* CreateAndUploadTexture(SDL_GPUCopyPass* aCopyPass, const char* a
     copyPass = SDL_BeginGPUCopyPass(commandBuffer);
   }
 
-  SDL_GPUTexture* texture = CreateTexture(surface->w, surface->h, SDL_GPU_TEXTUREUSAGE_SAMPLER, SDL_GPU_TEXTUREFORMAT_R8G8B8A8_UNORM, aTextureName);
+  SDL_GPUTexture* texture = CreateTexture(surface->w, surface->h, 1, 1, SDL_GPU_TEXTUREUSAGE_SAMPLER, SDL_GPU_TEXTUREFORMAT_R8G8B8A8_UNORM, aTextureName);
   SDL_assert(texture);
 
   // Copy to GPU
