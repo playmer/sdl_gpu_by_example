@@ -19,11 +19,13 @@ We have compressed formats such as various versions of DXT, ETC, and ATSC that c
 
 For now we'll not be worrying too much about these details, and just use the built-in formats.
 
-First we'll start with a small function to create a Texture resource:
+First we'll start with a small function to create a Texture resource. We'll need to create textures outside of loading up files from time to time, so it's nice to have a little function to simplify creation a bit. As usual we'll pass a name in and set it in the properties, the rest is quite straightforward.
 
 ```c
 SDL_GPUTexture* CreateTexture(Uint32 aWidth, Uint32 aHeight, SDL_GPUTextureUsageFlags aUsage, SDL_GPUTextureFormat aFormat, const char* aName)
 {
+  SDL_SetStringProperty(gContext.mProperties, SDL_PROP_GPU_TEXTURE_CREATE_NAME_STRING, aName);
+  
   SDL_GPUTextureCreateInfo textureCreateInfo;
   SDL_zero(textureCreateInfo);
   textureCreateInfo.width = aWidth;
@@ -32,9 +34,96 @@ SDL_GPUTexture* CreateTexture(Uint32 aWidth, Uint32 aHeight, SDL_GPUTextureUsage
   textureCreateInfo.num_levels = 1;
   textureCreateInfo.usage = aUsage;
   textureCreateInfo.format = aFormat;
+  textureCreateInfo.props = gContext.mProperties;
   return SDL_CreateGPUTexture(gContext.mDevice, &textureCreateInfo);
 }
 ```
+
+For the most part we'll be usually be loading files and dumping them into textures, so we'll write a function that does this for us. Like with shaders, we'll load them from a specific place, and for now we'll assume everything is BMP. We can compose a path given a texture name, and then use `SDL_LoadBMP` to load an `SDL_Surface` with the texture data. For the sake of simplicity, we'll ensure we use RGBA32 format as discussed above, and if it's not, we can convert to it using `SDL_ConvertSurface`, and destroy the original afterword.
+
+```c
+SDL_GPUTexture* CreateAndUploadTexture(SDL_GPUCopyPass* aCopyPass, const char* aTextureName) {
+  char texture_path[4096];
+  SDL_snprintf(texture_path, SDL_arraysize(texture_path), "Assets/Images/%s.bmp", aTextureName);
+  SDL_Surface* surface = SDL_LoadBMP(texture_path);
+  if (surface->format != SDL_PIXELFORMAT_RGBA32)
+  {
+    SDL_Surface* temp = SDL_ConvertSurface(surface, SDL_PIXELFORMAT_RGBA32);
+    SDL_DestroySurface(surface);
+    surface = temp;
+  }
+```
+
+Now that we've got the texture data in CPU memory in an expected format we can start working on uploading it to the GPU
+
+```c
+SDL_GPUTransferBufferCreateInfo transferCreateInfo;
+SDL_zero(transferCreateInfo);
+transferCreateInfo.usage = SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD;
+transferCreateInfo.props = gContext.mProperties;
+
+{
+  const SDL_PixelFormatDetails* formatDetails = SDL_GetPixelFormatDetails(surface->format);
+  transferCreateInfo.size = surface->h * surface->pitch;
+}
+
+SDL_GPUTransferBuffer* transferBuffer = SDL_CreateGPUTransferBuffer(gContext.mDevice, &transferCreateInfo);
+void* transferPtr = SDL_MapGPUTransferBuffer(gContext.mDevice, transferBuffer, false);
+memcpy(transferPtr, surface->pixels, transferCreateInfo.size);
+SDL_UnmapGPUTransferBuffer(gContext.mDevice, transferBuffer);
+```
+
+
+```c
+SDL_GPUTexture* texture = CreateTexture(surface->w, surface->h, SDL_GPU_TEXTUREUSAGE_SAMPLER, SDL_GPU_TEXTUREFORMAT_R8G8B8A8_UNORM, aTextureName);
+SDL_assert(texture);
+```
+
+```c
+SDL_GPUCommandBuffer* commandBuffer = NULL;
+SDL_GPUCopyPass* copyPass = aCopyPass;
+bool needsToSubmit = NULL == copyPass;
+if (needsToSubmit) {
+  commandBuffer = SDL_AcquireGPUCommandBuffer(gContext.mDevice);
+  copyPass = SDL_BeginGPUCopyPass(commandBuffer);
+}
+```
+
+```c
+// Copy to GPU
+SDL_GPUTextureTransferInfo textureTransferInfo;
+SDL_zero(textureTransferInfo);
+textureTransferInfo.pixels_per_row = surface->w;
+textureTransferInfo.rows_per_layer = surface->h;
+textureTransferInfo.transfer_buffer = transferBuffer;
+
+SDL_GPUTextureRegion textureRegion;
+SDL_zero(textureRegion);
+textureRegion.texture = texture;
+textureRegion.w = surface->w;
+textureRegion.h = surface->h;
+textureRegion.d = 1;
+
+SDL_UploadToGPUTexture(
+  copyPass,
+  &textureTransferInfo,
+  &textureRegion,
+  false
+);
+```
+
+```c
+if (needsToSubmit) {
+  SDL_EndGPUCopyPass(copyPass);
+  SDL_SubmitGPUCommandBuffer(commandBuffer);
+}
+
+SDL_ReleaseGPUTransferBuffer(gContext.mDevice, transferBuffer);
+SDL_DestroySurface(surface);
+
+return texture;
+```
+
 
 ## Transfer Buffers
 
