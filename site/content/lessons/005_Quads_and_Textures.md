@@ -188,6 +188,68 @@ graphicsPipelineCreateInfo.fragment_shader = CreateShader(
 );
 ```
 
+Now that we've got a position and scale, we'll need to set them up. 0.5f will give us a reasonably sized unit square in NDC for our scale, and the origin seems a reasonable position.
+
+```c
+context.mUniform.mPosition.x = 0.f;
+context.mUniform.mPosition.y = 0.f;
+context.mUniform.mScale.x = 0.5f;
+context.mUniform.mScale.y = 0.5f;
+```
+
+Finally we need to create a sampler for our texture, this is essentially how we'll tell the graphics card how we'd like 
+
+```c
+SDL_GPUSamplerCreateInfo samplerCreateInfo;
+SDL_zero(samplerCreateInfo);
+samplerCreateInfo.address_mode_u = SDL_GPU_SAMPLERADDRESSMODE_REPEAT;
+samplerCreateInfo.address_mode_v = SDL_GPU_SAMPLERADDRESSMODE_REPEAT;
+context.mSampler = SDL_CreateGPUSampler(gContext.mDevice, &samplerCreateInfo);
+SDL_assert(context.mSampler);
+
+context.mTexture = CreateAndUploadTexture(NULL, "sample.bmp");
+```
+
+## Drawing
+
+```c
+SDL_BindGPUGraphicsPipeline(aRenderPass, aContext->mPipeline);
+SDL_PushGPUVertexUniformData(aCommandBuffer, 0, &aContext->mUniform, sizeof(aContext->mUniform));
+
+{
+  SDL_GPUTextureSamplerBinding textureBinding;
+  SDL_zero(textureBinding);
+  textureBinding.texture = aContext->mTexture;
+  textureBinding.sampler = aContext->mSampler;
+  SDL_BindGPUFragmentSamplers(aRenderPass, 0, &textureBinding, 1);
+}
+
+SDL_DrawGPUPrimitives(aRenderPass, 6, 1, 0, 0);
+```
+
+## Cleanup
+
+We'll need to clean up the new resources we made in our destroy function: 
+
+```c
+SDL_ReleaseGPUSampler(gContext.mDevice, aContext->mSampler);
+SDL_ReleaseGPUTexture(gContext.mDevice, aContext->mTexture);
+```
+
+## Controls
+
+We don't need the coloring controls from the last example so if you still have that in your event handler, remove it. This time we'll adjust and expand out our controls a bit, one due to now using a struct that contains our position, and two so we can adjust the scale of our textured object:
+
+```c
+if (key_map[SDL_SCANCODE_D]) context.mUniform.mPosition.x += speed * dt * 1.0f;
+if (key_map[SDL_SCANCODE_A]) context.mUniform.mPosition.x -= speed * dt * 1.0f;
+if (key_map[SDL_SCANCODE_W]) context.mUniform.mPosition.y += speed * dt * 1.0f;
+if (key_map[SDL_SCANCODE_S]) context.mUniform.mPosition.y -= speed * dt * 1.0f;
+if (key_map[SDL_SCANCODE_R]) context.mUniform.mScale.x += speed * dt * 1.0f;
+if (key_map[SDL_SCANCODE_F]) context.mUniform.mScale.x -= speed * dt * 1.0f;
+if (key_map[SDL_SCANCODE_T]) context.mUniform.mScale.y += speed * dt * 1.0f;
+if (key_map[SDL_SCANCODE_G]) context.mUniform.mScale.y -= speed * dt * 1.0f;
+```
 
 ## The Vertex Shader
 
