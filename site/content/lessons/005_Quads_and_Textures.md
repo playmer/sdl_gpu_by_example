@@ -20,7 +20,7 @@ We have compressed formats such as various versions of DXT, ETC, and ATSC that c
 First we'll start with a small function to create a Texture resource. We'll need to create textures outside of loading up files from time to time, so it's nice to have a little function to simplify creation a bit. As usual we'll pass a name in and set it in the properties, the rest is _mostly_ straightforward.
 
 ```c
-SDL_GPUTexture* CreateTexture(Uint32 aWidth, Uint32 aHeight, Uint32 layers, Uint32 levels, SDL_GPUTextureUsageFlags aUsage, SDL_GPUTextureFormat aFormat, const char* aName)
+SDL_GPUTexture* CreateTexture(Uint32 aWidth, Uint32 aHeight, Uint32 layers_or_depth, Uint32 levels, SDL_GPUTextureUsageFlags aUsage, SDL_GPUTextureFormat aFormat, const char* aName)
 {
   SDL_SetStringProperty(gContext.mProperties, SDL_PROP_GPU_TEXTURE_CREATE_NAME_STRING, aName);
 
@@ -39,7 +39,7 @@ SDL_GPUTexture* CreateTexture(Uint32 aWidth, Uint32 aHeight, Uint32 layers, Uint
 
 Part of creating a texture is deciding how much memory to allocate, and for this the API will need to know nearly every other parameter here. Width and Height are self explanatory, and we've briefly discussed how format determines how the data is laid out, which should indicate that it's also relevant to the size of the data required, how much is dependent on the specific format.
 
-Layers and Levels are a little less obvious. Layers are relatively simple to explain, they're essentially just additional textures of the same size and format. These can be used for any number of things, maybe you store the different faces of a skybox (a cube with textures on the inside that are used to display the sky), or you store several texture atlases together to reduce on texture rebindings. All we really need to consider for now is that we just need a single layer for most tasks currently. Levels on the other hand relate to what are referred to as mipmaps. They're somewhat similar to layers, but rather than being the same size, each additional mip level is another texture that's smaller than the last. Traditionally they're intended to be downsampled, although perhaps touched up by artists, copies of the full texture, to be automatically used when the triangle displaying the texture is of some size where the full texture's quality would go to waste. For various cache efficiency reasons this ends up being a large performance win for objects not close to the screen. We'll talk more about each of those in the future, but that should suffice for a high level explanation.
+Layers/Depth and Levels are a little less obvious. Layers and Depth are relatively simple to explain, they're essentially just additional textures of the same size and format. These can be used for any number of things, maybe you store the different faces of a skybox (a cube with textures on the inside that are used to display the sky), or you store several texture atlases together to reduce on texture rebindings. All we really need to consider for now is that we just need a single layer for most tasks currently, multiple levels and depth will only really come up when we use 2D Array textures or 3D textures. Levels on the other hand relate to what are referred to as mipmaps. They're somewhat similar to layers, but rather than being the same size, each additional mip level is another texture that's smaller than the last. Traditionally they're intended to be downsampled, although perhaps touched up by artists, copies of the full texture, to be automatically used when the triangle displaying the texture is of some size where the full texture's quality would go to waste. For various cache efficiency reasons this ends up being a large performance win for objects not close to the screen. We'll talk more about each of those in the future, but that should suffice for a high level explanation.
 
 Finally there's the usage parameter, which is kind of what it sounds like. We need to tell SDL_GPU how we plan to use this texture, for now, we really only care about `SDL_GPU_TEXTUREUSAGE_SAMPLER`, but you may wish to look at the various other options of [`SDL_GPUTextureUsageFlags`](https://wiki.libsdl.org/SDL3/SDL_GPUTextureUsageFlags) on your own. We'll be discussing them as they're relevant.
 
@@ -65,7 +65,9 @@ SDL_GPUTransferBuffer* CreateTransferBuffer(Uint32 aSize, SDL_GPUTransferBufferU
 
 This one is a bit simpler, since we only care about usage and size. Usage just determines if this transfer buffer will be used for CPU -> GPU (upload), or GPU -> CPU (download) transfers. For now, we'll only be looking at uploading.
 
-For the most part we'll be usually be loading files and dumping them into textures, so we'll write a function that does this for us. Like with shaders, we'll load them from a specific place. We can compose a path given a texture name, and then use `SDL_LoadSurface` to load an `SDL_Surface` with the texture data. For the sake of simplicity, we'll ensure we use RGBA32 format as discussed above, and if it's not, we can convert to it using `SDL_ConvertSurface`, and destroy the original afterword.
+For the most part we'll be usually be loading files and dumping them into textures, so we'll write a function that does this for us. Like with shaders, we'll load them from a specific place. We can compose a path given a texture name, and then use `SDL_LoadSurface` to load an `SDL_Surface` with the texture data. For the sake of simplicity, we'll ensure we use RGBA32 format as discussed above, and if it's not, we can convert to it using `SDL_ConvertSurface`, and destroy the original afterword. 
+
+Regarding the copy pass parameter, we'll discuss that a bit down below, but just know that `NULL` is a perfectly valid argument here, and it's what we'll be doing for awhile.
 
 ```c
 SDL_GPUTexture* CreateAndUploadTexture(SDL_GPUCopyPass* aCopyPass, const char* aTextureName) {
@@ -98,11 +100,16 @@ Once we have the transfer buffer we can map it, which will give us a pointer to 
   SDL_UnmapGPUTransferBuffer(gContext.mDevice, transferBuffer)
 ```
 
+Next we need to make a texture resource, we talked a about the parameters above, so the calls should seem straightforward. We don't need any additional layers, and we're not dealing with mipmaps yet, so each of those are 1. We want to display our textures from a fragment shader, so our usage will be `SDL_GPU_TEXTUREUSAGE_SAMPLER`, and since we're using a RGBA32 pixel format on our surface, this maps to `SDL_GPU_TEXTUREFORMAT_R8G8B8A8_UNORM` in SDL_GPU. 
 
 ```c
 SDL_GPUTexture* texture = CreateTexture(surface->w, surface->h, 1, 1, SDL_GPU_TEXTUREUSAGE_SAMPLER, SDL_GPU_TEXTUREFORMAT_R8G8B8A8_UNORM, aTextureName);
 SDL_assert(texture);
 ```
+
+Now we get to discuss copy passes a bit. You'll remember we've been using render passes previously, this is a similar idea. Like how render passes contain many rendering operations, so too does a copy pass contain many copying operations. We'll need one of these to move data from our transfer buffer into the texture. To accommodate possible future use of this function, we took a copy pass. This is for future chapters where we might load a bunch of things all at the same time and this function is just one among many loads. In a situation like that we'd only want to create one copy pass and use it for all of our transfers. For our use case, it won't be uncommon that we want a one-off copy pass, so we'll accept a `NULL` copy pass, and create our own if so. 
+
+Thankfully getting them is pretty easy, we're also assuming that if we weren't handed a copy pass, there's likely no command buffer as well, so we'll treat that as a one-off as well.
 
 ```c
 SDL_GPUCommandBuffer* commandBuffer = NULL;
@@ -113,6 +120,8 @@ if (needsToSubmit) {
   copyPass = SDL_BeginGPUCopyPass(commandBuffer);
 }
 ```
+
+Now that we've got a copypass, we can issue the actual copy command. In this case we're copying to a texture, so we need a `SDL_GPUTextureTransferInfo` and `SDL_GPUTextureRegion` to describe it. You can essentially think of these as the transfer info describing the source data and the region the destination texture. With that in mind, given we're not doing anything special, this should be rather straightforward. We use the surface width and height to describe the rows and columns of the source data, and the `w` and `h` of the destination texture. We need to specify that we're using the transfer buffer from above as the source, and the texture we created as the destination. The last two interesting pieces of this is the `d` field of the region and the `false` we pass to the upload command. The `d` field refers to the layer or depth we're copying to. We're only handling normal textures here, and we only passed 1 for layers, so that's the layer we're writing to. Regarding the `false`, this corresponds to something called [cycling](https://wiki.libsdl.org/SDL3/CategoryGPU#a-note-on-cycling). For now we don't want to request cycling, but it's related to doing multiple uploads to the same buffer or texture. We'll discuss it more later on when we start doing those updates.
 
 ```c
 // Copy to GPU
@@ -136,6 +145,7 @@ SDL_UploadToGPUTexture(
   false
 );
 ```
+
 Finally we can close out the copy pass and command buffer if we needed to make them, as well as releasing the TransferBuffer. You don't need to worry about releasing it before submitting the command buffer if we _had_ passed one, as it's internally refcounted by SDL.
 
 ```c
@@ -148,13 +158,6 @@ SDL_ReleaseGPUTransferBuffer(gContext.mDevice, transferBuffer);
 
 return texture;
 ```
-
-
-## Transfer Buffers
-
-
-## Uploads
-
 
 ## The Vertex Shader
 
