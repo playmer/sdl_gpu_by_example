@@ -3,7 +3,7 @@ title: Quads and Textures
 description: Extending off of Uniform Buffers, we'll learn about Texture Buffers, so we can finally display images beyond colored shapes.
 template: lesson_template.html
 example_status: Finished
-chapter_status: Not Started
+chapter_status: In progress
 collections: ["lessons"]
 ---
 
@@ -15,11 +15,9 @@ We'll be using SDL's built-in support for BMPs, but it also supports PNGs as of 
 
 Typically games use gpu compressed texture formats rather than things like PNG, BMP, TIFF, or JPEG. This comes down to data layouts and hardware support. The typical image formats you're familiar with are designed around minimizing file size, but this means it's essentially impossible for hardware to trivially sample individual pixels. This means that to use these formats on the gpu, we need to decompress them to a format such as RGBA where each component is 1 byte, with each Pixel being the Uint32 of those components combined side-by-side. This means the texture is significantly larger in memory, and slower to sample. 
 
-We have compressed formats such as various versions of DXT, ETC, and ATSC that compress textures as a series of blocks, which gpus have hardware support for sampling. There's various tradeoffs between the different formats, the hardware you're targeting, and what needs to be done on load time to use them. We'll look into some options further on in the series.
+We have compressed formats such as various versions of DXT, ETC, and ATSC that compress textures as a series of blocks, which gpus have hardware support for sampling. There's various tradeoffs between the different formats, the hardware you're targeting, and what needs to be done on load time to use them. We'll look into some options further on in the series, but for now we'll not be worrying too much about these details, and just use the built-in formats.
 
-For now we'll not be worrying too much about these details, and just use the built-in formats.
-
-First we'll start with a small function to create a Texture resource. We'll need to create textures outside of loading up files from time to time, so it's nice to have a little function to simplify creation a bit. As usual we'll pass a name in and set it in the properties, the rest is quite straightforward.
+First we'll start with a small function to create a Texture resource. We'll need to create textures outside of loading up files from time to time, so it's nice to have a little function to simplify creation a bit. As usual we'll pass a name in and set it in the properties, the rest is _mostly_ straightforward.
 
 ```c
 SDL_GPUTexture* CreateTexture(Uint32 aWidth, Uint32 aHeight, Uint32 layers, Uint32 levels, SDL_GPUTextureUsageFlags aUsage, SDL_GPUTextureFormat aFormat, const char* aName)
@@ -38,7 +36,14 @@ SDL_GPUTexture* CreateTexture(Uint32 aWidth, Uint32 aHeight, Uint32 layers, Uint
   return SDL_CreateGPUTexture(gContext.mDevice, &textureCreateInfo);
 }
 ```
-Next we'll do something similar for creating `SDL_GPUTransferBuffer`s. 
+
+Part of creating a texture is deciding how much memory to allocate, and for this the API will need to know nearly every other parameter here. Width and Height are self explanatory, and we've briefly discussed how format determines how the data is laid out, which should indicate that it's also relevant to the size of the data required, how much is dependent on the specific format.
+
+Layers and Levels are a little less obvious. Layers are relatively simple to explain, they're essentially just additional textures of the same size and format. These can be used for any number of things, maybe you store the different faces of a skybox (a cube with textures on the inside that are used to display the sky), or you store several texture atlases together to reduce on texture rebindings. All we really need to consider for now is that we just need a single layer for most tasks currently. Levels on the other hand relate to what are referred to as mipmaps. They're somewhat similar to layers, but rather than being the same size, each additional mip level is another texture that's smaller than the last. Traditionally they're intended to be downsampled, although perhaps touched up by artists, copies of the full texture, to be automatically used when the triangle displaying the texture is of some size where the full texture's quality would go to waste. For various cache efficiency reasons this ends up being a large performance win for objects not close to the screen. We'll talk more about each of those in the future, but that should suffice for a high level explanation.
+
+Finally there's the usage parameter, which is kind of what it sounds like. We need to tell SDL_GPU how we plan to use this texture, for now, we really only care about `SDL_GPU_TEXTUREUSAGE_SAMPLER`, but you may wish to look at the various other options of [`SDL_GPUTextureUsageFlags`](https://wiki.libsdl.org/SDL3/SDL_GPUTextureUsageFlags) on your own. We'll be discussing them as they're relevant.
+
+Next we'll do something similar for creating `SDL_GPUTransferBuffer`s, which are intermediate buffers we'll use to copy our texture data to the GPU. And of course, we'll use them for other types of buffers in the future as well.
 
 ```c
 SDL_GPUTransferBuffer* CreateTransferBuffer(Uint32 aSize, SDL_GPUTransferBufferUsage aUsage, const char* aName)
@@ -56,16 +61,17 @@ SDL_GPUTransferBuffer* CreateTransferBuffer(Uint32 aSize, SDL_GPUTransferBufferU
 
   return transferBuffer;
 }
-
 ```
 
-For the most part we'll be usually be loading files and dumping them into textures, so we'll write a function that does this for us. Like with shaders, we'll load them from a specific place, and for now we'll assume everything is BMP. We can compose a path given a texture name, and then use `SDL_LoadBMP` to load an `SDL_Surface` with the texture data. For the sake of simplicity, we'll ensure we use RGBA32 format as discussed above, and if it's not, we can convert to it using `SDL_ConvertSurface`, and destroy the original afterword.
+This one is a bit simpler, since we only care about usage and size. Usage just determines if this transfer buffer will be used for CPU -> GPU (upload), or GPU -> CPU (download) transfers. For now, we'll only be looking at uploading.
+
+For the most part we'll be usually be loading files and dumping them into textures, so we'll write a function that does this for us. Like with shaders, we'll load them from a specific place. We can compose a path given a texture name, and then use `SDL_LoadSurface` to load an `SDL_Surface` with the texture data. For the sake of simplicity, we'll ensure we use RGBA32 format as discussed above, and if it's not, we can convert to it using `SDL_ConvertSurface`, and destroy the original afterword.
 
 ```c
 SDL_GPUTexture* CreateAndUploadTexture(SDL_GPUCopyPass* aCopyPass, const char* aTextureName) {
-  char texture_path[4096];
-  SDL_snprintf(texture_path, SDL_arraysize(texture_path), "Assets/Images/%s.bmp", aTextureName);
-  SDL_Surface* surface = SDL_LoadBMP(texture_path);
+  char stringBuffer[4096];
+  SDL_snprintf(stringBuffer, SDL_arraysize(stringBuffer), "Assets/Images/%s", aTextureName);
+  SDL_Surface* surface = SDL_LoadSurface(stringBuffer);
   if (surface->format != SDL_PIXELFORMAT_RGBA32)
   {
     SDL_Surface* temp = SDL_ConvertSurface(surface, SDL_PIXELFORMAT_RGBA32);
@@ -74,16 +80,19 @@ SDL_GPUTexture* CreateAndUploadTexture(SDL_GPUCopyPass* aCopyPass, const char* a
   }
 ```
 
-Now that we've got the texture data in CPU memory in an expected format we can start working on uploading it to the GPU. For that we'll need a transfer buffer
+Now that we've got the texture data in CPU memory in an expected format we can start working on uploading it to the GPU. For that we'll need a tranfer buffer, as discussed. We'll be using it on upload, and we can calculate the size we'll need by multiplying the height of the texture, by the pitch. The pitch is the size in bytes of a row (width) of pixels, which may require padding depending on the size and format of the image, not to mention the different sizes of pixels.
 
 ```c
   Uint32 textureSize = surface->h * surface->pitch;
 
-  char tranferBufferName[4096];
-  SDL_snprintf(tranferBufferName, SDL_arraysize(tranferBufferName), "CreateAndUploadTexture Transfer Buffer for %s", aTextureName);
+  SDL_snprintf(stringBuffer, SDL_arraysize(stringBuffer), "CreateAndUploadTexture Transfer Buffer for %s", aTextureName);
 
-  SDL_GPUTransferBuffer* transferBuffer = CreateTransferBuffer(textureSize, SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD, tranferBufferName);
+  SDL_GPUTransferBuffer* transferBuffer = CreateTransferBuffer(textureSize, SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD, stringBuffer);
+```
 
+Once we have the transfer buffer we can map it, which will give us a pointer to memory we're allowed to touch, and then we can simply memcpy our texture data into it. Then we just need to unmap it. Now there's a lot of discussion we could have about keeping around our transfer buffers, and persistently mapping them, but for our case here, we're going to be comfortable just creating them and throwing them away. Regarding persistent mapping, there's not a ton of immediate need for that unless you're creating a much more complicated upload system. Perhaps we can explore that and keeping around transfer buffers later, with the latter being much more generally applicable.
+
+```c
   void* transferPtr = SDL_MapGPUTransferBuffer(gContext.mDevice, transferBuffer, false);
   memcpy(transferPtr, surface->pixels, textureSize);
   SDL_UnmapGPUTransferBuffer(gContext.mDevice, transferBuffer)
@@ -127,7 +136,7 @@ SDL_UploadToGPUTexture(
   false
 );
 ```
-Finally we can close out the copypass and commandbuffer if we needed to make them, as well as releasing the TransferBuffer. You don't need to worry about releasing it before submitting the command buffer if we _had_ passed one, as it's internally refcounted by SDL.
+Finally we can close out the copy pass and command buffer if we needed to make them, as well as releasing the TransferBuffer. You don't need to worry about releasing it before submitting the command buffer if we _had_ passed one, as it's internally refcounted by SDL.
 
 ```c
 if (needsToSubmit) {

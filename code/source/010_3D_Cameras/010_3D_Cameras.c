@@ -754,9 +754,9 @@ SDL_GPUTexture* CreateTexture(Uint32 aWidth, Uint32 aHeight, Uint32 layers, Uint
 }
 
 SDL_GPUTexture* CreateAndUploadTexture(SDL_GPUCopyPass* aCopyPass, const char* aTextureName) {
-  char texturePath[4096];
-  SDL_snprintf(texturePath, SDL_arraysize(texturePath), "Assets/Images/%s.bmp", aTextureName);
-  SDL_Surface* surface = SDL_LoadBMP(texturePath);
+  char stringBuffer[4096];
+  SDL_snprintf(stringBuffer, SDL_arraysize(stringBuffer), "Assets/Images/%s", aTextureName);
+  SDL_Surface* surface = SDL_LoadSurface(stringBuffer);
   if (surface->format != SDL_PIXELFORMAT_RGBA32)
   {
     SDL_Surface* temp = SDL_ConvertSurface(surface, SDL_PIXELFORMAT_RGBA32);
@@ -766,10 +766,9 @@ SDL_GPUTexture* CreateAndUploadTexture(SDL_GPUCopyPass* aCopyPass, const char* a
 
   Uint32 textureSize = surface->h * surface->pitch;
 
-  char tranferBufferName[4096];
-  SDL_snprintf(tranferBufferName, SDL_arraysize(tranferBufferName), "CreateAndUploadTexture Transfer Buffer for %s", aTextureName);
+  SDL_snprintf(stringBuffer, SDL_arraysize(stringBuffer), "CreateAndUploadTexture Transfer Buffer for %s", aTextureName);
 
-  SDL_GPUTransferBuffer* transferBuffer = CreateTransferBuffer(textureSize, SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD, tranferBufferName);
+  SDL_GPUTransferBuffer* transferBuffer = CreateTransferBuffer(textureSize, SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD, stringBuffer);
 
   void* transferPtr = SDL_MapGPUTransferBuffer(gContext.mDevice, transferBuffer, false);
   memcpy(transferPtr, surface->pixels, textureSize);
