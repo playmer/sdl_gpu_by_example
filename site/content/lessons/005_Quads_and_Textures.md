@@ -159,6 +159,36 @@ SDL_ReleaseGPUTransferBuffer(gContext.mDevice, transferBuffer);
 return texture;
 ```
 
+## Pipeline Setup
+
+```c
+typedef struct ModelUniform {
+  float2 mPosition;
+  float2 mScale;
+} ModelUniform;
+
+typedef struct QuadContext {
+  SDL_GPUGraphicsPipeline* mPipeline;
+  SDL_GPUTexture* mTexture;
+  SDL_GPUSampler* mSampler;
+  ModelUniform mUniform;
+} QuadContext;
+```
+
+
+```c
+graphicsPipelineCreateInfo.fragment_shader = CreateShader(
+  "Quad.frag",
+  SDL_GPU_SHADERSTAGE_FRAGMENT,
+  1,
+  0,
+  0,
+  0,
+  SDL_PROPERTY_TYPE_INVALID
+);
+```
+
+
 ## The Vertex Shader
 
 ### The Quad and an index array

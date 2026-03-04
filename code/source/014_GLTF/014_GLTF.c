@@ -1327,7 +1327,7 @@ ModelContext CreateModelContext(SDL_GPUTextureFormat aDepthFormat) {
   );
   SDL_assert(graphicsPipelineCreateInfo.fragment_shader);
 
-  SDL_assert(SDL_SetStringProperty(gContext.mProperties, SDL_PROP_GPU_SHADER_CREATE_NAME_STRING, "ModelContext"));
+  SDL_assert(SDL_SetStringProperty(gContext.mProperties, SDL_PROP_GPU_GRAPHICSPIPELINE_CREATE_NAME_STRING, "ModelContext"));
 
   ModelContext context;
 
@@ -1463,7 +1463,7 @@ int main(int argc, char** argv)
   Uint32 depthHeight = 0;
   SDL_GPUTextureFormat depthFormat = GetSupportedDepthFormat();
 
-  ModelContext cubeContext = CreateModelContext(depthFormat);
+  ModelContext context = CreateModelContext(depthFormat);
 
   const float speed = 5.f;
   Uint64 last_frame_ticks_so_far = SDL_GetTicksNS();
@@ -1494,22 +1494,22 @@ int main(int argc, char** argv)
       0.1f
     );
 
-    if (key_map[SDL_SCANCODE_D])        cubeContext.mUbo[0].mPosition.x += speed * dt * 1.0f;
-    if (key_map[SDL_SCANCODE_A])        cubeContext.mUbo[0].mPosition.x -= speed * dt * 1.0f;
-    if (key_map[SDL_SCANCODE_W])        cubeContext.mUbo[0].mPosition.y += speed * dt * 1.0f;
-    if (key_map[SDL_SCANCODE_S])        cubeContext.mUbo[0].mPosition.y -= speed * dt * 1.0f;
-    if (key_map[SDL_SCANCODE_E])        cubeContext.mUbo[0].mPosition.z += speed * dt * 1.0f;
-    if (key_map[SDL_SCANCODE_Q])        cubeContext.mUbo[0].mPosition.z -= speed * dt * 1.0f;
-    if (key_map[SDL_SCANCODE_R])        cubeContext.mUbo[0].mScale.x += speed * dt * 1.0f;
-    if (key_map[SDL_SCANCODE_F])        cubeContext.mUbo[0].mScale.x -= speed * dt * 1.0f;
-    if (key_map[SDL_SCANCODE_T])        cubeContext.mUbo[0].mScale.y += speed * dt * 1.0f;
-    if (key_map[SDL_SCANCODE_G])        cubeContext.mUbo[0].mScale.y -= speed * dt * 1.0f;
-    if (key_map[SDL_SCANCODE_INSERT])   cubeContext.mUbo[0].mRotation.x += speed * dt * 1.0f;
-    if (key_map[SDL_SCANCODE_DELETE])   cubeContext.mUbo[0].mRotation.x -= speed * dt * 1.0f;
-    if (key_map[SDL_SCANCODE_HOME])     cubeContext.mUbo[0].mRotation.y += speed * dt * 1.0f;
-    if (key_map[SDL_SCANCODE_END])      cubeContext.mUbo[0].mRotation.y -= speed * dt * 1.0f;
-    if (key_map[SDL_SCANCODE_PAGEUP])   cubeContext.mUbo[0].mRotation.z += speed * dt * 1.0f;
-    if (key_map[SDL_SCANCODE_PAGEDOWN]) cubeContext.mUbo[0].mRotation.z -= speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_D])        context.mUbo[0].mPosition.x += speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_A])        context.mUbo[0].mPosition.x -= speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_W])        context.mUbo[0].mPosition.y += speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_S])        context.mUbo[0].mPosition.y -= speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_E])        context.mUbo[0].mPosition.z += speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_Q])        context.mUbo[0].mPosition.z -= speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_R])        context.mUbo[0].mScale.x += speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_F])        context.mUbo[0].mScale.x -= speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_T])        context.mUbo[0].mScale.y += speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_G])        context.mUbo[0].mScale.y -= speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_INSERT])   context.mUbo[0].mRotation.x += speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_DELETE])   context.mUbo[0].mRotation.x -= speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_HOME])     context.mUbo[0].mRotation.y += speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_END])      context.mUbo[0].mRotation.y -= speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_PAGEUP])   context.mUbo[0].mRotation.z += speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_PAGEDOWN]) context.mUbo[0].mRotation.z -= speed * dt * 1.0f;
 
     SDL_GPUCommandBuffer* commandBuffer = SDL_AcquireGPUCommandBuffer(gContext.mDevice);
     if (!commandBuffer)
@@ -1572,7 +1572,7 @@ int main(int argc, char** argv)
       &depthStencilTargetInfo
     );
 
-    DrawModelContext(&cubeContext, commandBuffer, renderPass);
+    DrawModelContext(&context, commandBuffer, renderPass);
 
     SDL_EndGPURenderPass(renderPass);
     SDL_SubmitGPUCommandBuffer(commandBuffer);
@@ -1580,7 +1580,7 @@ int main(int argc, char** argv)
 
   SDL_ReleaseGPUTexture(gContext.mDevice, depthTexture);
 
-  DestroyModelContext(&cubeContext);
+  DestroyModelContext(&context);
 
   DestroyGpuContext();
 

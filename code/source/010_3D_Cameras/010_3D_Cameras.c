@@ -896,14 +896,14 @@ SDL_GPUBuffer* CreateAndUploadBuffer(const void* aData, Uint32 aSize, SDL_GPUBuf
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Technique Code
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-typedef struct CubeContext {
+typedef struct TechniqueContext {
   SDL_GPUGraphicsPipeline* mPipeline;
   SDL_GPUBuffer* mVertexBuffer;
   SDL_GPUBuffer* mIndexBuffer;
   Transform mUniform[2];
-} CubeContext;
+} TechniqueContext;
 
-CubeContext CreateCubeContext(SDL_GPUTextureFormat aDepthFormat) {
+TechniqueContext CreateTechniqueContext(SDL_GPUTextureFormat aDepthFormat) {
   SDL_GPUColorTargetDescription colorTargetDescription;
   SDL_zero(colorTargetDescription);
   colorTargetDescription.format = SDL_GetGPUSwapchainTextureFormat(gContext.mDevice, gContext.mWindow);
@@ -975,9 +975,9 @@ CubeContext CreateCubeContext(SDL_GPUTextureFormat aDepthFormat) {
   );
   SDL_assert(graphicsPipelineCreateInfo.fragment_shader);
 
-  SDL_assert(SDL_SetStringProperty(gContext.mProperties, SDL_PROP_GPU_SHADER_CREATE_NAME_STRING, "CubeContext"));
+  SDL_assert(SDL_SetStringProperty(gContext.mProperties, SDL_PROP_GPU_GRAPHICSPIPELINE_CREATE_NAME_STRING, "TechniqueContext"));
 
-  CubeContext context;
+  TechniqueContext context;
   context.mPipeline = SDL_CreateGPUGraphicsPipeline(gContext.mDevice, &graphicsPipelineCreateInfo);
   SDL_assert(context.mPipeline);
 
@@ -1058,25 +1058,25 @@ CubeContext CreateCubeContext(SDL_GPUTextureFormat aDepthFormat) {
   return context;
 }
 
-void DrawCubeContext(CubeContext* aPipeline, SDL_GPUCommandBuffer* aCommandBuffer, SDL_GPURenderPass* aRenderPass)
+void DrawTechniqueContext(TechniqueContext* aContext, SDL_GPUCommandBuffer* aCommandBuffer, SDL_GPURenderPass* aRenderPass)
 {
-  SDL_BindGPUGraphicsPipeline(aRenderPass, aPipeline->mPipeline);
+  SDL_BindGPUGraphicsPipeline(aRenderPass, aContext->mPipeline);
 
-  float4x4 model = CreateModelMatrixFromTransform(&aPipeline->mUniform[0]);
+  float4x4 model = CreateModelMatrixFromTransform(&aContext->mUniform[0]);
 
   SDL_PushGPUVertexUniformData(aCommandBuffer, 1, &model, sizeof(model));
   SDL_PushGPUVertexUniformData(aCommandBuffer, 2, &gContext.WorldToNDC, sizeof(gContext.WorldToNDC));
 
   {
     SDL_GPUBufferBinding binding;
-    binding.buffer = aPipeline->mVertexBuffer;
+    binding.buffer = aContext->mVertexBuffer;
     binding.offset = 0;
     SDL_BindGPUVertexBuffers(aRenderPass, 0, &binding, 1);
   }
 
   {
     SDL_GPUBufferBinding binding;
-    binding.buffer = aPipeline->mIndexBuffer;
+    binding.buffer = aContext->mIndexBuffer;
     binding.offset = 0;
     SDL_BindGPUIndexBuffer(aRenderPass, &binding, SDL_GPU_INDEXELEMENTSIZE_16BIT);
   }
@@ -1085,12 +1085,12 @@ void DrawCubeContext(CubeContext* aPipeline, SDL_GPUCommandBuffer* aCommandBuffe
   SDL_DrawGPUIndexedPrimitives(aRenderPass, 36, 1, 0, 0, 0);
 
   // Draw the second cube, make sure to recalculate the model matrix for it and reupload it.
-  model = CreateModelMatrixFromTransform(&aPipeline->mUniform[1]);
+  model = CreateModelMatrixFromTransform(&aContext->mUniform[1]);
   SDL_PushGPUVertexUniformData(aCommandBuffer, 1, &model, sizeof(model));
   SDL_DrawGPUIndexedPrimitives(aRenderPass, 36, 1, 0, 0, 0);
 }
 
-void DestroyCubeContext(CubeContext* aContext)
+void DestroyTechniqueContext(TechniqueContext* aContext)
 {
   SDL_ReleaseGPUBuffer(gContext.mDevice, aContext->mVertexBuffer);
   SDL_ReleaseGPUBuffer(gContext.mDevice, aContext->mIndexBuffer);
@@ -1151,7 +1151,7 @@ int main(int argc, char** argv)
   Uint32 depthHeight = 0;
   SDL_GPUTextureFormat depthFormat = GetSupportedDepthFormat();
 
-  CubeContext cubeContext = CreateCubeContext(depthFormat);
+  TechniqueContext context = CreateTechniqueContext(depthFormat);
   Transform cameraTransform = GetDefaultTransform();
   cameraTransform.mPosition.z = -1.0f;
   //cameraTransform.mScale.x = 1.0f;
@@ -1197,22 +1197,22 @@ int main(int argc, char** argv)
       0.1f
     );
 
-    if (key_map[SDL_SCANCODE_RIGHT])    cubeContext.mUniform[0].mPosition.x += speed * dt * 1.0f;
-    if (key_map[SDL_SCANCODE_LEFT])     cubeContext.mUniform[0].mPosition.x -= speed * dt * 1.0f;
-    if (key_map[SDL_SCANCODE_UP])       cubeContext.mUniform[0].mPosition.y += speed * dt * 1.0f;
-    if (key_map[SDL_SCANCODE_DOWN])     cubeContext.mUniform[0].mPosition.y -= speed * dt * 1.0f;
-    if (key_map[SDL_SCANCODE_E])        cubeContext.mUniform[0].mPosition.z += speed * dt * 1.0f;
-    if (key_map[SDL_SCANCODE_Q])        cubeContext.mUniform[0].mPosition.z -= speed * dt * 1.0f;
-    if (key_map[SDL_SCANCODE_R])        cubeContext.mUniform[0].mScale.x += speed * dt * 1.0f;
-    if (key_map[SDL_SCANCODE_F])        cubeContext.mUniform[0].mScale.x -= speed * dt * 1.0f;
-    if (key_map[SDL_SCANCODE_T])        cubeContext.mUniform[0].mScale.y += speed * dt * 1.0f;
-    if (key_map[SDL_SCANCODE_G])        cubeContext.mUniform[0].mScale.y -= speed * dt * 1.0f;
-    if (key_map[SDL_SCANCODE_INSERT])   cubeContext.mUniform[0].mRotation.x += speed * dt * 1.0f;
-    if (key_map[SDL_SCANCODE_DELETE])   cubeContext.mUniform[0].mRotation.x -= speed * dt * 1.0f;
-    if (key_map[SDL_SCANCODE_HOME])     cubeContext.mUniform[0].mRotation.y += speed * dt * 1.0f;
-    if (key_map[SDL_SCANCODE_END])      cubeContext.mUniform[0].mRotation.y -= speed * dt * 1.0f;
-    if (key_map[SDL_SCANCODE_PAGEUP])   cubeContext.mUniform[0].mRotation.z += speed * dt * 1.0f;
-    if (key_map[SDL_SCANCODE_PAGEDOWN]) cubeContext.mUniform[0].mRotation.z -= speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_RIGHT])    context.mUniform[0].mPosition.x += speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_LEFT])     context.mUniform[0].mPosition.x -= speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_UP])       context.mUniform[0].mPosition.y += speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_DOWN])     context.mUniform[0].mPosition.y -= speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_E])        context.mUniform[0].mPosition.z += speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_Q])        context.mUniform[0].mPosition.z -= speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_R])        context.mUniform[0].mScale.x += speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_F])        context.mUniform[0].mScale.x -= speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_T])        context.mUniform[0].mScale.y += speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_G])        context.mUniform[0].mScale.y -= speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_INSERT])   context.mUniform[0].mRotation.x += speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_DELETE])   context.mUniform[0].mRotation.x -= speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_HOME])     context.mUniform[0].mRotation.y += speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_END])      context.mUniform[0].mRotation.y -= speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_PAGEUP])   context.mUniform[0].mRotation.z += speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_PAGEDOWN]) context.mUniform[0].mRotation.z -= speed * dt * 1.0f;
 
     FlybyCamera(&cameraTransform, key_map, mouseMove, speed, dt);
 
@@ -1279,7 +1279,7 @@ int main(int argc, char** argv)
 
     SDL_PushGPUVertexUniformData(commandBuffer, 0, &viewMatrix, sizeof(viewMatrix));
 
-    DrawCubeContext(&cubeContext, commandBuffer, renderPass);
+    DrawTechniqueContext(&context, commandBuffer, renderPass);
 
     SDL_EndGPURenderPass(renderPass);
     SDL_SubmitGPUCommandBuffer(commandBuffer);
@@ -1287,7 +1287,7 @@ int main(int argc, char** argv)
 
   SDL_ReleaseGPUTexture(gContext.mDevice, depthTexture);
 
-  DestroyCubeContext(&cubeContext);
+  DestroyTechniqueContext(&context);
 
   DestroyGpuContext();
 

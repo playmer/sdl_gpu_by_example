@@ -352,23 +352,19 @@ SDL_GPUTexture* CreateAndUploadTexture(SDL_GPUCopyPass* aCopyPass, const char* a
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Technique Code
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-////////////////////////////////////////////////////////////
-/// QuadContext
-
 typedef struct ModelUniform {
   float2 mPosition;
   float2 mScale;
 } ModelUniform;
 
-typedef struct QuadContext {
+typedef struct TechniqueContext {
   SDL_GPUGraphicsPipeline* mPipeline;
   SDL_GPUTexture* mTexture;
   SDL_GPUSampler* mSampler;
   ModelUniform mUniform;
-} QuadContext;
+} TechniqueContext;
 
-QuadContext CreateQuadContext() {
+TechniqueContext CreateTechniqueContext() {
   SDL_GPUColorTargetDescription colorTargetDescription;
   SDL_zero(colorTargetDescription);
   colorTargetDescription.format = SDL_GetGPUSwapchainTextureFormat(gContext.mDevice, gContext.mWindow);
@@ -402,52 +398,55 @@ QuadContext CreateQuadContext() {
   );
   SDL_assert(graphicsPipelineCreateInfo.fragment_shader);
 
-  SDL_assert(SDL_SetStringProperty(gContext.mProperties, SDL_PROP_GPU_SHADER_CREATE_NAME_STRING, "QuadContext"));
+  SDL_assert(SDL_SetStringProperty(gContext.mProperties, SDL_PROP_GPU_GRAPHICSPIPELINE_CREATE_NAME_STRING, "TechniqueContext"));
 
-  QuadContext pipeline;
-  pipeline.mPipeline = SDL_CreateGPUGraphicsPipeline(gContext.mDevice, &graphicsPipelineCreateInfo);
-  pipeline.mTexture = CreateAndUploadTexture(NULL, "sample.bmp");
+  TechniqueContext context;
+  SDL_zero(context);
+  context.mPipeline = SDL_CreateGPUGraphicsPipeline(gContext.mDevice, &graphicsPipelineCreateInfo);
+  SDL_assert(context.mPipeline);
+
+  context.mUniform.mPosition.x = 0.f;
+  context.mUniform.mPosition.y = 0.f;
+  context.mUniform.mScale.x = 0.5f;
+  context.mUniform.mScale.y = 0.5f;
 
   SDL_GPUSamplerCreateInfo samplerCreateInfo;
   SDL_zero(samplerCreateInfo);
   samplerCreateInfo.address_mode_u = SDL_GPU_SAMPLERADDRESSMODE_REPEAT;
   samplerCreateInfo.address_mode_v = SDL_GPU_SAMPLERADDRESSMODE_REPEAT;
-  pipeline.mSampler = SDL_CreateGPUSampler(gContext.mDevice, &samplerCreateInfo);
-  SDL_assert(pipeline.mPipeline);
+  context.mSampler = SDL_CreateGPUSampler(gContext.mDevice, &samplerCreateInfo);
+  SDL_assert(context.mSampler);
 
-  pipeline.mUniform.mPosition.x = 0.f;
-  pipeline.mUniform.mPosition.y = 0.f;
-  pipeline.mUniform.mScale.x = 0.5f;
-  pipeline.mUniform.mScale.y = 0.5f;
+  context.mTexture = CreateAndUploadTexture(NULL, "sample.bmp");
 
   SDL_ReleaseGPUShader(gContext.mDevice, graphicsPipelineCreateInfo.vertex_shader);
   SDL_ReleaseGPUShader(gContext.mDevice, graphicsPipelineCreateInfo.fragment_shader);
 
-  return pipeline;
+  return context;
 }
 
-void DrawQuadContext(QuadContext* aPipeline, SDL_GPUCommandBuffer* aCommandBuffer, SDL_GPURenderPass* aRenderPass)
+void DrawTechniqueContext(TechniqueContext* aContext, SDL_GPUCommandBuffer* aCommandBuffer, SDL_GPURenderPass* aRenderPass)
 {
-  SDL_BindGPUGraphicsPipeline(aRenderPass, aPipeline->mPipeline);
-  SDL_PushGPUVertexUniformData(aCommandBuffer, 0, &aPipeline->mUniform, sizeof(aPipeline->mUniform));
+  SDL_BindGPUGraphicsPipeline(aRenderPass, aContext->mPipeline);
+  SDL_PushGPUVertexUniformData(aCommandBuffer, 0, &aContext->mUniform, sizeof(aContext->mUniform));
 
   {
     SDL_GPUTextureSamplerBinding textureBinding;
     SDL_zero(textureBinding);
-    textureBinding.texture = aPipeline->mTexture;
-    textureBinding.sampler = aPipeline->mSampler;
+    textureBinding.texture = aContext->mTexture;
+    textureBinding.sampler = aContext->mSampler;
     SDL_BindGPUFragmentSamplers(aRenderPass, 0, &textureBinding, 1);
   }
 
   SDL_DrawGPUPrimitives(aRenderPass, 6, 1, 0, 0);
 }
 
-void DestroyQuadContext(QuadContext* aPipeline)
+void DestroyTechniqueContext(TechniqueContext* aContext)
 {
-  SDL_ReleaseGPUSampler(gContext.mDevice, aPipeline->mSampler);
-  SDL_ReleaseGPUTexture(gContext.mDevice, aPipeline->mTexture);
-  SDL_ReleaseGPUGraphicsPipeline(gContext.mDevice, aPipeline->mPipeline);
-  SDL_zero(*aPipeline);
+  SDL_ReleaseGPUSampler(gContext.mDevice, aContext->mSampler);
+  SDL_ReleaseGPUTexture(gContext.mDevice, aContext->mTexture);
+  SDL_ReleaseGPUGraphicsPipeline(gContext.mDevice, aContext->mPipeline);
+  SDL_zero(*aContext);
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -464,7 +463,7 @@ int main(int argc, char** argv)
 
   CreateGpuContext(window);
 
-  QuadContext quadContext = CreateQuadContext();
+  TechniqueContext context = CreateTechniqueContext();
 
   const float speed = 1.f;
   Uint64 last_frame_ticks_so_far = SDL_GetTicksNS();
@@ -479,20 +478,20 @@ int main(int argc, char** argv)
     SDL_Event event;
     while (SDL_PollEvent(&event)) {
       switch (event.common.type) {
-        case SDL_EVENT_QUIT:
-          running = false;
-          break;
+      case SDL_EVENT_QUIT:
+        running = false;
+        break;
       }
-    }      
-      
-    if (key_map[SDL_SCANCODE_D]) quadContext.mUniform.mPosition.x += speed * dt * 1.0f;
-    if (key_map[SDL_SCANCODE_A]) quadContext.mUniform.mPosition.x -= speed * dt * 1.0f;
-    if (key_map[SDL_SCANCODE_W]) quadContext.mUniform.mPosition.y += speed * dt * 1.0f;
-    if (key_map[SDL_SCANCODE_S]) quadContext.mUniform.mPosition.y -= speed * dt * 1.0f;
-    if (key_map[SDL_SCANCODE_R]) quadContext.mUniform.mScale.x += speed * dt * 1.0f;
-    if (key_map[SDL_SCANCODE_F]) quadContext.mUniform.mScale.x -= speed * dt * 1.0f;
-    if (key_map[SDL_SCANCODE_T]) quadContext.mUniform.mScale.y += speed * dt * 1.0f;
-    if (key_map[SDL_SCANCODE_G]) quadContext.mUniform.mScale.y -= speed * dt * 1.0f;
+    }
+
+    if (key_map[SDL_SCANCODE_D]) context.mUniform.mPosition.x += speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_A]) context.mUniform.mPosition.x -= speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_W]) context.mUniform.mPosition.y += speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_S]) context.mUniform.mPosition.y -= speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_R]) context.mUniform.mScale.x += speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_F]) context.mUniform.mScale.x -= speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_T]) context.mUniform.mScale.y += speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_G]) context.mUniform.mScale.y -= speed * dt * 1.0f;
 
     SDL_GPUCommandBuffer* commandBuffer = SDL_AcquireGPUCommandBuffer(gContext.mDevice);
     if (!commandBuffer)
@@ -526,13 +525,13 @@ int main(int argc, char** argv)
       NULL
     );
 
-    DrawQuadContext(&quadContext, commandBuffer, renderPass);
+    DrawTechniqueContext(&context, commandBuffer, renderPass);
 
     SDL_EndGPURenderPass(renderPass);
     SDL_SubmitGPUCommandBuffer(commandBuffer);
   }
 
-  DestroyQuadContext(&quadContext);
+  DestroyTechniqueContext(&context);
 
   DestroyGpuContext();
 

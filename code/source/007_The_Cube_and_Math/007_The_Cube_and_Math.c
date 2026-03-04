@@ -673,17 +673,14 @@ SDL_GPUTexture* CreateAndUploadTexture(SDL_GPUCopyPass* aCopyPass, const char* a
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Technique Code
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-////////////////////////////////////////////////////////////
-/// CubeContext
-typedef struct CubeContext {
+typedef struct TechniqueContext {
   SDL_GPUGraphicsPipeline* mPipeline;
   SDL_GPUTexture* mTexture;
   SDL_GPUSampler* mSampler;
   Transform mUniform;
-} CubeContext;
+} TechniqueContext;
 
-CubeContext CreateCubeContext() {
+TechniqueContext CreateTechniqueContext() {
   SDL_GPUColorTargetDescription colorTargetDescription;
   SDL_zero(colorTargetDescription);
   colorTargetDescription.format = SDL_GetGPUSwapchainTextureFormat(gContext.mDevice, gContext.mWindow);
@@ -719,17 +716,10 @@ CubeContext CreateCubeContext() {
   );
   SDL_assert(graphicsPipelineCreateInfo.fragment_shader);
 
-  SDL_assert(SDL_SetStringProperty(gContext.mProperties, SDL_PROP_GPU_SHADER_CREATE_NAME_STRING, "CubeContext"));
+  SDL_assert(SDL_SetStringProperty(gContext.mProperties, SDL_PROP_GPU_GRAPHICSPIPELINE_CREATE_NAME_STRING, "TechniqueContext"));
 
-  CubeContext context;
+  TechniqueContext context;
   context.mPipeline = SDL_CreateGPUGraphicsPipeline(gContext.mDevice, &graphicsPipelineCreateInfo);
-  context.mTexture = CreateAndUploadTexture(NULL, "sample.bmp");
-
-  SDL_GPUSamplerCreateInfo samplerCreateInfo;
-  SDL_zero(samplerCreateInfo);
-  samplerCreateInfo.address_mode_u = SDL_GPU_SAMPLERADDRESSMODE_REPEAT;
-  samplerCreateInfo.address_mode_v = SDL_GPU_SAMPLERADDRESSMODE_REPEAT;
-  context.mSampler = SDL_CreateGPUSampler(gContext.mDevice, &samplerCreateInfo);
   SDL_assert(context.mPipeline);
 
   context.mUniform.mPosition.x =  0.f;
@@ -745,13 +735,22 @@ CubeContext CreateCubeContext() {
   context.mUniform.mRotation.z = 0.f;
   context.mUniform.mRotation.w = 0.f;
 
+  SDL_GPUSamplerCreateInfo samplerCreateInfo;
+  SDL_zero(samplerCreateInfo);
+  samplerCreateInfo.address_mode_u = SDL_GPU_SAMPLERADDRESSMODE_REPEAT;
+  samplerCreateInfo.address_mode_v = SDL_GPU_SAMPLERADDRESSMODE_REPEAT;
+  context.mSampler = SDL_CreateGPUSampler(gContext.mDevice, &samplerCreateInfo);
+  SDL_assert(context.mSampler);
+
+  context.mTexture = CreateAndUploadTexture(NULL, "sample.bmp");
+
   SDL_ReleaseGPUShader(gContext.mDevice, graphicsPipelineCreateInfo.vertex_shader);
   SDL_ReleaseGPUShader(gContext.mDevice, graphicsPipelineCreateInfo.fragment_shader);
 
   return context;
 }
 
-void DrawCubeContext(CubeContext* aContext, SDL_GPUCommandBuffer* aCommandBuffer, SDL_GPURenderPass* aRenderPass)
+void DrawTechniqueContext(TechniqueContext* aContext, SDL_GPUCommandBuffer* aCommandBuffer, SDL_GPURenderPass* aRenderPass)
 {
   SDL_BindGPUGraphicsPipeline(aRenderPass, aContext->mPipeline);
 
@@ -771,7 +770,7 @@ void DrawCubeContext(CubeContext* aContext, SDL_GPUCommandBuffer* aCommandBuffer
   SDL_DrawGPUPrimitives(aRenderPass, 6 /* 6 per face */ * 6 /* 6 sides of our cube */, 1, 0, 0);
 }
 
-void DestroyCubeContext(CubeContext* aContext)
+void DestroyTechniqueContext(TechniqueContext* aContext)
 {
   SDL_ReleaseGPUSampler(gContext.mDevice, aContext->mSampler);
   SDL_ReleaseGPUTexture(gContext.mDevice, aContext->mTexture);
@@ -793,7 +792,7 @@ int main(int argc, char** argv)
 
   CreateGpuContext(window);
 
-  CubeContext cubeContext = CreateCubeContext();
+  TechniqueContext context = CreateTechniqueContext();
 
   const float speed = 5.f;
   Uint64 last_frame_ticks_so_far = SDL_GetTicksNS();
@@ -823,22 +822,22 @@ int main(int argc, char** argv)
       20.0f, 60.0f
     );
       
-    if (key_map[SDL_SCANCODE_D])        cubeContext.mUniform.mPosition.x += speed * dt * 1.0f;
-    if (key_map[SDL_SCANCODE_A])        cubeContext.mUniform.mPosition.x -= speed * dt * 1.0f;
-    if (key_map[SDL_SCANCODE_W])        cubeContext.mUniform.mPosition.y += speed * dt * 1.0f;
-    if (key_map[SDL_SCANCODE_S])        cubeContext.mUniform.mPosition.y -= speed * dt * 1.0f;
-    if (key_map[SDL_SCANCODE_E])        cubeContext.mUniform.mPosition.z += speed * dt * 1.0f;
-    if (key_map[SDL_SCANCODE_Q])        cubeContext.mUniform.mPosition.z -= speed * dt * 1.0f;
-    if (key_map[SDL_SCANCODE_R])        cubeContext.mUniform.mScale.x += speed * dt * 1.0f;
-    if (key_map[SDL_SCANCODE_F])        cubeContext.mUniform.mScale.x -= speed * dt * 1.0f;
-    if (key_map[SDL_SCANCODE_T])        cubeContext.mUniform.mScale.y += speed * dt * 1.0f;
-    if (key_map[SDL_SCANCODE_G])        cubeContext.mUniform.mScale.y -= speed * dt * 1.0f;
-    if (key_map[SDL_SCANCODE_INSERT])   cubeContext.mUniform.mRotation.x += speed * dt * 1.0f;
-    if (key_map[SDL_SCANCODE_DELETE])   cubeContext.mUniform.mRotation.x -= speed * dt * 1.0f;
-    if (key_map[SDL_SCANCODE_HOME])     cubeContext.mUniform.mRotation.y += speed * dt * 1.0f;
-    if (key_map[SDL_SCANCODE_END])      cubeContext.mUniform.mRotation.y -= speed * dt * 1.0f;
-    if (key_map[SDL_SCANCODE_PAGEUP])   cubeContext.mUniform.mRotation.y += speed * dt * 1.0f;
-    if (key_map[SDL_SCANCODE_PAGEDOWN]) cubeContext.mUniform.mRotation.y -= speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_D])        context.mUniform.mPosition.x += speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_A])        context.mUniform.mPosition.x -= speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_W])        context.mUniform.mPosition.y += speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_S])        context.mUniform.mPosition.y -= speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_E])        context.mUniform.mPosition.z += speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_Q])        context.mUniform.mPosition.z -= speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_R])        context.mUniform.mScale.x += speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_F])        context.mUniform.mScale.x -= speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_T])        context.mUniform.mScale.y += speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_G])        context.mUniform.mScale.y -= speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_INSERT])   context.mUniform.mRotation.x += speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_DELETE])   context.mUniform.mRotation.x -= speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_HOME])     context.mUniform.mRotation.y += speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_END])      context.mUniform.mRotation.y -= speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_PAGEUP])   context.mUniform.mRotation.y += speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_PAGEDOWN]) context.mUniform.mRotation.y -= speed * dt * 1.0f;
 
     SDL_GPUCommandBuffer* commandBuffer = SDL_AcquireGPUCommandBuffer(gContext.mDevice);
     if (!commandBuffer)
@@ -872,13 +871,13 @@ int main(int argc, char** argv)
       NULL
     );
 
-    DrawCubeContext(&cubeContext, commandBuffer, renderPass);
+    DrawTechniqueContext(&context, commandBuffer, renderPass);
 
     SDL_EndGPURenderPass(renderPass);
     SDL_SubmitGPUCommandBuffer(commandBuffer);
   }
 
-  DestroyCubeContext(&cubeContext);
+  DestroyTechniqueContext(&context);
 
   DestroyGpuContext();
 

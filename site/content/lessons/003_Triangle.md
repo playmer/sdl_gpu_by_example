@@ -329,7 +329,7 @@ Like when creating the RenderPass and returning from the Fragment shader, we'll 
 With that out of the way, we can begin configuring our Pipeline.
 
 ```c
-SDL_assert(SDL_SetStringProperty(gContext.mProperties, SDL_PROP_GPU_SHADER_CREATE_NAME_STRING, "TriangleContext"));
+SDL_assert(SDL_SetStringProperty(gContext.mProperties, SDL_PROP_GPU_GRAPHICSPIPELINE_CREATE_NAME_STRING, "TriangleContext"));
 
 SDL_GPUGraphicsPipelineCreateInfo graphicsPipelineCreateInfo;
 SDL_zero(graphicsPipelineCreateInfo);

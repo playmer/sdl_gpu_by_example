@@ -256,16 +256,13 @@ SDL_GPUShader* CreateShader(
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Technique Code
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-////////////////////////////////////////////////////////////
-/// FullscreenContext
-typedef struct FullscreenContext {
+typedef struct TechniqueContext {
   SDL_GPUGraphicsPipeline* mPipeline;
   float2 mPositon;
   int mColorIndex;
-} FullscreenContext;
+} TechniqueContext;
 
-FullscreenContext CreateFullscreenContext() {
+TechniqueContext CreateTechniqueContext() {
   SDL_GPUColorTargetDescription colorTargetDescription;
   SDL_zero(colorTargetDescription);
   colorTargetDescription.format = SDL_GetGPUSwapchainTextureFormat(gContext.mDevice, gContext.mWindow);
@@ -299,22 +296,23 @@ FullscreenContext CreateFullscreenContext() {
   );
   SDL_assert(graphicsPipelineCreateInfo.fragment_shader);
 
-  SDL_assert(SDL_SetStringProperty(gContext.mProperties, SDL_PROP_GPU_SHADER_CREATE_NAME_STRING, "FullscreenContext"));
+  SDL_assert(SDL_SetStringProperty(gContext.mProperties, SDL_PROP_GPU_GRAPHICSPIPELINE_CREATE_NAME_STRING, "TechniqueContext"));
 
-  FullscreenContext pipeline;
-  SDL_zero(pipeline);
-  pipeline.mPipeline = SDL_CreateGPUGraphicsPipeline(gContext.mDevice, &graphicsPipelineCreateInfo);
-  pipeline.mPositon.x = 0.5f;
-  pipeline.mPositon.y = 0.5f;
-  SDL_assert(pipeline.mPipeline);
+  TechniqueContext context;
+  SDL_zero(context);
+  context.mPipeline = SDL_CreateGPUGraphicsPipeline(gContext.mDevice, &graphicsPipelineCreateInfo);
+  SDL_assert(context.mPipeline);
+
+  context.mPositon.x = 0.5f;
+  context.mPositon.y = 0.5f;
 
   SDL_ReleaseGPUShader(gContext.mDevice, graphicsPipelineCreateInfo.vertex_shader);
   SDL_ReleaseGPUShader(gContext.mDevice, graphicsPipelineCreateInfo.fragment_shader);
 
-  return pipeline;
+  return context;
 }
 
-void DrawFullscreenContext(FullscreenContext* aPipeline, SDL_GPUCommandBuffer* aCommandBuffer, SDL_GPURenderPass* aRenderPass)
+void DrawTechniqueContext(TechniqueContext* aContext, SDL_GPUCommandBuffer* aCommandBuffer, SDL_GPURenderPass* aRenderPass)
 {
   SDL_FColor colors[] = {
     {1, 0, 0, 1},
@@ -322,16 +320,16 @@ void DrawFullscreenContext(FullscreenContext* aPipeline, SDL_GPUCommandBuffer* a
     {0, 0, 1, 1}
   };
 
-  SDL_BindGPUGraphicsPipeline(aRenderPass, aPipeline->mPipeline);
-  SDL_PushGPUVertexUniformData(aCommandBuffer, 0, &aPipeline->mPositon, sizeof(float2));
-  SDL_PushGPUFragmentUniformData(aCommandBuffer, 0, &colors[aPipeline->mColorIndex], sizeof(SDL_FColor));
+  SDL_BindGPUGraphicsPipeline(aRenderPass, aContext->mPipeline);
+  SDL_PushGPUVertexUniformData(aCommandBuffer, 0, &aContext->mPositon, sizeof(float2));
+  SDL_PushGPUFragmentUniformData(aCommandBuffer, 0, &colors[aContext->mColorIndex], sizeof(SDL_FColor));
   SDL_DrawGPUPrimitives(aRenderPass, 3, 1, 0, 0);
 }
 
-void DestroyFullscreenContext(FullscreenContext* aPipeline)
+void DestroyTechniqueContext(TechniqueContext* aContext)
 {
-  SDL_ReleaseGPUGraphicsPipeline(gContext.mDevice, aPipeline->mPipeline);
-  SDL_zero(*aPipeline);
+  SDL_ReleaseGPUGraphicsPipeline(gContext.mDevice, aContext->mPipeline);
+  SDL_zero(*aContext);
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -348,10 +346,10 @@ int main(int argc, char** argv)
 
   CreateGpuContext(window);
 
-  FullscreenContext fullscreenContext = CreateFullscreenContext();
+  TechniqueContext context = CreateTechniqueContext();
 
   const float speed = 1.f;
-  Uint64 last_frame_ticks_so_far = SDL_GetTicksNS();	
+  Uint64 last_frame_ticks_so_far = SDL_GetTicksNS();
   int keys;
   const bool* key_map = SDL_GetKeyboardState(&keys);
   bool running = true;
@@ -369,19 +367,19 @@ int main(int argc, char** argv)
         break;
       case SDL_EVENT_KEY_DOWN:
         switch (event.key.scancode) {
-          case SDL_SCANCODE_1: fullscreenContext.mColorIndex = 0; break;
-          case SDL_SCANCODE_2: fullscreenContext.mColorIndex = 1; break;
-          case SDL_SCANCODE_3: fullscreenContext.mColorIndex = 2; break;
-          default: break;
+        case SDL_SCANCODE_1: context.mColorIndex = 0; break;
+        case SDL_SCANCODE_2: context.mColorIndex = 1; break;
+        case SDL_SCANCODE_3: context.mColorIndex = 2; break;
+        default: break;
         }
         break;
       }
     }
 
-    if (key_map[SDL_SCANCODE_D]) fullscreenContext.mPositon.x += speed * dt * 1.0f;
-    if (key_map[SDL_SCANCODE_A]) fullscreenContext.mPositon.x -= speed * dt * 1.0f;
-    if (key_map[SDL_SCANCODE_W]) fullscreenContext.mPositon.y += speed * dt * 1.0f;
-    if (key_map[SDL_SCANCODE_S]) fullscreenContext.mPositon.y -= speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_D]) context.mPositon.x += speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_A]) context.mPositon.x -= speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_W]) context.mPositon.y += speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_S]) context.mPositon.y -= speed * dt * 1.0f;
 
 
     SDL_GPUCommandBuffer* commandBuffer = SDL_AcquireGPUCommandBuffer(gContext.mDevice);
@@ -416,13 +414,13 @@ int main(int argc, char** argv)
       NULL
     );
 
-    DrawFullscreenContext(&fullscreenContext, commandBuffer, renderPass);
+    DrawTechniqueContext(&context, commandBuffer, renderPass);
 
     SDL_EndGPURenderPass(renderPass);
     SDL_SubmitGPUCommandBuffer(commandBuffer);
   }
 
-  DestroyFullscreenContext(&fullscreenContext);
+  DestroyTechniqueContext(&context);
 
   DestroyGpuContext();
 

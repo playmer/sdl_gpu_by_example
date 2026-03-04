@@ -115,14 +115,11 @@ SDL_GPUShader* CreateShader(
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Technique Code
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-////////////////////////////////////////////////////////////
-/// TriangleContext
-typedef struct TriangleContext {
+typedef struct TechniqueContext {
   SDL_GPUGraphicsPipeline* mPipeline;
-} TriangleContext;
+} TechniqueContext;
 
-TriangleContext CreateTriangleContext() {
+TechniqueContext CreateTechniqueContext() {
   SDL_GPUColorTargetDescription colorTargetDescription;
   SDL_zero(colorTargetDescription);
   colorTargetDescription.format = SDL_GetGPUSwapchainTextureFormat(gContext.mDevice, gContext.mWindow);
@@ -156,9 +153,9 @@ TriangleContext CreateTriangleContext() {
   );
   SDL_assert(graphicsPipelineCreateInfo.fragment_shader);
 
-  SDL_assert(SDL_SetStringProperty(gContext.mProperties, SDL_PROP_GPU_SHADER_CREATE_NAME_STRING, "TriangleContext"));
+  SDL_assert(SDL_SetStringProperty(gContext.mProperties, SDL_PROP_GPU_GRAPHICSPIPELINE_CREATE_NAME_STRING, "TechniqueContext"));
 
-  TriangleContext pipeline;
+  TechniqueContext pipeline;
   SDL_zero(pipeline);
   pipeline.mPipeline = SDL_CreateGPUGraphicsPipeline(gContext.mDevice, &graphicsPipelineCreateInfo);
   SDL_assert(pipeline.mPipeline);
@@ -169,13 +166,13 @@ TriangleContext CreateTriangleContext() {
   return pipeline;
 }
 
-void DrawTriangleContext(TriangleContext* aPipeline, SDL_GPURenderPass* aRenderPass)
+void DrawTechniqueContext(TechniqueContext* aPipeline, SDL_GPURenderPass* aRenderPass)
 {
   SDL_BindGPUGraphicsPipeline(aRenderPass, aPipeline->mPipeline);
   SDL_DrawGPUPrimitives(aRenderPass, 3, 1, 0, 0);
 }
 
-void DestroyTriangleContext(TriangleContext* aPipeline)
+void DestroyTechniqueContext(TechniqueContext* aPipeline)
 {
   SDL_ReleaseGPUGraphicsPipeline(gContext.mDevice, aPipeline->mPipeline);
   SDL_zero(*aPipeline);
@@ -195,7 +192,7 @@ int main(int argc, char** argv)
 
   CreateGpuContext(window);
 
-  TriangleContext triangleContext = CreateTriangleContext();
+  TechniqueContext context = CreateTechniqueContext();
 
   bool running = true;
 
@@ -241,13 +238,13 @@ int main(int argc, char** argv)
       NULL
     );
 
-    DrawTriangleContext(&triangleContext, renderPass);
+    DrawTechniqueContext(&context, renderPass);
 
     SDL_EndGPURenderPass(renderPass);
     SDL_SubmitGPUCommandBuffer(commandBuffer);
   }
 
-  DestroyTriangleContext(&triangleContext);
+  DestroyTechniqueContext(&context);
 
   DestroyGpuContext();
 
