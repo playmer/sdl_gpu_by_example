@@ -412,8 +412,6 @@ TechniqueContext CreateTechniqueContext() {
 
   SDL_GPUSamplerCreateInfo samplerCreateInfo;
   SDL_zero(samplerCreateInfo);
-  samplerCreateInfo.address_mode_u = SDL_GPU_SAMPLERADDRESSMODE_REPEAT;
-  samplerCreateInfo.address_mode_v = SDL_GPU_SAMPLERADDRESSMODE_REPEAT;
   context.mSampler = SDL_CreateGPUSampler(gContext.mDevice, &samplerCreateInfo);
   SDL_assert(context.mSampler);
 

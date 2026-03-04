@@ -159,7 +159,9 @@ SDL_ReleaseGPUTransferBuffer(gContext.mDevice, transferBuffer);
 return texture;
 ```
 
-## Pipeline Setup
+## Pipeline Setup and Controls
+
+This time around we'll want to be able to both move and scale our texture, which we'll display on a "Quad", which is really just another term for Rect/Rectangle. We'll expand this in a bit, but for now we'll call this a Uniform since we'll upload the whole thing into a uniform buffer. We'll use this in place of the position in our context.
 
 ```c
 typedef struct ModelUniform {
@@ -167,14 +169,15 @@ typedef struct ModelUniform {
   float2 mScale;
 } ModelUniform;
 
-typedef struct QuadContext {
+typedef struct TechniqueContext {
   SDL_GPUGraphicsPipeline* mPipeline;
   SDL_GPUTexture* mTexture;
   SDL_GPUSampler* mSampler;
   ModelUniform mUniform;
-} QuadContext;
+} TechniqueContext;
 ```
 
+Next up we're changing our fragment shader a bit, we don't need the uniform buffer anymore, so we'll change that to 0, but we're now using a sampler, so we'll pass that in as a 1:
 
 ```c
 graphicsPipelineCreateInfo.fragment_shader = CreateShader(
@@ -197,25 +200,33 @@ context.mUniform.mScale.x = 0.5f;
 context.mUniform.mScale.y = 0.5f;
 ```
 
-Finally we need to create a sampler for our texture, this is essentially how we'll tell the graphics card how we'd like 
+Finally we need to create a sampler for our texture, this is essentially how we'll tell the graphics card how we'd like it to read from the texture. For now we're okay with the defaults, but for context the sorts of things this decides are what happens when you try to sample "outside" of the texture (the default is that it repeats), what happens when you're not sampling from an exact texture position (the default is to find the nearest pixel to that sample and use it, rather than doing a linear interpolation between the various near pixels). There's a bunch more options, but that'll give you a general idea of what this is for.
 
 ```c
 SDL_GPUSamplerCreateInfo samplerCreateInfo;
 SDL_zero(samplerCreateInfo);
-samplerCreateInfo.address_mode_u = SDL_GPU_SAMPLERADDRESSMODE_REPEAT;
-samplerCreateInfo.address_mode_v = SDL_GPU_SAMPLERADDRESSMODE_REPEAT;
 context.mSampler = SDL_CreateGPUSampler(gContext.mDevice, &samplerCreateInfo);
 SDL_assert(context.mSampler);
+```
 
+And then of course we just need to make the texture itself, like was mentioned earlier, we won't bother with creating a copy pass since we're really just doing this one upload.
+
+```c
 context.mTexture = CreateAndUploadTexture(NULL, "sample.bmp");
 ```
 
 ## Drawing
 
+This time around we'll be uploading the uniform struct, as we want both the position and scale. We could in theory have decided this should be two different uniforms, but in general we'll try to pack what we can into each uniform, where appropriate.
+
 ```c
 SDL_BindGPUGraphicsPipeline(aRenderPass, aContext->mPipeline);
 SDL_PushGPUVertexUniformData(aCommandBuffer, 0, &aContext->mUniform, sizeof(aContext->mUniform));
+```
 
+Next we'll need to bind the texture we're going to use in this draw, we can see that `SDL_GPUTextureSamplerBinding` takes both a texture and a sampler, so you can both reuse samplers for different textures, and swap them out, if some situations need alternate settings for effects. We're just using a single texture here, in the first (0th) slot, so we're just setting the slot, passing a pointer to the binding, and letting it know it's just a single binding.
+
+```c
 {
   SDL_GPUTextureSamplerBinding textureBinding;
   SDL_zero(textureBinding);
@@ -223,7 +234,11 @@ SDL_PushGPUVertexUniformData(aCommandBuffer, 0, &aContext->mUniform, sizeof(aCon
   textureBinding.sampler = aContext->mSampler;
   SDL_BindGPUFragmentSamplers(aRenderPass, 0, &textureBinding, 1);
 }
+```
 
+Finally we can draw the triangles that make up the quad, which we'll discuss in the vertex shader section below. We'll need to issue a draw for 6 vertices to draw it, and only one instance.
+
+```c
 SDL_DrawGPUPrimitives(aRenderPass, 6, 1, 0, 0);
 ```
 
