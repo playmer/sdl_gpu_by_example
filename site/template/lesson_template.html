@@ -38,7 +38,11 @@
               {{collapsible-card-end}}
             {{/if}}
             
+            {{#if this.example_status}}
             <a href="/sdl_gpu_by_example/assets/code/{{current_content.file_name_no_ext}}.zip"><p>Download the source for this example here.</p>
+            {{else}}
+            <p>No example yet, this is a potential future chapter and may change.</p>
+            {{/if}}
             
           </div>
         </div>

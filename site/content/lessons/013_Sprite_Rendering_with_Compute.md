@@ -2,8 +2,6 @@
 title: Sprite Rendering with Compute
 description: Now that we've covered the breadth of beginner rendering, it's time to start getting deeper into the structure of things and how we can render more efficiently. 
 template: lesson_template.html
-example_status: Not Started
-chapter_status: Not Started
 collections: ["lessons"]
 ---
 

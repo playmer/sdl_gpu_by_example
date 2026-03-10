@@ -39,7 +39,7 @@ Output main(uint id : SV_VertexID)
   uint vertexIndex = cVertexIndices[indicesIndex];
 
   Output output;
-  float2 vertex = cVertexPositions[vertexIndex];
+  float2 position = cVertexPositions[vertexIndex];
   
   float x = cModelUniform.mPosition.x;
   float y = cModelUniform.mPosition.y;
@@ -53,9 +53,9 @@ Output main(uint id : SV_VertexID)
     {     0.f,     0.f, 0.f, 1.f },
   };
 
-  float4 t1 = mul(mul(WorldToNDC, ObjectToWorld), float4(vertex, 0.0f, 1.0f));
+  float4 transformedPosition = mul(mul(WorldToNDC, ObjectToWorld), float4(position, 0.0f, 1.0f));
 
-  output.Position = t1;
-  output.UV = (vertex + 1.0f) * 0.5f;
+  output.Position = transformedPosition;
+  output.UV = (position + 1.0f) * 0.5f;
   return output;
 }

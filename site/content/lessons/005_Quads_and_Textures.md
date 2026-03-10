@@ -268,12 +268,9 @@ if (key_map[SDL_SCANCODE_G]) context.mUniform.mScale.y -= speed * dt * 1.0f;
 
 ## The Vertex Shader
 
-### The Quad and an index array
-
-Up until now, we've only stored arrays of vertices, this made sense because we've only been dealing with a single triangle. Once you want to render a texture however, you'll immediately realize that you'd be duplicating two vertices for that quad you want to display it on!
+Up until now, we've only stored arrays of vertices, this made sense because we've only been dealing with a single triangle. Once you want to render a texture however, you'll immediately realize that you'd be duplicating two vertices for that quad you want to display it on! Now obviously with a Quad, this isn't such a big deal, two verts is essentially nothing, but it allows us to demonstrate a new technique. There's a tool called an index buffer which, as it sounds, holds indices into the vertex buffer. Instead of iterating through the vertices, we iterate through the indices and use them to pull the relevant vertex. Here's what this looks like for a quad, with the vertex positions in parentheses and the index in the index buffer on each position.
 
 ```
-
  (-1, 1)                 (1, 1)
      0------------------1    1
      |                 /    /|
@@ -291,9 +288,9 @@ Up until now, we've only stored arrays of vertices, this made sense because we'v
 
 See how the first and second vertex are the same on each triangle? It doesn't look like much now, but when you start rendering models, this would really start increasing the size of them. So lets learn about indexing now, ahead of when we'll need them for some of the more serious 3D applications later on.
 
-Similar to last time, we'll be declaring some static data in the shader, but this time with an added vertex, as well as an array of indices to index with.
+Similar to last time, we'll be declaring some static data in the shader, but this time with an additional vertex, as well as an array of indices to index with. We won't need the colors like last time, hence their omition.
 
-```
+```cpp
 static const float2 cVertexPositions[4] = {
   {-1.0f,  1.0f},
   { 1.0f,  1.0f},
@@ -307,8 +304,61 @@ static const uint cVertexIndices[6] = {
 };
 ```
 
-We can see our indices align with the diagram above. An astute reader might also notice that these vertices match the dimensions of the screen. Don't worry, we'll learn how to adjust the size of it in this chapter so it won't take up the whole screen!
+We can see our indices align with the diagram above. An astute reader might also notice that these vertices match the dimensions of the screen in NDC space. Don't worry, we'll learn how to adjust the size of it in this chapter so it won't take up the whole screen!
 
-### UV Coordinates
+```cpp
+struct Output
+{
+  float2 UV : TEXCOORD1;
+  float4 Position : SV_Position;
+};
+```
+
+As discussed above, we're now taking in a "Uniform" struct that contains all of the data we need. For now that's just two `float2`s for position and scale. Here in HLSL we can define a struct that matches the one we have in C. When you're defining your own you'll need to be careful of alignment, as discussed in the previous chapter. In this case with two sequential `float2` and no previous members, we're safe to not need padding.
+
+Once you have the struct, you can declare uniform variable just as before, but this time as the struct we defined.
+
+```cpp
+struct ModelUniform
+{
+  float2 mPosition;
+  float2 mScale;
+};
+
+cbuffer UBO : register(b0, space1)
+{
+  ModelUniform cModelUniform;
+};
+```
+
+Incidentally, you don't _need_ to use a struct here. You can have position and scale be individual variables within the UBO cbuffer block. I just prefer to model this more directly on the C code, and for that I feel more comfortable using a struct. It's ultimately a subjective style decision.
+
+Now that we're using indices, we'll use our vertex ID to find which index we're currently rendering, remembering that we're rendering six this time, so using that for the mod. Then we can use the index to find the current vertex.
+
+```cpp
+Output main(uint id : SV_VertexID)
+{
+  uint indicesIndex = id % 6;
+  uint vertexIndex = cVertexIndices[indicesIndex];
+  
+  float2 position = cVertexPositions[vertexIndex];
+```
+
+We'll be getting deeper into the math of this in the next chapter, but for now we'll take it somewhat as given that we can simply piecewise multiply our scale against our vertex position to scale them up or down, and we've already seen we can do the same for piecewise addition to move things around.
+
+```cpp
+  float2 scaledPosition = position * cModelUniform.mScale;
+  float2 transformedPosition = scaledPosition + cModelUniform.mPosition;
+```
+
+As for output, the position will be output like in the fullscreen triangle, this time using our adjusted vertex position, rather than the vertex position directly. With the UV coordinate, a reminder of which is it being the texture coordinates from the last chapter, we'll be computing it based on the vertex position, rather than just using an array. There's nothing wrong with storing it in an array, this is just for demonstration purposes as it's trivial to compute in this case. Remember that we want bottom left to be (0, 0) and top -right to be (1, 1), so we can just do a scalar addition of 1 to our vertices to get the bottom left where we want it. At this point top right will be (2, 2), if we scale it down by half, we'll be where we want at the top right.
+
+```cpp
+  Output output;
+  output.Position = float4(transformedPosition, 0.0f, 1.0f);
+  output.UV = (vertex + 1.0f) * 0.5f;
+  return output;
+}
+```
 
 ## The Pixel Shader

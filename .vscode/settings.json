@@ -16,12 +16,14 @@
         "ATSC",
         "cbuffer",
         "downsampled",
+        "DXBC",
         "dxil",
         "Hemsley",
         "hlsl",
         "imgui",
         "LOADOP",
         "memcpy",
+        "omition",
         "PIXELFORMAT",
         "pmatrix",
         "PRIMITIVETYPE",
@@ -45,6 +47,7 @@
         "TRIANGLELIST",
         "tweakable",
         "UNORM",
-        "VSYNC"
+        "VSYNC",
+        "WASD"
     ]
 }

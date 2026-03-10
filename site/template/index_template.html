@@ -29,8 +29,16 @@
             <blockquote>
               <h5>Status:</h5>
               <ul>
+              {{#if this.example_status}}
                 <li>Example: {{this.example_status}}</li>
+              {{else}}
+                <li>Example: Not started</li>
+              {{/if}}
+              {{#if this.chapter_status}}
                 <li>Chapter: {{this.chapter_status}}</li>
+              {{else}}
+                <li>Chapter: Not started</li>
+              {{/if}}
               </ul>
             </blockquote>
 

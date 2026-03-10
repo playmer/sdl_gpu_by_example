@@ -32,12 +32,12 @@ Output main(uint id : SV_VertexID)
   uint indicesIndex = id % 6;
   uint vertexIndex = cVertexIndices[indicesIndex];
   
-  float2 vertex = cVertexPositions[vertexIndex];
-  float2 scaledVertex = vertex * cModelUniform.mScale;
-  float2 translatedVertex = scaledVertex + cModelUniform.mPosition;
+  float2 position = cVertexPositions[vertexIndex];
+  float2 scaledPosition = position * cModelUniform.mScale;
+  float2 transformedPosition = scaledPosition + cModelUniform.mPosition;
   
   Output output;
-  output.Position = float4(translatedVertex, 0.0f,1.0f);
-  output.UV = (vertex + 1.0f) * 0.5f;
+  output.Position = float4(transformedPosition, 0.0f, 1.0f);
+  output.UV = (position + 1.0f) * 0.5f;
   return output;
 }

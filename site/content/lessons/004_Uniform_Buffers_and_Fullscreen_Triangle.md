@@ -189,7 +189,7 @@ It'll end up looking something like this, albeit with everything outside of the 
 
 ```
 
-We'll render these clockwise, and like last time, embed them into the shader. This time however, we'll also need to account for the texture coordinates of these vertices, you can see them below each vertex of the triangle in `{}`.
+We'll render these clockwise, and like last time, embed them into the shader. This time however, we want to know _where_ we are within the triangle when we're outputting our color. We'll be using it to determine what we're drawing on any give pixel. We can use something called texture coordinates for this. Each vertices will, in addition to having a position, also have a texture coordinate (interchangeably referred to as UV coordinate), you can see them below each vertex of the triangle within braces.
 
 Texture coordinates have their own coordinate space, thankfully it's a rather simple one. Bottom left is (0, 0) and top right is (1, 1).
 
@@ -206,6 +206,8 @@ Texture coordinates have their own coordinate space, thankfully it's a rather si
     +----------------------+
 (0, 0)                (1, 0)
 ```
+
+You may wonder why we're introducing "texture" coordinates here when we're not currently using textures. It's because fullscreen triangles like this are effectively very similar to the quads we'll be seeing in the next chapter. In practice you're using it just as if it were a quad, and so having the same coordinates we would use to sample from a texture is equally useful. When you do the sort of "drawing" we'll be doing in the fragment shader, you can't really go wrong with having a universal input for rectangular shapes. So whether we're using these coordinates to know where to sample from a texture, or to know where we are to input into some mathematical formula, or whatever is just a matter of goal.
 
 So we'll make two arrays storing each of these.
 
@@ -445,4 +447,4 @@ Incredibly similar to the drawing function of the last chapter, but this time we
 
 And that's it, if you run now, you should get a screen that lets you move around and adjust the color of the oval!
 
-{{img "/sdl_gpu_by_example/site/static_data/assets/images/004_Uniform_Buffers_and_Fullscreen_Triangle.png" "A window on MacOS, with a black background and a blue oval approximatedly centered on the screen."}}
+{{img "/sdl_gpu_by_example/assets/images/004_Uniform_Buffers_and_Fullscreen_Triangle.png" "A window on MacOS, with a black background and a blue oval approximately centered on the screen."}}
