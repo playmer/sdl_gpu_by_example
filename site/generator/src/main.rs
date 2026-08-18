@@ -6,7 +6,6 @@ use std::fs::File;
 use std::io::stdout;
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
-use std::process::Command;
 use std::sync::Arc;
 use std::sync::RwLock;
 
@@ -19,6 +18,7 @@ use handlebars::Handlebars;
 use natural_sort_rs::NaturalSort;
 use serde_json::Value;
 use walkdir::WalkDir;
+use warp::Filter;
 use yaml_rust::{Yaml, YamlLoader};
 use zip::write::SimpleFileOptions;
 
@@ -624,8 +624,8 @@ fn process_content() -> Vec<(PathBuf, String)> {
     rendered_html
 }
 
-
-fn main() {
+#[tokio::main]
+async fn main() {
     //diff::diff_and_highlight();
 
     let output_dir = Path::new(OUTPUT_DIR);
@@ -653,29 +653,13 @@ fn main() {
 
     if !args.contains(&"--no-serve".to_owned())
     {
-        let gh_output_dir = Path::new("output_github");
-        let destination = gh_output_dir.join("sdl_gpu_by_example");
-
-        // Delete existing output    
-        if fs::exists(gh_output_dir).unwrap()
-        {
-            fs::remove_dir_all(gh_output_dir).unwrap();
-        }
-        
-        fs::create_dir_all(&destination).unwrap();
-
-        for file_source in get_files(output_dir) {
-            let file_destination = destination.join(&file_source);
-            fs::create_dir_all(file_destination.parent().unwrap()).unwrap();
-            fs::copy(output_dir.join(&file_source), &file_destination).unwrap();
-        }
-
         println!("Link to site: http://127.0.0.1:4040/sdl_gpu_by_example/");
 
-        // Should run the bottom command to host the site.
-        let _ = Command::new("http-serve-folder")
-            .args([gh_output_dir])
-            .status()
-            .expect("failed to execute process");
+        let site = warp::path("sdl_gpu_by_example")
+            .and(warp::fs::dir(OUTPUT_DIR));
+
+        warp::serve(site)
+            .run(([127, 0, 0, 1], 4040))
+            .await;
     }
 }
