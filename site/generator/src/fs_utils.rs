@@ -3,14 +3,11 @@ use std::path::{Path, PathBuf};
 use natural_sort_rs::NaturalSort;
 use walkdir::WalkDir;
 
-pub fn get_folders_or_paths(asset_dir: &Path, want_dirs: bool) -> Vec<PathBuf>
-{
-    let mut paths : Vec<PathBuf> = Vec::new();
+pub fn get_folders_or_paths(asset_dir: &Path, want_dirs: bool) -> Vec<PathBuf> {
+    let mut paths: Vec<PathBuf> = Vec::new();
 
     let walkdir = WalkDir::new(asset_dir);
-    let it = &mut walkdir
-        .into_iter()
-        .filter_map(|e| e.ok());
+    let it = &mut walkdir.into_iter().filter_map(|e| e.ok());
 
     for entry in it {
         let entry_path_buf = entry.into_path();
@@ -22,21 +19,18 @@ pub fn get_folders_or_paths(asset_dir: &Path, want_dirs: bool) -> Vec<PathBuf>
 
         if want_dirs {
             if 1 != entry_path.components().count() {
-                continue
+                continue;
             }
 
             if entry_path_buf.is_dir() {
                 paths.push(entry_path.to_path_buf());
             }
-        } 
-        else if entry_path_buf.is_file() {
+        } else if entry_path_buf.is_file() {
             paths.push(entry_path.to_path_buf());
         }
     }
 
-    
-    paths.natural_sort_by_key::<str, _, _>(|x| x.to_str().unwrap().to_string() );
-
+    paths.natural_sort_by_key::<str, _, _>(|x| x.to_str().unwrap().to_string());
 
     paths
 }

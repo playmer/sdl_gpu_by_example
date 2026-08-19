@@ -3,7 +3,6 @@ use pulldown_cmark::CowStr;
 use pulldown_cmark::TagEnd;
 use serde_json::Value;
 
-
 use syntect::highlighting::Theme;
 use syntect::highlighting::ThemeSet;
 use syntect::html::highlighted_html_for_string;
@@ -17,21 +16,29 @@ use pulldown_cmark::Tag;
 struct Highlighter {
     theme: Theme,
     syntax_set: SyntaxSet,
-    to_highlight: String
+    to_highlight: String,
 }
 
 impl Highlighter {
     fn new() -> Highlighter {
-        Highlighter{
+        Highlighter {
             theme: ThemeSet::load_defaults().themes["InspiredGitHub"].clone(),
             syntax_set: SyntaxSet::load_defaults_newlines(),
-            to_highlight: String::new()
+            to_highlight: String::new(),
         }
     }
-    
-    fn highlight_code_block<'a>(&mut self, transformed_events: &mut Vec<Event<'a>>, parser: &mut Parser<'a>, kind: CodeBlockKind<'_>)
-    {
-        transformed_events.push(Event::Html(CowStr::Boxed("<div class=\"card card-body\">".to_string().into_boxed_str())));
+
+    fn highlight_code_block<'a>(
+        &mut self,
+        transformed_events: &mut Vec<Event<'a>>,
+        parser: &mut Parser<'a>,
+        kind: CodeBlockKind<'_>,
+    ) {
+        transformed_events.push(Event::Html(CowStr::Boxed(
+            "<div class=\"card card-body\">"
+                .to_string()
+                .into_boxed_str(),
+        )));
 
         let language_syntax = match kind {
             CodeBlockKind::Fenced(lang) => {
@@ -40,12 +47,10 @@ impl Highlighter {
                 } else {
                     Some(self.syntax_set.find_syntax_plain_text())
                 }
-            },
-            CodeBlockKind::Indented => {
-                Some(self.syntax_set.find_syntax_plain_text())
             }
+            CodeBlockKind::Indented => Some(self.syntax_set.find_syntax_plain_text()),
         };
-        
+
         for event in parser.by_ref() {
             match event {
                 Event::Text(text) => {
@@ -53,16 +58,22 @@ impl Highlighter {
                 }
                 Event::End(TagEnd::CodeBlock) => {
                     let syntax = language_syntax.unwrap();
-                    let mut html = highlighted_html_for_string(&self.to_highlight, &self.syntax_set, syntax, &self.theme).unwrap();
+                    let mut html = highlighted_html_for_string(
+                        &self.to_highlight,
+                        &self.syntax_set,
+                        syntax,
+                        &self.theme,
+                    )
+                    .unwrap();
                     html.push_str("</div>");
                     transformed_events.push(Event::Html(CowStr::Boxed(html.into_boxed_str())));
                     self.to_highlight.clear();
                     return;
-                }    
+                }
                 e => {
                     transformed_events.push(e);
                 }
-            }   
+            }
         }
     }
 }
@@ -71,7 +82,7 @@ pub struct TocItem {
     pub level: i8,
     pub text: String,
     pub url: String,
-    pub children: Vec<TocItem>
+    pub children: Vec<TocItem>,
 }
 
 pub fn process_root_toc(item: &TocItem) -> Value {
@@ -83,12 +94,11 @@ pub fn process_root_toc(item: &TocItem) -> Value {
 
     let mut map: serde_json::Map<String, Value> = serde_json::Map::new();
     map.insert("name".to_string(), item.text.clone().into());
-    map.insert("url".to_string(),  item.url.clone().into());
-    map.insert("children".to_string(),  children.into());
+    map.insert("url".to_string(), item.url.clone().into());
+    map.insert("children".to_string(), children.into());
 
     map.into()
 }
-
 
 struct TocGenerator {
     children_stack: Vec<TocItem>,
@@ -98,16 +108,16 @@ struct TocGenerator {
 impl TocGenerator {
     fn new(title: String) -> TocGenerator {
         TocGenerator {
-            children_stack: vec![ TocItem { 
-                level: 1, 
+            children_stack: vec![TocItem {
+                level: 1,
                 text: title,
-                url: "#title".to_string(), 
-                children: Vec::new()
+                url: "#title".to_string(),
+                children: Vec::new(),
             }],
-            last_level: 1
+            last_level: 1,
         }
     }
-    
+
     fn string_to_id(value: &str) -> String {
         value
             .replace([' ', '/', '\\', '.', ','], "_")
@@ -116,8 +126,19 @@ impl TocGenerator {
             .replace(|c: char| !c.is_alphanumeric() && (c != '_'), "")
     }
 
-    fn process_header<'a>(&mut self, transformed_events: &mut Vec<Event<'a>>, parser: &mut Parser<'a>, event: Event<'a>) {
-        if let Event::Start(Tag::Heading { level, id: _, classes: _, attrs: _ }) = &event {
+    fn process_header<'a>(
+        &mut self,
+        transformed_events: &mut Vec<Event<'a>>,
+        parser: &mut Parser<'a>,
+        event: Event<'a>,
+    ) {
+        if let Event::Start(Tag::Heading {
+            level,
+            id: _,
+            classes: _,
+            attrs: _,
+        }) = &event
+        {
             print!("\tLevel{{{}}}: ", &level);
             let mut header_text = String::new();
             let header_id;
@@ -127,49 +148,45 @@ impl TocGenerator {
                     Event::Text(text) => {
                         header_id = TocGenerator::string_to_id(text);
                         header_text = text.to_string();
-                    },
-                    _ => { 
+                    }
+                    _ => {
                         header_id = format!("generated_toc_entry_{}", self.children_stack.len());
                     }
                 }
 
-                transformed_events.push(Event::Start(Tag::Heading { 
-                    level: *level, 
-                    id: Some(CowStr::Boxed(header_id.clone().into_boxed_str())), 
-                    classes: Vec::new(), 
-                    attrs: Vec::new()
+                transformed_events.push(Event::Start(Tag::Heading {
+                    level: *level,
+                    id: Some(CowStr::Boxed(header_id.clone().into_boxed_str())),
+                    classes: Vec::new(),
+                    attrs: Vec::new(),
                 }));
-                
+
                 transformed_events.push(maybe_text_event);
             } else {
                 header_id = format!("generated_toc_entry_{}", self.children_stack.len());
                 transformed_events.push(event.clone());
             }
 
-            let current_level = level
-                .to_string()
-                .split_off(1)
-                .parse::<i8>()
-                .unwrap();
+            let current_level = level.to_string().split_off(1).parse::<i8>().unwrap();
 
-            
             let url = format!("#{}", header_id);
 
-            let item = TocItem{
+            let item = TocItem {
                 level: current_level,
                 text: header_text,
-                url, 
-                children: Vec::new()
+                url,
+                children: Vec::new(),
             };
 
             if item.level == 1 {
-                 if item.text != "$" {
-                    panic!("Processing a header with name {} and id {}, this header has a heading of 1, which is disallowed in content. Anything above 1 is allowed. Headers must start at 2, and only increase one at a time.",
-                        item.text, 
-                        item.url);
-                 }
-                 
-                 return;
+                if item.text != "$" {
+                    panic!(
+                        "Processing a header with name {} and id {}, this header has a heading of 1, which is disallowed in content. Anything above 1 is allowed. Headers must start at 2, and only increase one at a time.",
+                        item.text, item.url
+                    );
+                }
+
+                return;
             }
 
             println!("\t{}, {}", self.last_level, item.level);
@@ -178,13 +195,23 @@ impl TocGenerator {
                 self.last_level += 1;
                 self.children_stack.push(item);
             } else if self.last_level == item.level {
-                let last_item  = self.children_stack.pop().unwrap();
-                self.children_stack.iter_mut().nth_back(0).unwrap().children.push(last_item);
+                let last_item = self.children_stack.pop().unwrap();
+                self.children_stack
+                    .iter_mut()
+                    .nth_back(0)
+                    .unwrap()
+                    .children
+                    .push(last_item);
                 self.children_stack.push(item);
-            }  else if self.last_level >= item.level {
+            } else if self.last_level >= item.level {
                 for _ in 0..(self.last_level - item.level) + 1 {
-                    let last_item  = self.children_stack.pop().unwrap();
-                    self.children_stack.iter_mut().nth_back(0).unwrap().children.push(last_item);
+                    let last_item = self.children_stack.pop().unwrap();
+                    self.children_stack
+                        .iter_mut()
+                        .nth_back(0)
+                        .unwrap()
+                        .children
+                        .push(last_item);
                     self.last_level -= 1;
                 }
 
@@ -196,9 +223,14 @@ impl TocGenerator {
 
     fn get_toc_value(&mut self) -> Option<Value> {
         for _ in 0..(self.children_stack.len() - 1) {
-            let last_item  = self.children_stack.pop().unwrap();
+            let last_item = self.children_stack.pop().unwrap();
             println!("\tget_toc_value: {}", last_item.url);
-            self.children_stack.iter_mut().nth_back(0).unwrap().children.push(last_item);
+            self.children_stack
+                .iter_mut()
+                .nth_back(0)
+                .unwrap()
+                .children
+                .push(last_item);
         }
 
         if !self.children_stack.is_empty() {
@@ -244,7 +276,12 @@ pub fn parse_markdown_to_html(title: &str, content: &str) -> (String, Option<Val
 
     while let Some(event) = parser.next() {
         match event.clone() {
-            Event::Start(Tag::Heading { level: _, id: _, classes: _, attrs: _ }) => {
+            Event::Start(Tag::Heading {
+                level: _,
+                id: _,
+                classes: _,
+                attrs: _,
+            }) => {
                 toc_generator.process_header(&mut transformed_events, &mut parser, event);
             }
             Event::Start(Tag::CodeBlock(kind)) => {
