@@ -6,6 +6,7 @@ use std::fs;
 use crate::config;
 use crate::lessons;
 use crate::templates;
+use crate::static_files;
 
 pub fn build_site()
 {
@@ -24,7 +25,7 @@ pub fn build_site()
     });
 
     let static_data_task = thread::spawn(move || {
-        lessons::write_static_data(output_dir);
+        static_files::write_static_data(output_dir);
     });
     
     static_data_task.join().unwrap();

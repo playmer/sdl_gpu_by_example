@@ -9,6 +9,7 @@ pub mod diff;
 pub mod lessons;
 pub mod fs_utils;
 pub mod markdown;
+pub mod static_files;
 pub mod templates;
 
 
