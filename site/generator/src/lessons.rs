@@ -9,7 +9,7 @@ use natural_sort_rs::NaturalSort;
 
 use zip::write::SimpleFileOptions;
 
-use crate::config;
+use crate::config::BuildConfig;
 use crate::fs_utils;
 
 
@@ -65,9 +65,9 @@ fn get_code_assets_lesson_needs(assets: &Vec<PathBuf>, lesson_c_source_path: &Pa
     assets_lesson_needs
 }
 
-fn get_specific_lesson_code() -> Vec<LessonCode> {
-    let source_dir = Path::new(config::CODE_SOURCE_DIR);
-    let code_asset_dir = Path::new(config::CODE_ASSET_DIR);
+fn get_specific_lesson_code(config: &BuildConfig) -> Vec<LessonCode> {
+    let source_dir = &config.code_source_dir;
+    let code_asset_dir = &config.code_asset_dir;
     let mut lessons: Vec<LessonCode> = Vec::new();
 
     let assets = {
@@ -101,8 +101,8 @@ fn get_specific_lesson_code() -> Vec<LessonCode> {
     lessons
 }
 
-fn get_agnostic_lesson_code() -> Vec<PathBuf> {
-    let cmake_dir = Path::new(config::CODE_CMAKE_DIR);
+fn get_agnostic_lesson_code(config: &BuildConfig) -> Vec<PathBuf> {
+    let cmake_dir = &config.code_cmake_dir;
     let cmake_final_dir = Path::new(cmake_dir.file_name().unwrap());
     
     fs_utils::get_files(cmake_dir)
@@ -112,19 +112,20 @@ fn get_agnostic_lesson_code() -> Vec<PathBuf> {
 }
 
 
-pub fn write_lesson_zips(output_dir: &Path) {
+pub fn write_lesson_zips(config: &BuildConfig) {
     println!("Writing lesson zips");
 
-    let code_dir = Path::new(config::CODE_DIR);
-    let output_code_dir = output_dir.join("assets").join("code");
-    let agnostic_code_for_lessons = get_agnostic_lesson_code();
+    let code_dir = config.code_dir.clone();
+    let output_code_dir = config.output_dir.join("assets").join("code");
+    let agnostic_code_for_lessons = get_agnostic_lesson_code(config);
 
     fs::create_dir_all(&output_code_dir).unwrap();
 
     let mut handles = Vec::new();
 
-    for lesson_code in get_specific_lesson_code() {
+    for lesson_code in get_specific_lesson_code(config) {
         // Clones for the thread we're spawning.
+        let code_dir = code_dir.clone();
         let output_code_dir = output_code_dir.clone();
         let agnostic_code_for_lessons = agnostic_code_for_lessons.clone();
 

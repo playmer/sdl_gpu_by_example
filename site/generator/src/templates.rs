@@ -7,6 +7,7 @@ use handlebars::Handlebars;
 use serde_json::Value;
 
 use crate::config;
+use crate::config::BuildConfig;
 use crate::content;
 use crate::diff;
 use crate::markdown;
@@ -191,14 +192,13 @@ pub fn handlebars_escape(data: &str) -> String {
 
 
 
-pub fn process_content() -> Vec<(PathBuf, String)> {
-    let output_dir = Path::new(config::OUTPUT_DIR);
-    let code_dir = Path::new(config::CODE_DIR).join("source");
-
-    let template_dir = Path::new(config::TEMPLATE_DIR);
+pub fn process_content(config: &BuildConfig) -> Vec<(PathBuf, String)> {
+    let output_dir = &config.output_dir;
+    let code_dir = &config.code_source_dir;
+    let template_dir = &config.template_dir;
     let rendered_html: Vec<(PathBuf, String)> = Vec::new();
 
-    let contents = content::get_content();
+    let contents = content::get_content(config);
     let template_context = content::get_template_context(&contents);
 
     let mut handlebars: Handlebars<'_> = Handlebars::new();
@@ -211,7 +211,7 @@ pub fn process_content() -> Vec<(PathBuf, String)> {
     handlebars.register_helper("card", Box::new(templates::card_start_helper));
     handlebars.register_helper("card-end", Box::new(templates::card_end_helper));
 
-    let inserts = content::get_inserts();
+    let inserts = content::get_inserts(config);
 
     for i in 0..contents.len() {
         let content = &contents[i];

@@ -3,14 +3,14 @@ use std::collections::HashMap;
 use std::fs;
 use std::io::stdout;
 use std::io::Write;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 use extract_frontmatter::config::Splitter;
 use extract_frontmatter::Extractor;
 use serde_json::Value;
 use yaml_rust::{Yaml, YamlLoader};
 
-use crate::config;
+use crate::config::BuildConfig;
 use crate::fs_utils;
 
 pub struct Content {
@@ -21,17 +21,15 @@ pub struct Content {
 }
 
 
-pub fn get_content() -> Vec<Content> {
-    let content_dir = Path::new(config::CONTENT_DIR);
-
+pub fn get_content(config: &BuildConfig) -> Vec<Content> {
     let mut content: Vec<Content> = Vec::new();
 
-    for file_path in fs_utils::get_files(content_dir) {
+    for file_path in fs_utils::get_files(&config.content_dir) {
         let file_name = file_path.file_name().unwrap().to_str().unwrap().to_string();
         println!("Getting Content for {file_name}");
         stdout().flush().unwrap();
 
-        let front_matter_and_markdown: String = std::fs::read_to_string(content_dir.join(&file_path)).unwrap();
+        let front_matter_and_markdown: String = std::fs::read_to_string(config.content_dir.join(&file_path)).unwrap();
         
         let (front_matter, markdown) = Extractor::new(Splitter::EnclosingLines("---"))
             .extract(&front_matter_and_markdown);
@@ -126,13 +124,12 @@ pub fn get_template_context(content: &Vec<Content>) -> serde_json::Map<String, V
 }
 
 
-pub fn get_inserts() -> Vec<(String, String)> {
-    let inserts_dir = Path::new("../inserts");
+pub fn get_inserts(config: &BuildConfig) -> Vec<(String, String)> {
     let mut inserts = Vec::new();
 
-    for insert in fs_utils::get_files(inserts_dir) {
+    for insert in fs_utils::get_files(&config.inserts_dir) {
         let name = insert.file_stem().unwrap().to_str().unwrap().to_string();
-        let insert_html = fs::read_to_string(inserts_dir.join(insert)).unwrap();
+        let insert_html = fs::read_to_string(config.inserts_dir.join(insert)).unwrap();
 
         inserts.push((name, insert_html));
     }
