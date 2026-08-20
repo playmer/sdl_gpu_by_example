@@ -6,10 +6,10 @@ use crate::lessons;
 use crate::static_files;
 use crate::templates;
 
-pub fn build_site(config: &BuildConfig) {
+pub fn build_site(config: &BuildConfig) -> anyhow::Result<()> {
     // Delete existing output
-    if fs::exists(&config.output_dir).unwrap() {
-        fs::remove_dir_all(&config.output_dir).unwrap();
+    if fs::exists(&config.output_dir)? {
+        fs::remove_dir_all(&config.output_dir)?;
     }
 
     let lesson_config = config.clone();
@@ -22,8 +22,17 @@ pub fn build_site(config: &BuildConfig) {
         static_files::write_static_data(&static_data_config);
     });
 
-    static_data_task.join().unwrap();
-    lesson_zip_task.join().unwrap();
+    let static_result = static_data_task
+        .join()
+        .map_err(|_| anyhow::anyhow!("static-data task panicked"));
 
-    templates::process_content(config);
+    let lesson_result = lesson_zip_task
+        .join()
+        .map_err(|_| anyhow::anyhow!("lesson ZIP task panicked"));
+
+    lesson_result?;
+    static_result?;
+
+    templates::process_content(config)?;
+    Ok(())
 }

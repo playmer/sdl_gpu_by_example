@@ -4,6 +4,7 @@ use std::path::{Path, PathBuf};
 use std::thread;
 use std::{fmt, fs};
 
+use anyhow::Context;
 use natural_sort_rs::NaturalSort;
 
 use zip::write::SimpleFileOptions;
@@ -63,7 +64,7 @@ fn get_code_assets_lesson_needs(
     assets_lesson_needs
 }
 
-fn get_specific_lesson_code(config: &BuildConfig) -> Vec<LessonCode> {
+fn get_specific_lesson_code(config: &BuildConfig) -> anyhow::Result<Vec<LessonCode>> {
     let source_dir = &config.code_source_dir;
     let code_asset_dir = &config.code_asset_dir;
     let mut lessons: Vec<LessonCode> = Vec::new();
@@ -71,20 +72,20 @@ fn get_specific_lesson_code(config: &BuildConfig) -> Vec<LessonCode> {
     let assets = {
         let asset_final_dir = Path::new(code_asset_dir.file_name().unwrap());
 
-        fs_utils::get_files(code_asset_dir)
+        fs_utils::get_files(code_asset_dir)?
             .into_iter()
             .map(|i| asset_final_dir.join(i))
             .collect()
     };
 
-    for path in fs_utils::get_folders(source_dir) {
+    for path in fs_utils::get_folders(source_dir)? {
         let lesson_name = path;
         let lesson_code_directory = source_dir.join(&lesson_name);
         let lesson_c_source_path: PathBuf =
             lesson_code_directory.join(&lesson_name).with_extension("c");
 
         let code_assets = get_code_assets_lesson_needs(&assets, &lesson_c_source_path);
-        let code_files = fs_utils::get_files(&lesson_code_directory);
+        let code_files = fs_utils::get_files(&lesson_code_directory)?;
 
         lessons.push(LessonCode {
             lesson_name: lesson_name.to_str().unwrap().to_string(),
@@ -96,31 +97,34 @@ fn get_specific_lesson_code(config: &BuildConfig) -> Vec<LessonCode> {
 
     lessons.natural_sort_by_key::<str, _, _>(|x| x.lesson_name.clone());
 
-    lessons
+    Ok(lessons)
 }
 
-fn get_agnostic_lesson_code(config: &BuildConfig) -> Vec<PathBuf> {
-    let cmake_dir = &config.code_cmake_dir;
-    let cmake_final_dir = Path::new(cmake_dir.file_name().unwrap());
+fn get_agnostic_lesson_code(config: &BuildConfig) -> anyhow::Result<Vec<PathBuf>> {
+    let cmake_dir = &config.code_cmake_dir.file_name().expect(&format!(
+        "{} should have a leaf file name to retrieve.",
+        config.code_cmake_dir.display()
+    ));
+    let cmake_final_dir = Path::new(cmake_dir);
 
-    fs_utils::get_files(cmake_dir)
+    Ok(fs_utils::get_files(&config.code_cmake_dir)?
         .into_iter()
         .map(|i| cmake_final_dir.join(i))
-        .collect()
+        .collect())
 }
 
-pub fn write_lesson_zips(config: &BuildConfig) {
+pub fn write_lesson_zips(config: &BuildConfig) -> anyhow::Result<()> {
     println!("Writing lesson zips");
 
     let code_dir = config.code_dir.clone();
     let output_code_dir = config.output_dir.join("assets").join("code");
-    let agnostic_code_for_lessons = get_agnostic_lesson_code(config);
+    let agnostic_code_for_lessons = get_agnostic_lesson_code(config)?;
 
     fs::create_dir_all(&output_code_dir).unwrap();
 
     let mut handles = Vec::new();
 
-    for lesson_code in get_specific_lesson_code(config) {
+    for lesson_code in get_specific_lesson_code(config)? {
         // Clones for the thread we're spawning.
         let code_dir = code_dir.clone();
         let output_code_dir = output_code_dir.clone();
@@ -174,4 +178,6 @@ pub fn write_lesson_zips(config: &BuildConfig) {
     for handle in handles {
         handle.join().unwrap();
     }
+
+    Ok(())
 }

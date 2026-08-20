@@ -13,10 +13,10 @@ pub mod static_files;
 pub mod templates;
 
 #[tokio::main]
-async fn main() {
-    let config = config::BuildConfig::discover();
+async fn main() -> anyhow::Result<()> {
+    let config = config::BuildConfig::discover()?;
 
-    build::build_site(&config);
+    build::build_site(&config)?;
 
     let args: Vec<String> = env::args().collect();
 
@@ -27,4 +27,6 @@ async fn main() {
 
         warp::serve(site).run(([127, 0, 0, 1], 4040)).await;
     }
+
+    Ok(())
 }

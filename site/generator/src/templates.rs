@@ -188,13 +188,13 @@ pub fn handlebars_escape(data: &str) -> String {
     handlebars::html_escape(data)
 }
 
-pub fn process_content(config: &BuildConfig) -> Vec<(PathBuf, String)> {
+pub fn process_content(config: &BuildConfig) -> anyhow::Result<Vec<(PathBuf, String)>> {
     let output_dir = &config.output_dir;
     let code_dir = &config.code_source_dir;
     let template_dir = &config.template_dir;
     let rendered_html: Vec<(PathBuf, String)> = Vec::new();
 
-    let contents = content::get_content(config);
+    let contents = content::get_content(config)?;
     let template_context = content::get_template_context(&contents);
 
     let mut handlebars: Handlebars<'_> = Handlebars::new();
@@ -215,7 +215,7 @@ pub fn process_content(config: &BuildConfig) -> Vec<(PathBuf, String)> {
     handlebars.register_helper("card", Box::new(templates::card_start_helper));
     handlebars.register_helper("card-end", Box::new(templates::card_end_helper));
 
-    let inserts = content::get_inserts(config);
+    let inserts = content::get_inserts(config).unwrap();
 
     for i in 0..contents.len() {
         let content = &contents[i];
@@ -268,5 +268,5 @@ pub fn process_content(config: &BuildConfig) -> Vec<(PathBuf, String)> {
         std::fs::write(final_file_path, final_html).unwrap();
     }
 
-    rendered_html
+    Ok(rendered_html)
 }
