@@ -13,13 +13,12 @@ pub fn build_site(config: &BuildConfig) -> anyhow::Result<()> {
     }
 
     let lesson_config = config.clone();
-    let lesson_zip_task = thread::spawn(move || {
-        lessons::write_lesson_zips(&lesson_config);
-    });
+    let lesson_zip_task =
+        thread::spawn(move || -> anyhow::Result<()> { lessons::write_lesson_zips(&lesson_config) });
 
     let static_data_config = config.clone();
-    let static_data_task = thread::spawn(move || {
-        static_files::write_static_data(&static_data_config);
+    let static_data_task = thread::spawn(move || -> anyhow::Result<()> {
+        static_files::write_static_data(&static_data_config)
     });
 
     let static_result = static_data_task
@@ -30,8 +29,8 @@ pub fn build_site(config: &BuildConfig) -> anyhow::Result<()> {
         .join()
         .map_err(|_| anyhow::anyhow!("lesson ZIP task panicked"));
 
-    lesson_result?;
-    static_result?;
+    lesson_result??;
+    static_result??;
 
     templates::process_content(config)?;
     Ok(())
