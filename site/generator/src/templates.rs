@@ -250,7 +250,7 @@ pub fn process_content(config: &BuildConfig) -> anyhow::Result<Vec<(PathBuf, Str
                     &code_dir
                         .join(content_name)
                         .join(format!("{}.c", content_name.display())),
-                );
+                )?;
 
                 current_content_context.insert("lesson_diff".to_string(), html.into());
             }

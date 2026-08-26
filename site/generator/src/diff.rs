@@ -6,16 +6,14 @@ use syntect::highlighting::ThemeSet;
 use syntect::html::highlighted_html_for_string;
 use syntect::parsing::SyntaxSet;
 
-pub fn generate_diff_html() {
+pub fn generate_diff_html() -> anyhow::Result<()> {
     let source = "E:/Repos/sdl_gpu_by_example/code/source/003_Triangle_and_Fullscreen_Triangle/003_Triangle_and_Fullscreen_Triangle.c";
     let dest = "E:/Repos/sdl_gpu_by_example/code/source/004_Uniform_Buffers/004_Uniform_Buffers.c";
 
     let old_content = std::fs::read_to_string(Path::new(source))
-        .unwrap()
-        .replace("\r\n", "\n");
+        ?.replace("\r\n", "\n");
     let new_content = std::fs::read_to_string(Path::new(dest))
-        .unwrap()
-        .replace("\r\n", "\n");
+        ?.replace("\r\n", "\n");
 
     let diff = TextDiff::from_lines(&old_content, &new_content);
 
@@ -26,16 +24,18 @@ pub fn generate_diff_html() {
             ChangeTag::Equal => ("      ", change.as_str()),
         };
     }
+
+    Ok(())
 }
 
-fn diff(old_content: &Path, new_content: &Path) -> (Vec<ChangeTag>, String) {
+fn diff(old_content: &Path, new_content: &Path) -> anyhow::Result<(Vec<ChangeTag>, String)> {
     println!(
         "wooooooooo {}, {}",
         &old_content.display(),
         &new_content.display()
     );
-    let old_content = std::fs::read_to_string(old_content).unwrap();
-    let new_content = std::fs::read_to_string(new_content).unwrap();
+    let old_content = std::fs::read_to_string(old_content)?;
+    let new_content = std::fs::read_to_string(new_content)?;
 
     let mut changes: Vec<ChangeTag> = Vec::new();
     let mut full_content = String::with_capacity(old_content.len() + new_content.len());
@@ -49,12 +49,12 @@ fn diff(old_content: &Path, new_content: &Path) -> (Vec<ChangeTag>, String) {
         full_content.push_str(line);
     }
 
-    (changes, full_content)
+    Ok((changes, full_content))
 }
 
-pub fn diff_and_highlight(source: &Path, dest: &Path) -> String {
+pub fn diff_and_highlight(source: &Path, dest: &Path) -> anyhow::Result<String> {
     if !std::fs::exists(source).unwrap() || !std::fs::exists(dest).unwrap() {
-        return String::new();
+        return Ok(String::new());
     }
 
     // Setup for syntect to highlight (specifically) Rust code
@@ -63,7 +63,7 @@ pub fn diff_and_highlight(source: &Path, dest: &Path) -> String {
     let syntax = default_syntax_set.find_syntax_by_extension("c").unwrap();
     let theme = &default_theme_set.themes["InspiredGitHub"];
 
-    let (changes, full_content) = diff(source, dest);
+    let (changes, full_content) = diff(source, dest)?;
 
     let html =
         highlighted_html_for_string(&full_content, &default_syntax_set, syntax, theme).unwrap();
@@ -90,5 +90,5 @@ pub fn diff_and_highlight(source: &Path, dest: &Path) -> String {
     }
     highlighted_html.push_str(html_lines[html_lines.len() - 1]);
 
-    return highlighted_html;
+    return Ok(highlighted_html);
 }
