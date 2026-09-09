@@ -29,14 +29,21 @@ When we look at how we do real-time rendering today, it's essentially a combinat
 
 Pipelines are how we configure everything else not encapsulated in a RenderPass. You have to explain the layout of your data and how they flow from stage to stage, along with what you want the GPU to react to and modify data between and after the stages. A rough outline of the stages you'd typically see is the following:
 
-```
-+-----------------+    +-----------------+    +--------------------+ 
-| Input Assembler | -> | Vertex Shader   | -> | Tesselation Shader | --+
-+-----------------+    +-----------------+    +--------------------+   |
- +---------------------------------------------------------------------+
- |    +-----------------+    +---------------+    +------------------+
- + -> | Geometry Shader | -> | Rasterization | -> | Fragment Shaders |
-      +-----------------+    +---------------+    +------------------+ 
+```d2
+direction: right
+
+input-assembler: Input Assembler
+vertex-shader: Vertex Shader
+tessellation-shader: Tessellation Shader
+geometry-shader: Geometry Shader
+rasterization: Rasterization
+fragment-shader: Fragment Shader
+
+input-assembler -> vertex-shader
+vertex-shader -> tessellation-shader
+tessellation-shader -> geometry-shader
+geometry-shader -> rasterization
+rasterization -> fragment-shader
 ```
 
 We should first mention the Input Assembler which is something that's technically always happening, but we won't interact with much for some time. Essentially it takes data we describe in the Pipeline, and sets it up to be used in the subsequent stages.

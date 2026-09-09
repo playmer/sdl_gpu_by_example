@@ -85,9 +85,12 @@ fn get_specific_lesson_code(config: &BuildConfig) -> anyhow::Result<Vec<LessonCo
     let mut lessons: Vec<LessonCode> = Vec::new();
 
     let assets = {
-        let asset_final_dir = code_asset_dir
-            .file_name()
-            .with_context(|| format!("{} doesn't have a directory name.", code_asset_dir.display()))?;
+        let asset_final_dir = code_asset_dir.file_name().with_context(|| {
+            format!(
+                "{} doesn't have a directory name.",
+                code_asset_dir.display()
+            )
+        })?;
         let asset_final_dir = Path::new(asset_final_dir);
 
         fs_utils::get_files(code_asset_dir)?
@@ -106,8 +109,8 @@ fn get_specific_lesson_code(config: &BuildConfig) -> anyhow::Result<Vec<LessonCo
         let code_files = fs_utils::get_files(&lesson_code_directory)?;
         let lesson_name = lesson_name
             .to_str()
-            .with_context(|| format!("{} cant be converted to utf8.", lesson_name.display()))
-            ?.to_string();
+            .with_context(|| format!("{} cant be converted to utf8.", lesson_name.display()))?
+            .to_string();
 
         lessons.push(LessonCode {
             lesson_name: lesson_name,

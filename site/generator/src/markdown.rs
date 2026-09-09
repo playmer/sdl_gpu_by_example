@@ -1,3 +1,9 @@
+use std::collections::HashMap;
+use std::io::Write;
+use std::process::Command;
+use std::process::Stdio;
+
+use anyhow::Context;
 use pulldown_cmark::CodeBlockKind;
 use pulldown_cmark::CowStr;
 use pulldown_cmark::TagEnd;
@@ -13,10 +19,63 @@ use pulldown_cmark::Options;
 use pulldown_cmark::Parser;
 use pulldown_cmark::Tag;
 
+struct d2RenderOptions {
+    name: String,
+    caption: String,
+}
+
+fn parse_d2_options(args: Vec<&str>) -> anyhow::Result<d2RenderOptions> {
+    let mut arg_map = HashMap::new();
+
+    for arg in args {
+        let (key, value) = arg
+            .split_once('=')
+            .with_context(|| format!("Expected `key=value`, found `{arg:?}`"))?;
+
+        arg_map.insert(key, value);
+    }
+
+    Ok(d2RenderOptions {
+        name: arg_map
+            .remove("name")
+            .with_context(|| format!("No name arg found for d2 declaration"))?
+            .to_owned(),
+        caption: arg_map
+            .remove("caption")
+            .with_context(|| format!("No caption arg found for d2 declaration"))?
+            .to_owned(),
+    })
+}
+
+fn render_d2(args: Vec<&str>, d2_markup: &str) -> anyhow::Result<String> {
+    let options = parse_d2_options(args)?;
+
+
+    let mut d2 = Command::new("d2")
+        .args(["--no-xml-tag", "-", "-"])
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .context("Failed to launch d2.")?;
+
+    d2.stdin
+        .take()
+        .context("Failed to open d2's stdin")?
+        .write_all(d2_markup.as_bytes())?;
+
+    let output = d2.wait_with_output()?;
+
+    if !output.status.success() {
+        anyhow::bail!("d2 failed:\n\t{}", String::from_utf8_lossy(&output.stderr));
+    }
+
+    Ok(String::from_utf8(output.stdout)?)
+}
+
 struct Highlighter {
     theme: Theme,
     syntax_set: SyntaxSet,
-    to_highlight: String,
 }
 
 impl Highlighter {
@@ -24,16 +83,15 @@ impl Highlighter {
         Highlighter {
             theme: ThemeSet::load_defaults().themes["InspiredGitHub"].clone(),
             syntax_set: SyntaxSet::load_defaults_newlines(),
-            to_highlight: String::new(),
         }
     }
 
     fn highlight_code_block<'a>(
-        &mut self,
+        &self,
         transformed_events: &mut Vec<Event<'a>>,
-        parser: &mut Parser<'a>,
         kind: CodeBlockKind<'_>,
-    ) {
+        source: &str,
+    ) -> anyhow::Result<()> {
         transformed_events.push(Event::Html(CowStr::Boxed(
             "<div class=\"card card-body\">"
                 .to_string()
@@ -43,38 +101,65 @@ impl Highlighter {
         let language_syntax = match kind {
             CodeBlockKind::Fenced(lang) => {
                 if let Some(found_syntax) = self.syntax_set.find_syntax_by_extension(&lang) {
-                    Some(found_syntax)
+                    found_syntax
                 } else {
-                    Some(self.syntax_set.find_syntax_plain_text())
+                    self.syntax_set.find_syntax_plain_text()
                 }
             }
-            CodeBlockKind::Indented => Some(self.syntax_set.find_syntax_plain_text()),
+            CodeBlockKind::Indented => self.syntax_set.find_syntax_plain_text(),
         };
+
+        let mut html =
+            highlighted_html_for_string(source, &self.syntax_set, language_syntax, &self.theme)?;
+        html.push_str("</div>");
+        transformed_events.push(Event::Html(CowStr::Boxed(html.into_boxed_str())));
+
+        Ok(())
+    }
+}
+
+struct CodeBlockProcessor {
+    highlighter: Highlighter,
+}
+
+impl CodeBlockProcessor {
+    fn new() -> CodeBlockProcessor {
+        CodeBlockProcessor {
+            highlighter: Highlighter::new(),
+        }
+    }
+
+    pub fn process_code_block<'a>(
+        &mut self,
+        transformed_events: &mut Vec<Event<'a>>,
+        parser: &mut Parser<'a>,
+        kind: CodeBlockKind<'_>,
+    ) -> anyhow::Result<()> {
+        let mut text = String::new();
 
         for event in parser.by_ref() {
             match event {
-                Event::Text(text) => {
-                    self.to_highlight.push_str(&text);
-                }
-                Event::End(TagEnd::CodeBlock) => {
-                    let syntax = language_syntax.unwrap();
-                    let mut html = highlighted_html_for_string(
-                        &self.to_highlight,
-                        &self.syntax_set,
-                        syntax,
-                        &self.theme,
-                    )
-                    .unwrap();
-                    html.push_str("</div>");
-                    transformed_events.push(Event::Html(CowStr::Boxed(html.into_boxed_str())));
-                    self.to_highlight.clear();
-                    return;
-                }
-                e => {
-                    transformed_events.push(e);
-                }
+                Event::Text(new_text) => text.push_str(&new_text),
+                Event::End(TagEnd::CodeBlock) => break,
+                _ => {}
             }
         }
+
+        match kind {
+            CodeBlockKind::Fenced(info)
+                if let mut args = info.to_owned().split_whitespace()
+                    && args.next() == Some("d2") =>
+            {
+                let args: Vec<&str> = args.collect();
+                let svg = render_d2(args, &text)?;
+                transformed_events.push(Event::Html(CowStr::Boxed(svg.into_boxed_str())));
+            }
+            _ => self
+                .highlighter
+                .highlight_code_block(transformed_events, kind, &text)?,
+        }
+
+        Ok(())
     }
 }
 
@@ -257,7 +342,10 @@ fn process_math<'a>(transformed_events: &mut Vec<Event<'a>>, math: CowStr<'_>) {
     }
 }
 
-pub fn parse_markdown_to_html(title: &str, content: &str) -> (String, Option<Value>) {
+pub fn parse_markdown_to_html(
+    title: &str,
+    content: &str,
+) -> anyhow::Result<(String, Option<Value>)> {
     // Set up options and parser. Strikethroughs are not part of the CommonMark standard
     // and we therefore must enable it explicitly.
     let mut options = Options::empty();
@@ -268,7 +356,7 @@ pub fn parse_markdown_to_html(title: &str, content: &str) -> (String, Option<Val
     options.insert(Options::ENABLE_HEADING_ATTRIBUTES);
 
     let mut html_output = String::new();
-    let mut highlighter = Highlighter::new();
+    let mut code_block_processor = CodeBlockProcessor::new();
     let mut toc_generator = TocGenerator::new(title.to_string());
 
     let mut parser: Parser<'_> = Parser::new_ext(content, options);
@@ -285,7 +373,11 @@ pub fn parse_markdown_to_html(title: &str, content: &str) -> (String, Option<Val
                 toc_generator.process_header(&mut transformed_events, &mut parser, event);
             }
             Event::Start(Tag::CodeBlock(kind)) => {
-                highlighter.highlight_code_block(&mut transformed_events, &mut parser, kind);
+                code_block_processor.process_code_block(
+                    &mut transformed_events,
+                    &mut parser,
+                    kind,
+                )?;
             }
             Event::DisplayMath(math) => {
                 process_math(&mut transformed_events, math);
@@ -302,5 +394,5 @@ pub fn parse_markdown_to_html(title: &str, content: &str) -> (String, Option<Val
     // Now we send this new vector of events off to be transformed into HTML
     pulldown_cmark::html::push_html(&mut html_output, transformed_events.into_iter());
 
-    (html_output, toc_generator.get_toc_value())
+    Ok((html_output, toc_generator.get_toc_value()))
 }

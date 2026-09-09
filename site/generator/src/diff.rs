@@ -10,10 +10,8 @@ pub fn generate_diff_html() -> anyhow::Result<()> {
     let source = "E:/Repos/sdl_gpu_by_example/code/source/003_Triangle_and_Fullscreen_Triangle/003_Triangle_and_Fullscreen_Triangle.c";
     let dest = "E:/Repos/sdl_gpu_by_example/code/source/004_Uniform_Buffers/004_Uniform_Buffers.c";
 
-    let old_content = std::fs::read_to_string(Path::new(source))
-        ?.replace("\r\n", "\n");
-    let new_content = std::fs::read_to_string(Path::new(dest))
-        ?.replace("\r\n", "\n");
+    let old_content = std::fs::read_to_string(Path::new(source))?.replace("\r\n", "\n");
+    let new_content = std::fs::read_to_string(Path::new(dest))?.replace("\r\n", "\n");
 
     let diff = TextDiff::from_lines(&old_content, &new_content);
 

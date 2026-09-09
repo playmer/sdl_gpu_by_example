@@ -120,7 +120,7 @@ pub fn get_specific_content_context(
     template_context: &serde_json::Map<String, Value>,
     inserts: &Vec<(String, String)>,
     content: &content::Content,
-) -> serde_json::Map<String, Value> {
+) -> anyhow::Result<serde_json::Map<String, Value>> {
     let mut map: serde_json::Map<String, Value> = template_context.clone();
     let mut current_content = content::get_content_info(content);
 
@@ -136,7 +136,7 @@ pub fn get_specific_content_context(
 
         let rendered_content_html = {
             let (rendered_html, toc_items) =
-                markdown::parse_markdown_to_html(&content_title, &content.markdown);
+                markdown::parse_markdown_to_html(&content_title, &content.markdown)?;
 
             let rendered_html = format!("{}\n{}", config::NO_ESCAPE, rendered_html);
 
@@ -177,7 +177,7 @@ pub fn get_specific_content_context(
     map.insert("inserts".to_string(), inserts);
     map.insert("current_content".to_string(), current_content);
 
-    map
+    Ok(map)
 }
 
 pub fn handlebars_escape(data: &str) -> String {
@@ -233,7 +233,7 @@ pub fn process_content(config: &BuildConfig) -> anyhow::Result<Vec<(PathBuf, Str
         let template_path = template_dir.join(template);
         let template_html = fs::read_to_string(&template_path).unwrap();
         let mut current_content_context =
-            get_specific_content_context(&handlebars, &template_context, &inserts, &content);
+            get_specific_content_context(&handlebars, &template_context, &inserts, &content)?;
 
         // TODO: Probably should figure out a way to not hardcode this.
         if let Some(previous_content) = previous_content {
