@@ -17,7 +17,7 @@ The first thing we'll need to clear the window is the window. So let's look into
 
 
 ```c
-SDL_Window* window = SDL_CreateWindow("002_Window_and_Clearing", 1280, 720, 0)
+SDL_Window* window = SDL_CreateWindow("002_Window_and_Clearing", 1280, 720, 0);
 if (!window) {
     SDL_Log("Couldn't initialize SDL: %s", SDL_GetError());
     return 1;

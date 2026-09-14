@@ -19,7 +19,7 @@ While not intended as a replacement for the relevant math classes, or a math tex
 
 Rather than writing a library that's very concerned about the particulars of the mathematics here, we're going for the more typical pragmatic approach. This means we won't have separate types for Homogenous Coordinates, Points, Vectors, and whatever else I might be forgetting. We'll get into some of the details there later, but for now, we'll say that we need a way to represent points in 2D, 3D, and Homogeneous Coordinate Space. This ends up being 2 through 4 float structs:
 
-```c
+```cpp
 typedef struct float2 {
   float x, y;
 } float2;
@@ -61,7 +61,7 @@ When only a translation is what you need, you typically reach for a piecewise ad
 
 Math:
 
-$$ \begin{pmatrix} x_1 y_1 \end{pmatrix} + \begin{pmatrix} x_2 \\ y_2 \end{pmatrix} = \begin{pmatrix} x_1 + x_2 \\ y_1 + y_2 \end{pmatrix} $$
+$$ \begin{pmatrix} x_1 \\ y_1 \end{pmatrix} + \begin{pmatrix} x_2 \\ y_2 \end{pmatrix} = \begin{pmatrix} x_1 + x_2 \\ y_1 + y_2 \end{pmatrix} $$
 
 Code:
 
@@ -73,6 +73,8 @@ float2 Float2_Add(float2 aLeft, float2 aRight) {
 ```
 
 #### Subtraction
+
+Subtraction of course is nearly identical to addition:
 
 Math:
 
@@ -143,7 +145,7 @@ float2 Float2_Scalar_Multiply(float2 aLeft, float aRight) {
 
 Math:
 
-$$ a * \begin{pmatrix} x \\ y \end{pmatrix} = \begin{pmatrix} a * x \\ a * y \end{pmatrix} $$
+$$ \begin{pmatrix} x \\ y \end{pmatrix} ÷ a = \begin{pmatrix} x ÷ a \\ y ÷ a \end{pmatrix} $$
 
 Code:
 
@@ -154,7 +156,76 @@ float2 Float2_Scalar_Division(float2 aLeft, float aRight) {
 }
 ```
 
-We'll be introducing more math as time goes on, so expect some more sections in future chapters covering new functions we need.
+#### Other Operations
+
+##### Downcasting/(Basic) Swizzling
+
+It's not uncommon to need only a portion of a vector. In shader languages, as well as some fancier math libraries in languages like C++, this is built in and expressed through a feature called "swizzling". In C, we don't have an easy way of doing that, but it's still useful to "downcast" a `float3` to a `float2`, trimming off the `z` value for example. If you need to do something more involved you'd want to do it manually, but we'll include a definition of a typical such downcast here:
+
+Code:
+
+```cpp
+float2 Float3_XY(float3 aValue) {
+  float2 toReturn = { aValue.x, aValue.y };
+  return toReturn;
+}
+```
+
+You can see how you might extend this in different ways for the different vector types we've defined with different combinations of fields and output types. With full swizzling this is simply part of the language by using `someVec.xy` for example to get a `float2` with the `x` and `y` fields placed in that order. We'll use this from time to time.
+
+##### Dot Product
+
+The dot product between two vectors is useful for a variety of things, but the actual operation is quite simple. It looks a lot like a piecewise multiplcation, with the caveat of summing the resultant vectors inner values.
+
+Math:
+
+$$ \begin{pmatrix} x_1 \\ y_1 \end{pmatrix} ⋅ \begin{pmatrix} x_2 \\ y_2 \end{pmatrix} =  (x_1 * x_2) + (y_1 * y_2)  $$
+
+Code:
+
+```cpp
+float Float2_Dot(float2 aLeft, float2 aRight) {
+  return
+    (aLeft.x * aRight.x) +
+    (aLeft.y * aRight.y);
+}
+```
+
+A common use is in computing an approximatation of magnitude. A vector represents a direction or point off the origin, we can compute that distance by using the Pythagorean theorem. We can see that taking the dot product of a vector with itself will get us halfway there. 
+
+This value, prior to square root, is often good enough when comparing distances between many objects in a virtual space. As long as they're all using the same calcuation, and we don't care about the _exact_ distances, we can avoid the square root altogether. Of course, when that's not good enough, we'll have to compute the actual magnitude:
+
+##### Magnitude
+
+Which obviously only requires applying the square root against the dot product of the vector against it self, as mentioned above:
+
+Math:
+
+$$ \sqrt{ \begin{pmatrix} x \\ y \end{pmatrix} ⋅ \begin{pmatrix} x \\ y \end{pmatrix} } $$
+
+Code:
+
+```cpp
+float Float2_Magnitude(float2 aValue) {
+  return SDL_sqrt(Float2_Dot(aValue, aValue));
+}
+```
+
+##### Normalization
+
+Finally, it's common to need a "normalized" vector, one where it's magnitude is equal to 1. This is intended for when you only care about the direction it may be pointing. It emphasizes the confusion between "points" and "vectors" and how we're using the "vector" term interchangably here. Again though, the math here is simple, just requiring a piecewise division of the values magnitude against itself.
+
+Math:
+
+$$ \begin{pmatrix} x \\ y \end{pmatrix} ÷ \sqrt{ \begin{pmatrix} x \\ y \end{pmatrix} ⋅ \begin{pmatrix} x \\ y \end{pmatrix} } $$
+
+Code:
+
+```cpp
+float2 Float2_Normalize(float2 aValue) {
+  return Float2_Scalar_Division(aValue, Float2_Magnitude(aValue));
+}
+```
 
 ## The Fullscreen Triangle
 

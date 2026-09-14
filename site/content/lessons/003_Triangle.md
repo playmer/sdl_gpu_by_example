@@ -25,11 +25,11 @@ Unfortunately, before we discuss creating one, we should go over what a pipeline
 
 ## Shaders and Pipelines
 
-When we look at how we do real-time rendering today, it's essentially a combination of generally tweakable fixed stages and programmable stages. We got a taste of this fixed functionality when we set-up and executed a RenderPass in the previous chapter. We were able to clear the screen just by tweaking the initialization and target of the RenderPass, with no need to submit geometry to proceed through the rest of the stages.
+When we look at how we do real-time rendering today, it's essentially a combination of tweakable fixed stages and programmable stages. We got a taste of this fixed functionality when we set-up and executed a RenderPass in the previous chapter. We were able to clear the screen just by tweaking the initialization and target of the RenderPass, with no need to submit geometry to proceed through the rest of the stages.
 
-Pipelines are how we configure everything else not encapsulated in a RenderPass. You have to explain the layout of your data and how they flow from stage to stage, along with what you want the GPU to react to and modify data between and after the stages. A rough outline of the stages you'd typically see is the following:
+Pipelines are how we configure everything else not encapsulated in a RenderPass. You have to explain the layout of your data and how they flow from stage to stage, along with what you want the GPU to react to and modify between and after the stages. A rough outline of the stages you'd historically see is the following:
 
-```d2
+```d2 render_pass_stages
 direction: right
 
 input-assembler: Input Assembler
@@ -46,9 +46,9 @@ geometry-shader -> rasterization
 rasterization -> fragment-shader
 ```
 
-We should first mention the Input Assembler which is something that's technically always happening, but we won't interact with much for some time. Essentially it takes data we describe in the Pipeline, and sets it up to be used in the subsequent stages.
+We should first mention the Input Assembler which is something that's technically always happening, but we won't interact with much for a few lessons. Essentially it takes data we describe in the Pipeline, and sets it up to be used in the subsequent stages.
 
-All that said, SDL GPU doesn't give us access to every programmable stage you see above, many aren't relevant or performant today and some are too new to have been added for compatibility reasons. What it does give us access to are the classics, Vertex Shaders and Fragment Shaders. It also has Compute Shaders to boot, but they're not part of the Render Pipeline, though we'll find they're still very useful for rendering later on. With regards to our concerns here, we'll write Vertex Shaders to output individual vertices, and Fragment Shaders to output colors.
+That said, SDL GPU doesn't give us access to every programmable stage you see above, many aren't relevant or performant today and some are too new to have been added for compatibility reasons. What it does give us access to are the classics, Vertex Shaders and Fragment Shaders. It also has Compute Shaders to boot, but they're not part of the Render Pipeline, though we'll find they're still very useful for rendering later on. With regards to our concerns here, we'll write Vertex Shaders to output individual vertices, and Fragment Shaders to output colors.
 
 > Note: If you've heard of Mesh Shaders, they effectively replace all of the geometry related stages. What we do in Vertex shaders would likely be sort of the base functionality of learning Mesh Shaders. That said, they're designed to be smarter around data management, letting you implement techniques that we'll have to split between Compute and Vertex shaders when we get there.
 
@@ -66,7 +66,7 @@ For this chapter, to not _completely_ overload on information, we're only thinki
 ```cpp
 typedef struct float2 {
     float x, y;
-}
+} float2;
 ```
 
 In practice, we're actually going to want several more of these position/vector types:
@@ -74,11 +74,11 @@ In practice, we're actually going to want several more of these position/vector 
 ```cpp
 typedef struct float3 {
     float x, y, z;
-}
+} float3;
 
 typedef struct float4 {
     float x, y, z, w;
-}
+} float4;
 ```
 
 These are each useful for various tasks, such as representing the previous dimensional vector in homogenous coordinates, we'll get into them more as we discuss some of the math we use later on. 
