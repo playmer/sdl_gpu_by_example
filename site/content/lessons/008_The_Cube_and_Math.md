@@ -57,25 +57,47 @@ collections: ["lessons"]
      2     2-----------------3
 ```
 
-## Model Matrix
-
-It's time to build out some matrix math functionality. If you're already comfortable with these topics, and prefer to just use your own, or copy/paste the one from this sample, that is entirely valid. 
-
-> Note: The implementations here are naive and intended for learning, rather than high performance work. I intend to teach you how to do things effectively and ideally in a fairly performant manner in this series, but I'm not counting CPU cycles or planning to drop down into SIMD.
-
-### Matrices
+## Matrices
 
 Unlike with direct vector math, with matrices, most math is going to be done either with 3x3 for 2D operations or 4x4 for 3D operations. We'll show this math in 3D and thus 4x4 matrices.
 
-##### Operations
+#### Multiplication
 
-###### Matrix * Vector Multiplication
+Before going over the code and formula, we should make sure we understand how Matrix Multiplication works.
 
-###### Matrix * Matrix Multiplication
 
-##### Transformations
+$$\begin{array}{cc}
+&
+{\color{#b8860b}
+B =
+\begin{pmatrix}
+5 & 6 & 7 \\
+8 & 9 & 10
+\end{pmatrix}}
+\\
+{\color{#228b22}
+A =
+\begin{pmatrix}
+1 & 2 \\
+3 & 4
+\end{pmatrix}}
+&
+C =
+\begin{pmatrix}
+(1*5)+(2*8) & (1*6)+(2*9) & (1*7)+(2*10) \\
+(3*5)+(4*8) & (3*6)+(4*9) & (3*7)+(4*10)
+\end{pmatrix}
+\end{array}$$
 
-###### Identity
+##### Matrix * Vector Multiplication
+
+
+##### Matrix * Matrix Multiplication
+
+
+#### Transformations
+
+##### Identity
 
 The identity matrix is generally a "base" matrix. Multiplying against it will return the same matrix you started with. It's simply a series of 1s along it's diagonal.
 
@@ -100,7 +122,7 @@ float4x4 IdentityMatrix() {
 }
 ```
 
-###### Translation
+##### Translation
 
 
 Math:
@@ -120,7 +142,7 @@ float4x4 TranslationMatrix(float4 aPosition) {
   return toReturn;
 }
 ```
-###### Scale
+##### Scale
 
 Math:
 
@@ -140,9 +162,9 @@ float4x4 ScaleMatrix(float4 aScale) {
 }
 ```
 
-###### Rotation
+##### Rotation
 
-####### Rotation about X
+###### Rotation about X
 
 Math:
 
@@ -164,7 +186,7 @@ float4x4 RotationMatrixX(float aAngle) {
 ```
 
 
-####### Rotation about Y
+###### Rotation about Y
 
 Math:
 
@@ -186,7 +208,7 @@ float4x4 RotationMatrixY(float aAngle) {
 ```
 
 
-####### Rotation about Z
+###### Rotation about Z
 
 Math:
 
@@ -207,6 +229,11 @@ float4x4 RotationMatrixZ(float aAngle) {
 }
 ```
 
-### Bring it together
+## Model Matrix
+
+It's time to build out some matrix math functionality. If you're already comfortable with these topics, and prefer to just use your own, or copy/paste the one from this sample, that is entirely valid. 
+
+> Note: The implementations here are naive and intended for learning, rather than high performance work. I intend to teach you how to do things effectively and ideally in a fairly performant manner in this series, but I'm not counting CPU cycles or planning to drop down into SIMD.
+
 
 ## Perspective Projection Matrix

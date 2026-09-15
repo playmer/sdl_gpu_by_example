@@ -7,3 +7,4 @@ examples.zip
 .vs/
 media/
 __pycache__
+.vscode/
