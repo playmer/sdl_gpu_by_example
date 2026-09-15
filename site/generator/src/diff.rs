@@ -6,26 +6,6 @@ use syntect::highlighting::ThemeSet;
 use syntect::html::highlighted_html_for_string;
 use syntect::parsing::SyntaxSet;
 
-pub fn generate_diff_html() -> anyhow::Result<()> {
-    let source = "E:/Repos/sdl_gpu_by_example/code/source/003_Triangle_and_Fullscreen_Triangle/003_Triangle_and_Fullscreen_Triangle.c";
-    let dest = "E:/Repos/sdl_gpu_by_example/code/source/004_Uniform_Buffers/004_Uniform_Buffers.c";
-
-    let old_content = std::fs::read_to_string(Path::new(source))?.replace("\r\n", "\n");
-    let new_content = std::fs::read_to_string(Path::new(dest))?.replace("\r\n", "\n");
-
-    let diff = TextDiff::from_lines(&old_content, &new_content);
-
-    for change in diff.iter_all_changes() {
-        let (_, _) = match change.tag() {
-            ChangeTag::Delete => ("delete", change.as_str()),
-            ChangeTag::Insert => ("insert", change.as_str()),
-            ChangeTag::Equal => ("      ", change.as_str()),
-        };
-    }
-
-    Ok(())
-}
-
 fn diff(old_content: &Path, new_content: &Path) -> anyhow::Result<(Vec<ChangeTag>, String)> {
     println!(
         "wooooooooo {}, {}",

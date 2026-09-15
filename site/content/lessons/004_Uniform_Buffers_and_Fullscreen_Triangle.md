@@ -518,4 +518,4 @@ Incredibly similar to the drawing function of the last chapter, but this time we
 
 And that's it, if you run now, you should get a screen that lets you move around and adjust the color of the oval!
 
-{{img "/sdl_gpu_by_example/assets/images/004_Uniform_Buffers_and_Fullscreen_Triangle.png" "A window on MacOS, with a black background and a blue oval approximately centered on the screen."}}
+{{img "/assets/images/004_Uniform_Buffers_and_Fullscreen_Triangle.png" "A window on MacOS, with a black background and a blue oval approximately centered on the screen."}}

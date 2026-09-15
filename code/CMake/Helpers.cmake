@@ -131,7 +131,7 @@ macro(get_shadercross)
                     set(PATH_TO_ZIP "${PROJECT_SOURCE_DIR}/../site/static_data/assets/${SHADER_CROSS_ZIP}")
                 else()
                     set(PATH_TO_ZIP "${CMAKE_CURRENT_BINARY_DIR}/${SHADER_CROSS_ZIP}")
-                    file(DOWNLOAD "https://www.nullterminatedstrings.com/sdl_gpu_by_example/assets/${SHADER_CROSS_ZIP}" "${PATH_TO_ZIP}")
+                    file(DOWNLOAD "https://sdl_gpu_by_example.com/assets/${SHADER_CROSS_ZIP}" "${PATH_TO_ZIP}")
                 endif()
                 
                 file(ARCHIVE_EXTRACT INPUT "${PATH_TO_ZIP}" DESTINATION "${PROJECT_SOURCE_DIR}/tools/")

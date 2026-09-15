@@ -449,7 +449,7 @@ And finally, we can clean up!
 
 If you run the program, you should see a nice, friendly triangle.
 
-{{img "/sdl_gpu_by_example/site/static_data/assets/images/003_Triangle_and_Fullscreen_Triangle_1.png" "A window on Windows, with the colors interpolated between red, green, and blue."}}
+{{img "/site/static_data/assets/images/003_Triangle_and_Fullscreen_Triangle_1.png" "A window on Windows, with the colors interpolated between red, green, and blue."}}
 
 As mentioned, the colors are interpolated across the surface of the triangle. As you get closer to one vertex, the value it outputs to the fragment shader is favored more and the others less. We'll go over this in more detail in a future lesson.
 
