@@ -29,7 +29,7 @@ When we look at how we do real-time rendering today, it's essentially a combinat
 
 Pipelines are how we configure everything else not encapsulated in a RenderPass. You have to explain the layout of your data and how they flow from stage to stage, along with what you want the GPU to react to and modify between and after the stages. A rough outline of the stages you'd historically see is the following:
 
-```d2 render_pass_stages
+```d2 name=render_pass_stages caption=Render_Pass_Stages
 direction: right
 
 input-assembler: Input Assembler
