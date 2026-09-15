@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::io::Write;
 use std::process::Command;
 use std::process::Stdio;
@@ -15,6 +15,7 @@ use syntect::html::highlighted_html_for_string;
 use syntect::parsing::SyntaxSet;
 
 use pulldown_cmark::Event;
+use pulldown_cmark::HeadingLevel;
 use pulldown_cmark::Options;
 use pulldown_cmark::Parser;
 use pulldown_cmark::Tag;
@@ -187,6 +188,7 @@ pub fn process_root_toc(item: &TocItem) -> Value {
 struct TocGenerator {
     children_stack: Vec<TocItem>,
     last_level: i8,
+    used_ids: HashSet<String>,
 }
 
 impl TocGenerator {
@@ -199,6 +201,7 @@ impl TocGenerator {
                 children: Vec::new(),
             }],
             last_level: 1,
+            used_ids: HashSet::from(["title".to_string()]),
         }
     }
 
@@ -210,75 +213,139 @@ impl TocGenerator {
             .replace(|c: char| !c.is_alphanumeric() && (c != '_'), "")
     }
 
+    fn resolve_header_id(
+        &mut self,
+        explicit_id: Option<&str>,
+        header_text: &str,
+    ) -> anyhow::Result<String> {
+        if let Some(explicit_id) = explicit_id {
+            anyhow::ensure!(
+                self.used_ids.insert(explicit_id.to_string()),
+                "Heading ID `{explicit_id}` is used more than once."
+            );
+
+            return Ok(explicit_id.to_string());
+        }
+
+        let base_id = match Self::string_to_id(header_text) {
+            id if id.is_empty() => "section".to_string(),
+            id => id,
+        };
+
+        let mut header_id = base_id.clone();
+        let mut suffix = 2;
+
+        while !self.used_ids.insert(header_id.clone()) {
+            header_id = format!("{base_id}-{suffix}");
+            suffix += 1;
+        }
+
+        Ok(header_id)
+    }
+
+    fn level_number(level: HeadingLevel) -> i8 {
+        match level {
+            HeadingLevel::H1 => 1,
+            HeadingLevel::H2 => 2,
+            HeadingLevel::H3 => 3,
+            HeadingLevel::H4 => 4,
+            HeadingLevel::H5 => 5,
+            HeadingLevel::H6 => 6,
+        }
+    }
+
     fn process_header<'a>(
         &mut self,
         transformed_events: &mut Vec<Event<'a>>,
         parser: &mut Parser<'a>,
         event: Event<'a>,
-    ) {
-        if let Event::Start(Tag::Heading {
+    ) -> anyhow::Result<()> {
+        let Event::Start(Tag::Heading {
             level,
-            id: _,
-            classes: _,
-            attrs: _,
-        }) = &event
-        {
-            print!("\tLevel{{{}}}: ", &level);
-            let mut header_text = String::new();
-            let header_id;
+            id,
+            classes,
+            attrs,
+        }) = event
+        else {
+            anyhow::bail!("Expected the start of a heading.");
+        };
 
-            if let Some(maybe_text_event) = parser.next() {
-                match &maybe_text_event {
-                    Event::Text(text) => {
-                        header_id = TocGenerator::string_to_id(text);
-                        header_text = text.to_string();
-                    }
-                    _ => {
-                        header_id = format!("generated_toc_entry_{}", self.children_stack.len());
-                    }
-                }
+        print!("\tLevel{{{}}}: ", &level);
 
-                transformed_events.push(Event::Start(Tag::Heading {
-                    level: *level,
-                    id: Some(CowStr::Boxed(header_id.clone().into_boxed_str())),
-                    classes: Vec::new(),
-                    attrs: Vec::new(),
-                }));
+        let mut header_text = String::new();
+        let mut header_events = Vec::new();
+        let heading_end = loop {
+            let heading_event = parser
+                .next()
+                .context("Heading ended before its closing event.")?;
 
-                transformed_events.push(maybe_text_event);
-            } else {
-                header_id = format!("generated_toc_entry_{}", self.children_stack.len());
-                transformed_events.push(event.clone());
-            }
-
-            let current_level = level.to_string().split_off(1).parse::<i8>().unwrap();
-
-            let url = format!("#{}", header_id);
-
-            let item = TocItem {
-                level: current_level,
-                text: header_text,
-                url,
-                children: Vec::new(),
-            };
-
-            if item.level == 1 {
-                if item.text != "$" {
-                    panic!(
-                        "Processing a header with name {} and id {}, this header has a heading of 1, which is disallowed in content. Anything above 1 is allowed. Headers must start at 2, and only increase one at a time.",
-                        item.text, item.url
+            match &heading_event {
+                Event::End(TagEnd::Heading(end_level)) => {
+                    anyhow::ensure!(
+                        *end_level == level,
+                        "Heading started at level {level} but ended at level {end_level}."
                     );
+                    break heading_event;
                 }
-
-                return;
+                Event::Text(text)
+                | Event::Code(text)
+                | Event::InlineMath(text)
+                | Event::DisplayMath(text) => {
+                    header_text.push_str(text);
+                }
+                Event::SoftBreak | Event::HardBreak => {
+                    header_text.push(' ');
+                }
+                _ => {}
             }
 
-            println!("\t{}, {}", self.last_level, item.level);
+            header_events.push(heading_event);
+        };
 
-            if self.last_level < item.level {
-                self.last_level += 1;
-                self.children_stack.push(item);
-            } else if self.last_level == item.level {
+        let header_text = header_text.split_whitespace().collect::<Vec<_>>().join(" ");
+
+        anyhow::ensure!(!header_text.is_empty(), "Heading has no readable text.");
+
+        let header_id = self.resolve_header_id(id.as_deref(), &header_text)?;
+        let current_level = Self::level_number(level);
+
+        anyhow::ensure!(
+            current_level != 1,
+            "Heading `{header_text}` uses level 1. Content headings must start at level 2."
+        );
+
+        transformed_events.push(Event::Start(Tag::Heading {
+            level,
+            id: Some(CowStr::Boxed(header_id.clone().into_boxed_str())),
+            classes,
+            attrs,
+        }));
+        transformed_events.extend(header_events);
+        transformed_events.push(heading_end);
+
+        let item = TocItem {
+            level: current_level,
+            text: header_text,
+            url: format!("#{header_id}"),
+            children: Vec::new(),
+        };
+
+        println!("\t{}, {}", self.last_level, item.level);
+
+        if self.last_level < item.level {
+            self.last_level += 1;
+            self.children_stack.push(item);
+        } else if self.last_level == item.level {
+            let last_item = self.children_stack.pop().unwrap();
+            self.children_stack
+                .iter_mut()
+                .nth_back(0)
+                .unwrap()
+                .children
+                .push(last_item);
+            self.children_stack.push(item);
+        } else if self.last_level >= item.level {
+            for _ in 0..(self.last_level - item.level) + 1 {
                 let last_item = self.children_stack.pop().unwrap();
                 self.children_stack
                     .iter_mut()
@@ -286,23 +353,14 @@ impl TocGenerator {
                     .unwrap()
                     .children
                     .push(last_item);
-                self.children_stack.push(item);
-            } else if self.last_level >= item.level {
-                for _ in 0..(self.last_level - item.level) + 1 {
-                    let last_item = self.children_stack.pop().unwrap();
-                    self.children_stack
-                        .iter_mut()
-                        .nth_back(0)
-                        .unwrap()
-                        .children
-                        .push(last_item);
-                    self.last_level -= 1;
-                }
-
-                self.children_stack.push(item);
-                self.last_level += 1;
+                self.last_level -= 1;
             }
+
+            self.children_stack.push(item);
+            self.last_level += 1;
         }
+
+        Ok(())
     }
 
     fn get_toc_value(&mut self) -> Option<Value> {
@@ -369,7 +427,7 @@ pub fn parse_markdown_to_html(
                 classes: _,
                 attrs: _,
             }) => {
-                toc_generator.process_header(&mut transformed_events, &mut parser, event);
+                toc_generator.process_header(&mut transformed_events, &mut parser, event)?;
             }
             Event::Start(Tag::CodeBlock(kind)) => {
                 code_block_processor.process_code_block(
