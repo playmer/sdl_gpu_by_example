@@ -184,20 +184,20 @@ float4 Float4_Scalar_Division(float4 aLeft, float aRight) {
 // Dot Product
 
 float Float2_Dot(float2 aLeft, float2 aRight) {
-  return 
+  return
     (aLeft.x * aRight.x) +
     (aLeft.y * aRight.y);
 }
 
 float Float3_Dot(float3 aLeft, float3 aRight) {
-  return 
+  return
     (aLeft.x * aRight.x) +
     (aLeft.y * aRight.y) +
     (aLeft.z * aRight.z);
 }
 
 float Float4_Dot(float4 aLeft, float4 aRight) {
-  return 
+  return
     (aLeft.x * aRight.x) +
     (aLeft.y * aRight.y) +
     (aLeft.z * aRight.z) +
@@ -255,7 +255,7 @@ float2 Float2_Normalize(float2 aValue) {
   };
 
   return toReturn;
-} 
+}
 
 float3 Float3_Normalize(float3 aValue) {
   float magnitude = Float3_Magnitude(aValue);
@@ -267,7 +267,7 @@ float3 Float3_Normalize(float3 aValue) {
   };
 
   return toReturn;
-} 
+}
 
 float4 Float4_Normalize(float4 aValue) {
   float magnitude = Float4_Magnitude(aValue);
@@ -398,7 +398,6 @@ float4x4 Float4x4_Inverse(const float4x4* aValue)
 
   return toReturn;
 }
-
 
 ////////////////////////////////////////////////////////////
 /// Core Matrices
@@ -534,7 +533,6 @@ float4x4 LookAtLH(float3 aEye, float3 aCenter, float3 aUp) {
   return toReturn;
 }
 
-
 float4x4 OrthographicProjectionLHZO(float aLeft, float aRight, float aBottom, float aTop, float aNear, float aFar) {
   float4x4 toReturn;
   SDL_zero(toReturn);
@@ -598,7 +596,7 @@ float4x4 InfinitePerspectiveProjectionLHOZ(float aFovY, float aAspectRatio, floa
   toReturn.data[1][1] = focalLength;
   toReturn.data[2][2] = epsilon;
   toReturn.data[2][3] = 1.0f;
-  toReturn.data[3][2] = aNear/(1.0f - epsilon);
+  toReturn.data[3][2] = aNear / (1.0f - epsilon);
 
   return toReturn;
 }
@@ -686,7 +684,7 @@ SDL_GPUShader* CreateShader(
 
   SDL_GPUShaderCreateInfo shaderCreateInfo;
   SDL_zero(shaderCreateInfo);
-  
+
   shaderCreateInfo.entrypoint = gContext.mShaderEntryPoint;
   shaderCreateInfo.format = gContext.mChosenBackendFormat;
   shaderCreateInfo.code = (Uint8*)fileData;
@@ -1215,7 +1213,6 @@ int main(int argc, char** argv)
     if (key_map[SDL_SCANCODE_PAGEDOWN]) context.mUniform[0].mRotation.z -= speed * dt * 1.0f;
 
     FlybyCamera(&cameraTransform, key_map, mouseMove, speed, dt);
-
 
     SDL_GPUCommandBuffer* commandBuffer = SDL_AcquireGPUCommandBuffer(gContext.mDevice);
     if (!commandBuffer)

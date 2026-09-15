@@ -35,6 +35,46 @@ typedef struct float4x4 {
   };
 } float4x4;
 
+typedef struct Transform {
+  float4 mPosition;
+  float4 mScale;
+  float4 mRotation;
+} Transform;
+
+typedef struct Orientation {
+  float3 mForward;
+  float3 mRight;
+  float3 mUp;
+} Orientation;
+
+Transform GetDefaultTransform()
+{
+  Transform toReturn;
+
+  toReturn.mPosition.x = 0.f;
+  toReturn.mPosition.y = 0.f;
+  toReturn.mPosition.z = 0.f;
+  toReturn.mPosition.w = 0.f;
+  toReturn.mScale.x = 1.f;
+  toReturn.mScale.y = 1.f;
+  toReturn.mScale.z = 1.f;
+  toReturn.mScale.w = 1.f;
+  toReturn.mRotation.x = 0.f;
+  toReturn.mRotation.y = 0.f;
+  toReturn.mRotation.z = 0.f;
+  toReturn.mRotation.w = 0.f;
+
+  return toReturn;
+}
+
+float4 Float4_From3(float3 aFloat3, float aW) {
+  float4 toReturn = {
+    aFloat3.x, aFloat3.y, aFloat3.z, aW,
+  };
+
+  return toReturn;
+}
+
 //////////////////////////////////////////////////////
 // Downcasts
 
@@ -126,7 +166,7 @@ float4 Float4_Scalar_Multiply(float4 aLeft, float aRight) {
 }
 
 //////////////////////////////////////////////////////
-// Scalar Multiplication
+// Scalar Divison
 
 float2 Float2_Scalar_Division(float2 aLeft, float aRight) {
   float2 toReturn = { aLeft.x / aRight, aLeft.y / aRight };
@@ -309,6 +349,58 @@ float4x4 Float4x4_Multiply(const float4x4* aLeft, const float4x4* aRight)
   return toReturn;
 }
 
+float4x4 Float4x4_Inverse(const float4x4* aValue)
+{
+  const float3 a = Float4_XYZ(aValue->columns[0]);
+  const float3 b = Float4_XYZ(aValue->columns[1]);
+  const float3 c = Float4_XYZ(aValue->columns[2]);
+  const float3 d = Float4_XYZ(aValue->columns[3]);
+
+  const float x = aValue->data[0][3];
+  const float y = aValue->data[1][3];
+  const float z = aValue->data[2][3];
+  const float w = aValue->data[3][3];
+
+  const float3 s = Float3_Cross(a, b);
+  const float3 t = Float3_Cross(c, d);
+  const float3 u = Float3_Add(Float3_Scalar_Multiply(a, y), Float3_Scalar_Multiply(b, x));
+  const float3 v = Float3_Subtract(Float3_Scalar_Multiply(c, w), Float3_Scalar_Multiply(d, z));
+
+  const float determinant_inverse = 1.0f / (Float3_Dot(s, v) + Float3_Dot(t, u));
+
+  const float3 s_prime = Float3_Scalar_Multiply(s, determinant_inverse);
+  const float3 t_prime = Float3_Scalar_Multiply(t, determinant_inverse);
+  const float3 u_prime = Float3_Scalar_Multiply(u, determinant_inverse);
+  const float3 v_prime = Float3_Scalar_Multiply(v, determinant_inverse);
+
+  const float3 row0 =      Float3_Add(Float3_Cross(      b, v_prime), Float3_Scalar_Multiply(t_prime, y));
+  const float3 row1 = Float3_Subtract(Float3_Cross(v_prime,       a), Float3_Scalar_Multiply(t_prime, x));
+  const float3 row2 =      Float3_Add(Float3_Cross(      d, u_prime), Float3_Scalar_Multiply(s_prime, w));
+  const float3 row3 = Float3_Subtract(Float3_Cross(u_prime,       c), Float3_Scalar_Multiply(s_prime, z));
+
+  float4x4 toReturn;
+  toReturn.data[0][0] = row0.x;
+  toReturn.data[0][1] = row1.x;
+  toReturn.data[0][2] = row2.x;
+  toReturn.data[0][3] = row3.x;
+
+  toReturn.data[1][0] = row0.y;
+  toReturn.data[1][1] = row1.y;
+  toReturn.data[1][2] = row2.y;
+  toReturn.data[1][3] = row3.y;
+
+  toReturn.data[2][0] = row0.z;
+  toReturn.data[2][1] = row1.z;
+  toReturn.data[2][2] = row2.z;
+  toReturn.data[2][3] = row3.z;
+
+  toReturn.data[3][0] = -Float3_Dot(b, t_prime);
+  toReturn.data[3][1] =  Float3_Dot(a, t_prime);;
+  toReturn.data[3][2] = -Float3_Dot(d, s_prime);;
+  toReturn.data[3][3] =  Float3_Dot(c, s_prime);;
+
+  return toReturn;
+}
 
 ////////////////////////////////////////////////////////////
 /// Core Matrices
@@ -428,6 +520,10 @@ float4x4 CreateModelMatrix(float4 aPosition, float4 aScale, float4 aRotation) {
   return Float4x4_Multiply(&translation, &scale_rotation);
 }
 
+float4x4 CreateModelMatrixFromTransform(const Transform* aTransform) {
+  return CreateModelMatrix(aTransform->mPosition, aTransform->mScale, aTransform->mRotation);
+}
+
 float4x4 CreateModelMatrixWithQuaternion(float4 aPosition, float4 aScale, float4 aRotation) {
   float4x4 translation = TranslationMatrix(aPosition);
   float4x4 rotation = RotationMatrixFromQuaternion(aRotation);
@@ -436,6 +532,48 @@ float4x4 CreateModelMatrixWithQuaternion(float4 aPosition, float4 aScale, float4
   float4x4 scale_rotation = Float4x4_Multiply(&rotation, &scale);
 
   return Float4x4_Multiply(&translation, &scale_rotation);
+}
+
+Orientation GetOrientation(const Transform* aTransform) {
+  float4 forward = {
+    0.f, 0.f, 1.0f, 1.0f
+  };
+
+  float4 right = {
+    1.f, 0.f, 0.0f, 1.0f
+  };
+
+  float4 up = {
+    0.f, 1.f, 0.0f, 1.0f
+  };
+
+  float4x4 rotation = RotationMatrix(aTransform->mRotation);
+
+  Orientation toReturn = {
+    Float4_XYZ(Float4x4_Float4_Multiply(&rotation, forward)),
+    Float4_XYZ(Float4x4_Float4_Multiply(&rotation, right)),
+    Float4_XYZ(Float4x4_Float4_Multiply(&rotation, up))
+  };
+
+  return toReturn;
+}
+
+////////////////////////////////////////////////////////////
+/// Views
+
+float4x4 LookAtLH(float3 aEye, float3 aCenter, float3 aUp) {
+  float4x4 toReturn;
+  SDL_zero(toReturn);
+
+  float3 forward = Float3_Normalize(Float3_Subtract(aEye, aCenter));
+
+  //toReturn.data[0][0] = 1.0f / (aAspectRatio * tanHalfFovy);
+  //toReturn.data[1][1] = 1.0f / (tanHalfFovy);
+  //toReturn.data[2][2] = aFar / (aFar - aNear);
+  //toReturn.data[2][3] = 1.0f;
+  //toReturn.data[3][2] = -(aFar * aNear) / (aFar - aNear);
+
+  return toReturn;
 }
 
 float4x4 OrthographicProjectionLHZO(float aLeft, float aRight, float aBottom, float aTop, float aNear, float aFar) {
@@ -579,16 +717,16 @@ SDL_GPUShader* CreateShader(
   void* fileData = SDL_LoadFile(shader_path, &fileSize);
   SDL_assert(fileData);
 
-  SDL_GPUShaderCreateInfo shaderCreateInfo;
-  SDL_zero(shaderCreateInfo);
-
   SDL_PropertiesID properties = gContext.mProperties;
 
-  if (aProperties != SDL_PROPERTY_TYPE_INVALID) {
+  if (aProperties != 0) {
     properties = aProperties;
   }
 
   SDL_assert(SDL_SetStringProperty(properties, SDL_PROP_GPU_SHADER_CREATE_NAME_STRING, aShaderFilename));
+
+  SDL_GPUShaderCreateInfo shaderCreateInfo;
+  SDL_zero(shaderCreateInfo);
 
   shaderCreateInfo.entrypoint = gContext.mShaderEntryPoint;
   shaderCreateInfo.format = gContext.mChosenBackendFormat;
@@ -1233,15 +1371,15 @@ typedef struct ModelUbo {
   float4 mRotation;
 } ModelUbo;
 
-typedef struct ModelContext {
+typedef struct TechniqueContext {
   SDL_GPUGraphicsPipeline* mPipeline;
   SDL_GPUTexture* mTexture;
   SDL_GPUSampler* mSampler;
-  ModelUbo mUbo[2];
+  ModelUbo mUniform[2];
   Scene mModel;
-} ModelContext;
+} TechniqueContext;
 
-ModelContext CreateModelContext(SDL_GPUTextureFormat aDepthFormat) {
+TechniqueContext CreateTechniqueContext(SDL_GPUTextureFormat aDepthFormat) {
   SDL_GPUColorTargetDescription colorTargetDescription;
   SDL_zero(colorTargetDescription);
   colorTargetDescription.format = SDL_GetGPUSwapchainTextureFormat(gContext.mDevice, gContext.mWindow);
@@ -1309,7 +1447,7 @@ ModelContext CreateModelContext(SDL_GPUTextureFormat aDepthFormat) {
     "VertexAndIndexBuffer.vert",
     SDL_GPU_SHADERSTAGE_VERTEX,
     0,
-    2,
+    3,
     0,
     0,
     SDL_PROPERTY_TYPE_INVALID
@@ -1327,9 +1465,9 @@ ModelContext CreateModelContext(SDL_GPUTextureFormat aDepthFormat) {
   );
   SDL_assert(graphicsPipelineCreateInfo.fragment_shader);
 
-  SDL_assert(SDL_SetStringProperty(gContext.mProperties, SDL_PROP_GPU_GRAPHICSPIPELINE_CREATE_NAME_STRING, "ModelContext"));
+  SDL_assert(SDL_SetStringProperty(gContext.mProperties, SDL_PROP_GPU_GRAPHICSPIPELINE_CREATE_NAME_STRING, "TechniqueContext"));
 
-  ModelContext context;
+  TechniqueContext context;
 
   // Broke the name so that we don't waste time zipping it while the example isn't done.
   context.mModel = LoadGltfModel("buster_drone.glb");
@@ -1342,31 +1480,31 @@ ModelContext CreateModelContext(SDL_GPUTextureFormat aDepthFormat) {
   context.mSampler = SDL_CreateGPUSampler(gContext.mDevice, &samplerCreateInfo);
   SDL_assert(context.mPipeline);
 
-  context.mUbo[0].mPosition.x = 0.f;
-  context.mUbo[0].mPosition.y = -1.f;
-  context.mUbo[0].mPosition.z = 5.f;
-  context.mUbo[0].mPosition.w = 1.f;
-  context.mUbo[0].mScale.x = 1.0f;
-  context.mUbo[0].mScale.y = 1.0f;
-  context.mUbo[0].mScale.z = 1.0f;
-  context.mUbo[0].mScale.w = 1.0f;
-  context.mUbo[0].mRotation.x = 0.f;
-  context.mUbo[0].mRotation.y = 0.f;
-  context.mUbo[0].mRotation.z = 0.f;
-  context.mUbo[0].mRotation.w = 0.f;
+  context.mUniform[0].mPosition.x = 0.f;
+  context.mUniform[0].mPosition.y = -1.f;
+  context.mUniform[0].mPosition.z = 5.f;
+  context.mUniform[0].mPosition.w = 1.f;
+  context.mUniform[0].mScale.x = 1.0f;
+  context.mUniform[0].mScale.y = 1.0f;
+  context.mUniform[0].mScale.z = 1.0f;
+  context.mUniform[0].mScale.w = 1.0f;
+  context.mUniform[0].mRotation.x = 0.f;
+  context.mUniform[0].mRotation.y = 0.f;
+  context.mUniform[0].mRotation.z = 0.f;
+  context.mUniform[0].mRotation.w = 0.f;
 
-  context.mUbo[1].mPosition.x = 0.f;
-  context.mUbo[1].mPosition.y = -1.f;
-  context.mUbo[1].mPosition.z = 10.f;
-  context.mUbo[1].mPosition.w = 0.f;
-  context.mUbo[1].mScale.x = 2.f;
-  context.mUbo[1].mScale.y = 2.f;
-  context.mUbo[1].mScale.z = 2.f;
-  context.mUbo[1].mScale.w = 2.f;
-  context.mUbo[1].mRotation.x = 0.f;
-  context.mUbo[1].mRotation.y = 0.f;
-  context.mUbo[1].mRotation.z = 0.f;
-  context.mUbo[1].mRotation.w = 0.f;
+  context.mUniform[1].mPosition.x = 0.f;
+  context.mUniform[1].mPosition.y = -1.f;
+  context.mUniform[1].mPosition.z = 10.f;
+  context.mUniform[1].mPosition.w = 0.f;
+  context.mUniform[1].mScale.x = 2.f;
+  context.mUniform[1].mScale.y = 2.f;
+  context.mUniform[1].mScale.z = 2.f;
+  context.mUniform[1].mScale.w = 2.f;
+  context.mUniform[1].mRotation.x = 0.f;
+  context.mUniform[1].mRotation.y = 0.f;
+  context.mUniform[1].mRotation.z = 0.f;
+  context.mUniform[1].mRotation.w = 0.f;
 
   SDL_ReleaseGPUShader(gContext.mDevice, graphicsPipelineCreateInfo.vertex_shader);
   SDL_ReleaseGPUShader(gContext.mDevice, graphicsPipelineCreateInfo.fragment_shader);
@@ -1374,12 +1512,12 @@ ModelContext CreateModelContext(SDL_GPUTextureFormat aDepthFormat) {
   return context;
 }
 
-void DrawModelContext(ModelContext* aContext, SDL_GPUCommandBuffer* aCommandBuffer, SDL_GPURenderPass* aRenderPass)
+void DrawTechniqueContext(TechniqueContext* aContext, SDL_GPUCommandBuffer* aCommandBuffer, SDL_GPURenderPass* aRenderPass)
 {
   SDL_BindGPUGraphicsPipeline(aRenderPass, aContext->mPipeline);
 
-  float4x4 model = CreateModelMatrix(aContext->mUbo[0].mPosition, aContext->mUbo[0].mScale, aContext->mUbo[0].mRotation);
-  SDL_PushGPUVertexUniformData(aCommandBuffer, 1, &gContext.WorldToNDC, sizeof(gContext.WorldToNDC));
+  float4x4 model = CreateModelMatrix(aContext->mUniform[0].mPosition, aContext->mUniform[0].mScale, aContext->mUniform[0].mRotation);
+  SDL_PushGPUVertexUniformData(aCommandBuffer, 2, &gContext.WorldToNDC, sizeof(gContext.WorldToNDC));
 
   for (size_t i = 0; i < aContext->mModel.mMeshesCount; ++i) {
     Mesh* mesh = aContext->mModel.mMeshes + i;
@@ -1420,13 +1558,13 @@ void DrawModelContext(ModelContext* aContext, SDL_GPUCommandBuffer* aCommandBuff
     float4x4 meshMatrix = Float4x4_Multiply(&model, &mesh->mCurrentTransform);
     //float4x4 meshMatrix = model;
 
-    SDL_PushGPUVertexUniformData(aCommandBuffer, 0, &meshMatrix, sizeof(meshMatrix));
+    SDL_PushGPUVertexUniformData(aCommandBuffer, 1, &meshMatrix, sizeof(meshMatrix));
 
     SDL_DrawGPUIndexedPrimitives(aRenderPass, mesh->mIndicesCount, 1, 0, 0, 0);
   }
 }
 
-void DestroyModelContext(ModelContext* aContext)
+void DestroyTechniqueContext(TechniqueContext* aContext)
 {
   SDL_ReleaseGPUBuffer(gContext.mDevice, aContext->mModel.mPositions);
   SDL_ReleaseGPUBuffer(gContext.mDevice, aContext->mModel.mNormals);
@@ -1436,9 +1574,40 @@ void DestroyModelContext(ModelContext* aContext)
   SDL_ReleaseGPUTexture(gContext.mDevice, aContext->mTexture);
   SDL_ReleaseGPUSampler(gContext.mDevice, aContext->mSampler);
   SDL_ReleaseGPUGraphicsPipeline(gContext.mDevice, aContext->mPipeline);
-
-  SDL_ReleaseGPUGraphicsPipeline(gContext.mDevice, aContext->mPipeline);
   SDL_zero(*aContext);
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Camera Movements
+void FlybyCamera(Transform* aCamera, const bool* aKeyMap, float2 aFrameMouseMove, float aSpeed, float aDt)
+{
+  Orientation orientation = GetOrientation(aCamera);
+  float3 movementDirection = { 0.f, 0.f, 0.f };
+  SDL_MouseButtonFlags mouseFlags = SDL_GetMouseState(NULL, NULL);
+
+  if (SDL_BUTTON_LMASK & mouseFlags) {
+    aCamera->mRotation.x += aFrameMouseMove.y * aSpeed * aDt * .05f;
+    aCamera->mRotation.y += aFrameMouseMove.x * aSpeed * aDt * .05f;
+  }
+
+  if (aKeyMap[SDL_SCANCODE_D]) movementDirection = Float3_Add(movementDirection, orientation.mRight);
+  if (aKeyMap[SDL_SCANCODE_A]) movementDirection = Float3_Subtract(movementDirection, orientation.mRight);
+  if (aKeyMap[SDL_SCANCODE_W]) movementDirection = Float3_Add(movementDirection, orientation.mForward);
+  if (aKeyMap[SDL_SCANCODE_S]) movementDirection = Float3_Subtract(movementDirection, orientation.mForward);
+  if (aKeyMap[SDL_SCANCODE_SPACE]) movementDirection = Float3_Add(movementDirection, orientation.mUp);
+  if (aKeyMap[SDL_SCANCODE_LSHIFT]) movementDirection = Float3_Subtract(movementDirection, orientation.mUp);
+
+  if (SDL_BUTTON_MMASK & mouseFlags) {
+
+    movementDirection = Float3_Add(movementDirection, Float3_Scalar_Multiply(orientation.mRight, aFrameMouseMove.x * -.1f));
+    movementDirection = Float3_Add(movementDirection, Float3_Scalar_Multiply(orientation.mUp, aFrameMouseMove.y * .1f));
+  }
+  
+  aCamera->mPosition = Float4_From3(Float3_Add(
+    Float3_Scalar_Multiply(movementDirection, aSpeed * aDt),
+    Float4_XYZ(aCamera->mPosition)),
+    0.0f
+  );
 }
 
 
@@ -1461,7 +1630,12 @@ int main(int argc, char** argv)
   Uint32 depthHeight = 0;
   SDL_GPUTextureFormat depthFormat = GetSupportedDepthFormat();
 
-  ModelContext context = CreateModelContext(depthFormat);
+  TechniqueContext context = CreateTechniqueContext(depthFormat);
+  Transform cameraTransform = GetDefaultTransform();
+  cameraTransform.mPosition.z = -1.0f;
+  //cameraTransform.mScale.x = 1.0f;
+  //cameraTransform.mScale.y = 1.0f;
+  //cameraTransform.mScale.z = 1.0f;
 
   const float speed = 5.f;
   Uint64 last_frame_ticks_so_far = SDL_GetTicksNS();
@@ -1469,7 +1643,12 @@ int main(int argc, char** argv)
   const bool* key_map = SDL_GetKeyboardState(&keys);
   bool running = true;
 
+  float2 mouseMove;
+
   while (running) {
+    mouseMove.x = 0.f;
+    mouseMove.y = 0.f;
+
     Uint64 current_frame_ticks_so_far = SDL_GetTicksNS();
     float dt = (current_frame_ticks_so_far - last_frame_ticks_so_far) / 1000000000.f;
     last_frame_ticks_so_far = current_frame_ticks_so_far;
@@ -1477,9 +1656,13 @@ int main(int argc, char** argv)
     SDL_Event event;
     while (SDL_PollEvent(&event)) {
       switch (event.common.type) {
-      case SDL_EVENT_QUIT:
-        running = false;
-        break;
+        case SDL_EVENT_QUIT:
+          running = false;
+          break;
+        case SDL_EVENT_MOUSE_MOTION:
+          mouseMove.x = event.motion.xrel;
+          mouseMove.y = event.motion.yrel;
+          break;
       }
     }
 
@@ -1492,22 +1675,24 @@ int main(int argc, char** argv)
       0.1f
     );
 
-    if (key_map[SDL_SCANCODE_D])        context.mUbo[0].mPosition.x += speed * dt * 1.0f;
-    if (key_map[SDL_SCANCODE_A])        context.mUbo[0].mPosition.x -= speed * dt * 1.0f;
-    if (key_map[SDL_SCANCODE_W])        context.mUbo[0].mPosition.y += speed * dt * 1.0f;
-    if (key_map[SDL_SCANCODE_S])        context.mUbo[0].mPosition.y -= speed * dt * 1.0f;
-    if (key_map[SDL_SCANCODE_E])        context.mUbo[0].mPosition.z += speed * dt * 1.0f;
-    if (key_map[SDL_SCANCODE_Q])        context.mUbo[0].mPosition.z -= speed * dt * 1.0f;
-    if (key_map[SDL_SCANCODE_R])        context.mUbo[0].mScale.x += speed * dt * 1.0f;
-    if (key_map[SDL_SCANCODE_F])        context.mUbo[0].mScale.x -= speed * dt * 1.0f;
-    if (key_map[SDL_SCANCODE_T])        context.mUbo[0].mScale.y += speed * dt * 1.0f;
-    if (key_map[SDL_SCANCODE_G])        context.mUbo[0].mScale.y -= speed * dt * 1.0f;
-    if (key_map[SDL_SCANCODE_INSERT])   context.mUbo[0].mRotation.x += speed * dt * 1.0f;
-    if (key_map[SDL_SCANCODE_DELETE])   context.mUbo[0].mRotation.x -= speed * dt * 1.0f;
-    if (key_map[SDL_SCANCODE_HOME])     context.mUbo[0].mRotation.y += speed * dt * 1.0f;
-    if (key_map[SDL_SCANCODE_END])      context.mUbo[0].mRotation.y -= speed * dt * 1.0f;
-    if (key_map[SDL_SCANCODE_PAGEUP])   context.mUbo[0].mRotation.z += speed * dt * 1.0f;
-    if (key_map[SDL_SCANCODE_PAGEDOWN]) context.mUbo[0].mRotation.z -= speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_RIGHT])    context.mUniform[0].mPosition.x += speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_LEFT])     context.mUniform[0].mPosition.x -= speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_UP])       context.mUniform[0].mPosition.y += speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_DOWN])     context.mUniform[0].mPosition.y -= speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_E])        context.mUniform[0].mPosition.z += speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_Q])        context.mUniform[0].mPosition.z -= speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_R])        context.mUniform[0].mScale.x += speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_F])        context.mUniform[0].mScale.x -= speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_T])        context.mUniform[0].mScale.y += speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_G])        context.mUniform[0].mScale.y -= speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_INSERT])   context.mUniform[0].mRotation.x += speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_DELETE])   context.mUniform[0].mRotation.x -= speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_HOME])     context.mUniform[0].mRotation.y += speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_END])      context.mUniform[0].mRotation.y -= speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_PAGEUP])   context.mUniform[0].mRotation.z += speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_PAGEDOWN]) context.mUniform[0].mRotation.z -= speed * dt * 1.0f;
+
+    FlybyCamera(&cameraTransform, key_map, mouseMove, speed, dt);
 
     SDL_GPUCommandBuffer* commandBuffer = SDL_AcquireGPUCommandBuffer(gContext.mDevice);
     if (!commandBuffer)
@@ -1527,10 +1712,7 @@ int main(int argc, char** argv)
 
     if (depthWidth != swapchainWidth || depthHeight != swapchainHeight)
     {
-      if (depthTexture) {
-        SDL_ReleaseGPUTexture(gContext.mDevice, depthTexture);
-      }
-
+      SDL_ReleaseGPUTexture(gContext.mDevice, depthTexture);
       depthTexture = CreateTexture(swapchainWidth, swapchainHeight, 1, 1, SDL_GPU_TEXTUREUSAGE_DEPTH_STENCIL_TARGET, depthFormat, "DepthTexture");
       SDL_assert(depthTexture);
 
@@ -1548,7 +1730,6 @@ int main(int argc, char** argv)
     colorTargetInfo.clear_color.g = 0.2f;
     colorTargetInfo.clear_color.b = 0.85f;
     colorTargetInfo.clear_color.a = 1.0f;
-
 
     // Remember to come back to this later in the tutorial, don't show it off immediately.
     SDL_GPUDepthStencilTargetInfo depthStencilTargetInfo;
@@ -1570,7 +1751,12 @@ int main(int argc, char** argv)
       &depthStencilTargetInfo
     );
 
-    DrawModelContext(&context, commandBuffer, renderPass);
+    float4x4 modelMatrix = CreateModelMatrixFromTransform(&cameraTransform);
+    float4x4 viewMatrix = Float4x4_Inverse(&modelMatrix);
+
+    SDL_PushGPUVertexUniformData(commandBuffer, 0, &viewMatrix, sizeof(viewMatrix));
+
+    DrawTechniqueContext(&context, commandBuffer, renderPass);
 
     SDL_EndGPURenderPass(renderPass);
     SDL_SubmitGPUCommandBuffer(commandBuffer);
@@ -1578,10 +1764,14 @@ int main(int argc, char** argv)
 
   SDL_ReleaseGPUTexture(gContext.mDevice, depthTexture);
 
-  DestroyModelContext(&context);
+  DestroyTechniqueContext(&context);
 
   DestroyGpuContext();
 
   SDL_Quit();
   return 0;
 }
+
+#ifdef __cplusplus
+} // end cpp_test
+#endif
