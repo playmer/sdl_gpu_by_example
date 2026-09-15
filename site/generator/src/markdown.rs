@@ -50,7 +50,6 @@ fn parse_d2_options(args: Vec<&str>) -> anyhow::Result<d2RenderOptions> {
 fn render_d2(args: Vec<&str>, d2_markup: &str) -> anyhow::Result<String> {
     let options = parse_d2_options(args)?;
 
-
     let mut d2 = Command::new("d2")
         .args(["--no-xml-tag", "-", "-"])
         .stdin(Stdio::piped())

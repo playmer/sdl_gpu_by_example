@@ -3,7 +3,7 @@ use std::io::{Write, stdout};
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, RwLock};
 
-use handlebars::Handlebars;
+use handlebars::{Handlebars, RenderErrorReason};
 use serde_json::Value;
 
 use crate::config;
@@ -102,13 +102,20 @@ pub fn image_helper(
     _rc: &mut handlebars::RenderContext,
     out: &mut dyn handlebars::Output,
 ) -> handlebars::HelperResult {
-    let description = h.param(0).unwrap();
-    let url = h.param(1).unwrap();
+    let src = h
+        .param(0)
+        .and_then(|parameter| parameter.value().as_str())
+        .ok_or_else(|| RenderErrorReason::Other("img requires a source path".into()))?;
+
+    let alt = h
+        .param(1)
+        .and_then(|parameter| parameter.value().as_str())
+        .ok_or_else(|| RenderErrorReason::Other("img requires alternative text".into()))?;
 
     let img_html = format!(
-        "<img src={} class=\"img-fluid\" alt=\"{}\">",
-        description.value().as_str().unwrap(),
-        url.value().as_str().unwrap()
+        r#"<img src="{}" class="img-fluid" alt="{}">"#,
+        handlebars::html_escape(src),
+        handlebars::html_escape(alt)
     );
 
     out.write(&img_html).unwrap();
