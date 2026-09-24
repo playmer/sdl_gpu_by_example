@@ -152,6 +152,50 @@ macro(get_shadercross)
     unset(ShaderCrossExe_Search)
 endmacro()
 
+# This little dance was pulled out from SFML's graphics subsystem CMake and
+# turned into a function for simplicity.
+function(get_harfbuzz)
+    # The FreeType <-> HarfBuzz relationship is a complex one.
+    # HarfBuzz relies on FreeType to manage glyph data.
+    # FreeType relies on HarfBuzz for improved auto-hinting.
+    # Using FetchContent alone will not work since both libraries want the
+    # other to already exist as targets at configuration time.
+    # We break this dependency cycle by patching the FreeType configuration
+    # to assume that HarfBuzz exists but don't do any target linking itself.
+    # We import HarfBuzz normally, telling it to link to FreeType.
+    # After the HarfBuzz target has been created, we manually link the
+    # FreeType target to HarfBuzz so the include directories and linker paths
+    # to HarfBuzz are set for the FreeType library as well.
+
+    set(CMAKE_POLICY_DEFAULT_CMP0077 NEW)
+    set(CMAKE_DEBUG_POSTFIX d)
+    set(BUILD_SHARED_LIBS OFF)
+    set(SKIP_INSTALL_HEADERS ON)
+    set(FT_DISABLE_ZLIB ON)
+    set(FT_DISABLE_BZIP2 ON)
+    set(FT_DISABLE_PNG ON)
+    set(FT_DISABLE_HARFBUZZ ON)
+    set(FT_DISABLE_BROTLI ON)
+    set(FT_ENABLE_ERROR_STRINGS ON)
+
+    FetchContent_Declare(Freetype
+        GIT_REPOSITORY https://github.com/freetype/freetype.git
+        GIT_TAG VER-2-13-2
+        GIT_SHALLOW ON)
+
+    set(HB_BUILD_SUBSET OFF)
+    set(HB_HAVE_FREETYPE ON)
+    set(HB_HAVE_CORETEXT OFF)
+
+    FetchContent_Declare(HarfBuzz
+        GIT_REPOSITORY https://github.com/harfbuzz/harfbuzz.git
+        GIT_TAG 14.1.0
+        GIT_SHALLOW ON
+        OVERRIDE_FIND_PACKAGE)
+
+    FetchContent_MakeAvailable(Freetype HarfBuzz)
+endfunction()
+
 macro(set_up_example_top_level)
     if (PROJECT_IS_TOP_LEVEL)
         if (${PROJECT_NAME} STREQUAL SDL_GPU_By_Example)
@@ -200,6 +244,8 @@ macro(set_up_example_top_level)
                 EXCLUDE_FROM_ALL
             )
             FetchContent_MakeAvailable(SDL3)
+
+            get_harfbuzz()
         endif()
     endif()
 endmacro()
