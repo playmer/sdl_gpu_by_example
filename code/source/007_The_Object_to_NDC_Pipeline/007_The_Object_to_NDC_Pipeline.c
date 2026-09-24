@@ -1,6 +1,6 @@
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_stdinc.h>
-  
+
 // This is for testing to ensure the code works in both C and C++,
 // this entire preprocessor block should just be the #include
 // in your own code.
@@ -233,12 +233,12 @@ void CreateGpuContext(SDL_Window* aWindow) {
 
   gContext.mWindow = aWindow;
   gContext.mDevice = SDL_CreateGPUDevice(SDL_GPU_SHADERFORMAT_SPIRV | SDL_GPU_SHADERFORMAT_DXIL | SDL_GPU_SHADERFORMAT_MSL, true, NULL);
-  SDL_assert(gContext.mDevice);
+  SDL_assert_always(gContext.mDevice);
 
-  SDL_assert(SDL_ClaimWindowForGPUDevice(gContext.mDevice, gContext.mWindow));
+  SDL_assert_always(SDL_ClaimWindowForGPUDevice(gContext.mDevice, gContext.mWindow));
 
   gContext.mProperties = SDL_CreateProperties();
-  SDL_assert(gContext.mProperties);
+  SDL_assert_always(gContext.mProperties);
 
   SDL_GPUShaderFormat availableFormats = SDL_GetGPUShaderFormats(gContext.mDevice);
   gContext.mShaderEntryPoint = NULL;
@@ -284,7 +284,7 @@ SDL_GPUShader* CreateShader(
 
   size_t fileSize = 0;
   void* fileData = SDL_LoadFile(shader_path, &fileSize);
-  SDL_assert(fileData);
+  SDL_assert_always(fileData);
 
   SDL_PropertiesID properties = gContext.mProperties;
 
@@ -292,11 +292,11 @@ SDL_GPUShader* CreateShader(
     properties = aProperties;
   }
 
-  SDL_assert(SDL_SetStringProperty(properties, SDL_PROP_GPU_SHADER_CREATE_NAME_STRING, aShaderFilename));
+  SDL_assert_always(SDL_SetStringProperty(properties, SDL_PROP_GPU_SHADER_CREATE_NAME_STRING, aShaderFilename));
 
   SDL_GPUShaderCreateInfo shaderCreateInfo;
   SDL_zero(shaderCreateInfo);
-  
+
   shaderCreateInfo.entrypoint = gContext.mShaderEntryPoint;
   shaderCreateInfo.format = gContext.mChosenBackendFormat;
   shaderCreateInfo.code = (Uint8*)fileData;
@@ -311,7 +311,7 @@ SDL_GPUShader* CreateShader(
   SDL_GPUShader* shader = SDL_CreateGPUShader(gContext.mDevice, &shaderCreateInfo);
 
   SDL_free(fileData);
-  SDL_assert(shader);
+  SDL_assert_always(shader);
 
   return shader;
 }
@@ -326,7 +326,7 @@ SDL_GPUBuffer* CreateGPUBuffer(Uint32 aSize, SDL_GPUBufferUsageFlags aUsage, con
   createInfo.usage = aUsage;
 
   SDL_GPUBuffer* buffer = SDL_CreateGPUBuffer(gContext.mDevice, &createInfo);
-  SDL_assert(buffer);
+  SDL_assert_always(buffer);
 
   return buffer;
 }
@@ -342,7 +342,7 @@ SDL_GPUTransferBuffer* CreateTransferBuffer(Uint32 aSize, SDL_GPUTransferBufferU
   transferBufferCreateInfo.usage = aUsage;
 
   SDL_GPUTransferBuffer* transferBuffer = SDL_CreateGPUTransferBuffer(gContext.mDevice, &transferBufferCreateInfo);
-  SDL_assert(transferBuffer);
+  SDL_assert_always(transferBuffer);
 
   return transferBuffer;
 }
@@ -393,7 +393,7 @@ SDL_GPUTexture* CreateAndUploadTexture(SDL_GPUCopyPass* aCopyPass, const char* a
   }
 
   SDL_GPUTexture* texture = CreateTexture(surface->w, surface->h, 1, 1, SDL_GPU_TEXTUREUSAGE_SAMPLER, SDL_GPU_TEXTUREFORMAT_R8G8B8A8_UNORM, aTextureName);
-  SDL_assert(texture);
+  SDL_assert_always(texture);
 
   // Copy to GPU
   SDL_GPUTextureTransferInfo textureTransferInfo;
@@ -427,22 +427,50 @@ SDL_GPUTexture* CreateAndUploadTexture(SDL_GPUCopyPass* aCopyPass, const char* a
   return texture;
 }
 
+SDL_GPUTextureFormat GetSupportedDepthFormat()
+{
+  SDL_GPUTextureFormat possibleFormats[] = {
+    SDL_GPU_TEXTUREFORMAT_D32_FLOAT_S8_UINT,
+    SDL_GPU_TEXTUREFORMAT_D24_UNORM_S8_UINT,
+    SDL_GPU_TEXTUREFORMAT_D32_FLOAT,
+    SDL_GPU_TEXTUREFORMAT_D24_UNORM,
+    SDL_GPU_TEXTUREFORMAT_D16_UNORM,
+  };
+
+  for (size_t i = 0; i < SDL_arraysize(possibleFormats); ++i) {
+    if (SDL_GPUTextureSupportsFormat(
+      gContext.mDevice,
+      possibleFormats[i],
+      SDL_GPU_TEXTURETYPE_2D,
+      SDL_GPU_TEXTUREUSAGE_DEPTH_STENCIL_TARGET))
+    {
+      return possibleFormats[i];
+    }
+  }
+
+  // Didn't find a suitable depth format.
+  SDL_assert_always(false);
+
+  return SDL_GPU_TEXTUREFORMAT_INVALID;
+}
+
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Technique Code
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 typedef struct ModelUniform {
   float2 mPosition;
   float2 mScale;
+  float mDepth;
 } ModelUniform;
 
 typedef struct TechniqueContext {
   SDL_GPUGraphicsPipeline* mPipeline;
   SDL_GPUTexture* mTexture;
   SDL_GPUSampler* mSampler;
-  ModelUniform mUniform;
+  ModelUniform mUniform[2];
 } TechniqueContext;
 
-TechniqueContext CreateTechniqueContext() {
+TechniqueContext CreateTechniqueContext(SDL_GPUTextureFormat aDepthFormat) {
   SDL_GPUColorTargetDescription colorTargetDescription;
   SDL_zero(colorTargetDescription);
   colorTargetDescription.format = SDL_GetGPUSwapchainTextureFormat(gContext.mDevice, gContext.mWindow);
@@ -452,7 +480,12 @@ TechniqueContext CreateTechniqueContext() {
 
   graphicsPipelineCreateInfo.target_info.num_color_targets = 1;
   graphicsPipelineCreateInfo.target_info.color_target_descriptions = &colorTargetDescription;
+  graphicsPipelineCreateInfo.target_info.depth_stencil_format = aDepthFormat;
+  graphicsPipelineCreateInfo.target_info.has_depth_stencil_target = true;
   graphicsPipelineCreateInfo.primitive_type = SDL_GPU_PRIMITIVETYPE_TRIANGLELIST;
+  graphicsPipelineCreateInfo.depth_stencil_state.compare_op = SDL_GPU_COMPAREOP_GREATER_OR_EQUAL;
+  graphicsPipelineCreateInfo.depth_stencil_state.enable_depth_test = true;
+  graphicsPipelineCreateInfo.depth_stencil_state.enable_depth_write = true;
 
   graphicsPipelineCreateInfo.vertex_shader = CreateShader(
     "TransformedQuad.vert",
@@ -463,7 +496,7 @@ TechniqueContext CreateTechniqueContext() {
     0,
     SDL_PROPERTY_TYPE_INVALID
   );
-  SDL_assert(graphicsPipelineCreateInfo.vertex_shader);
+  SDL_assert_always(graphicsPipelineCreateInfo.vertex_shader);
 
   graphicsPipelineCreateInfo.fragment_shader = CreateShader(
     "TransformedQuad.frag",
@@ -474,24 +507,31 @@ TechniqueContext CreateTechniqueContext() {
     0,
     SDL_PROPERTY_TYPE_INVALID
   );
-  SDL_assert(graphicsPipelineCreateInfo.fragment_shader);
+  SDL_assert_always(graphicsPipelineCreateInfo.fragment_shader);
 
-  SDL_assert(SDL_SetStringProperty(gContext.mProperties, SDL_PROP_GPU_GRAPHICSPIPELINE_CREATE_NAME_STRING, "TechniqueContext"));
+  SDL_assert_always(SDL_SetStringProperty(gContext.mProperties, SDL_PROP_GPU_GRAPHICSPIPELINE_CREATE_NAME_STRING, "TechniqueContext"));
 
   TechniqueContext context;
   SDL_zero(context);
   context.mPipeline = SDL_CreateGPUGraphicsPipeline(gContext.mDevice, &graphicsPipelineCreateInfo);
-  SDL_assert(context.mPipeline);
+  SDL_assert_always(context.mPipeline);
 
-  context.mUniform.mPosition.x = 128.f;
-  context.mUniform.mPosition.y = 128.f;
-  context.mUniform.mScale.x = 256.f;
-  context.mUniform.mScale.y = 256.f;
+  context.mUniform[0].mPosition.x = 384.f;
+  context.mUniform[0].mPosition.y = 360.f;
+  context.mUniform[0].mScale.x = 256.f;
+  context.mUniform[0].mScale.y = 256.f;
+  context.mUniform[0].mDepth = 0.75f;
+
+  context.mUniform[1].mPosition.x = 640.f;
+  context.mUniform[1].mPosition.y = 360.f;
+  context.mUniform[1].mScale.x = 256.f;
+  context.mUniform[1].mScale.y = 256.f;
+  context.mUniform[1].mDepth = 0.25f;
 
   SDL_GPUSamplerCreateInfo samplerCreateInfo;
   SDL_zero(samplerCreateInfo);
   context.mSampler = SDL_CreateGPUSampler(gContext.mDevice, &samplerCreateInfo);
-  SDL_assert(context.mSampler);
+  SDL_assert_always(context.mSampler);
 
   context.mTexture = CreateAndUploadTexture(NULL, "sample.bmp");
 
@@ -504,7 +544,6 @@ TechniqueContext CreateTechniqueContext() {
 void DrawTechniqueContext(TechniqueContext* aContext, SDL_GPUCommandBuffer* aCommandBuffer, SDL_GPURenderPass* aRenderPass)
 {
   SDL_BindGPUGraphicsPipeline(aRenderPass, aContext->mPipeline);
-  SDL_PushGPUVertexUniformData(aCommandBuffer, 0, &aContext->mUniform, sizeof(aContext->mUniform));
   SDL_PushGPUVertexUniformData(aCommandBuffer, 1, &gContext.WorldToNDC, sizeof(gContext.WorldToNDC));
 
   {
@@ -515,6 +554,10 @@ void DrawTechniqueContext(TechniqueContext* aContext, SDL_GPUCommandBuffer* aCom
     SDL_BindGPUFragmentSamplers(aRenderPass, 0, &textureBinding, 1);
   }
 
+  SDL_PushGPUVertexUniformData(aCommandBuffer, 0, &aContext->mUniform[0], sizeof(aContext->mUniform[0]));
+  SDL_DrawGPUPrimitives(aRenderPass, 6, 1, 0, 0);
+
+  SDL_PushGPUVertexUniformData(aCommandBuffer, 0, &aContext->mUniform[1], sizeof(aContext->mUniform[1]));
   SDL_DrawGPUPrimitives(aRenderPass, 6, 1, 0, 0);
 }
 
@@ -533,14 +576,19 @@ int main(int argc, char** argv)
 {
   (void)argc;
   (void)argv;
-  SDL_assert(SDL_Init(SDL_INIT_VIDEO));
+  SDL_assert_always(SDL_Init(SDL_INIT_VIDEO));
 
   SDL_Window* window = SDL_CreateWindow(TARGET_NAME, 1280, 720, 0);
-  SDL_assert(window);
+  SDL_assert_always(window);
 
   CreateGpuContext(window);
 
-  TechniqueContext context = CreateTechniqueContext();
+  SDL_GPUTexture* depthTexture = NULL;
+  Uint32 depthWidth = 0;
+  Uint32 depthHeight = 0;
+  SDL_GPUTextureFormat depthFormat = GetSupportedDepthFormat();
+
+  TechniqueContext context = CreateTechniqueContext(depthFormat);
 
   const float speed = 200.f;
   Uint64 last_frame_ticks_so_far = SDL_GetTicksNS();
@@ -552,12 +600,12 @@ int main(int argc, char** argv)
     Uint64 current_frame_ticks_so_far = SDL_GetTicksNS();
     float dt = (current_frame_ticks_so_far - last_frame_ticks_so_far) / 1000000000.f;
     last_frame_ticks_so_far = current_frame_ticks_so_far;
-    SDL_Event event;
-    while (SDL_PollEvent(&event)) {
+
+    for (SDL_Event event; SDL_PollEvent(&event);) {
       switch (event.common.type) {
-      case SDL_EVENT_QUIT:
-        running = false;
-        break;
+        case SDL_EVENT_QUIT:
+          running = false;
+          break;
       }
     }
 
@@ -570,14 +618,16 @@ int main(int argc, char** argv)
       0.0f, 1.0f
     );
 
-    if (key_map[SDL_SCANCODE_D]) context.mUniform.mPosition.x += speed * dt * 1.0f;
-    if (key_map[SDL_SCANCODE_A]) context.mUniform.mPosition.x -= speed * dt * 1.0f;
-    if (key_map[SDL_SCANCODE_W]) context.mUniform.mPosition.y += speed * dt * 1.0f;
-    if (key_map[SDL_SCANCODE_S]) context.mUniform.mPosition.y -= speed * dt * 1.0f;
-    if (key_map[SDL_SCANCODE_R]) context.mUniform.mScale.x += speed * dt * 1.0f;
-    if (key_map[SDL_SCANCODE_F]) context.mUniform.mScale.x -= speed * dt * 1.0f;
-    if (key_map[SDL_SCANCODE_T]) context.mUniform.mScale.y += speed * dt * 1.0f;
-    if (key_map[SDL_SCANCODE_G]) context.mUniform.mScale.y -= speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_D]) context.mUniform[0].mPosition.x += speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_A]) context.mUniform[0].mPosition.x -= speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_W]) context.mUniform[0].mPosition.y += speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_S]) context.mUniform[0].mPosition.y -= speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_R]) context.mUniform[0].mScale.x += speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_F]) context.mUniform[0].mScale.x -= speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_T]) context.mUniform[0].mScale.y += speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_G]) context.mUniform[0].mScale.y -= speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_E]) context.mUniform[0].mDepth += speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_Q]) context.mUniform[0].mDepth -= speed * dt * 1.0f;
 
     SDL_GPUCommandBuffer* commandBuffer = SDL_AcquireGPUCommandBuffer(gContext.mDevice);
     if (!commandBuffer)
@@ -587,10 +637,27 @@ int main(int argc, char** argv)
     }
 
     SDL_GPUTexture* swapchainTexture;
-    if (!SDL_WaitAndAcquireGPUSwapchainTexture(commandBuffer, gContext.mWindow, &swapchainTexture, NULL, NULL))
+    Uint32 swapchainWidth = 0;
+    Uint32 swapchainHeight = 0;
+    if (!SDL_WaitAndAcquireGPUSwapchainTexture(
+      commandBuffer,
+      gContext.mWindow,
+      &swapchainTexture,
+      &swapchainWidth,
+      &swapchainHeight))
     {
       SDL_Log("WaitAndAcquireGPUSwapchainTexture failed: %s", SDL_GetError());
       continue;
+    }
+
+    if (depthWidth != swapchainWidth || depthHeight != swapchainHeight)
+    {
+      SDL_ReleaseGPUTexture(gContext.mDevice, depthTexture);
+      depthTexture = CreateTexture(swapchainWidth, swapchainHeight, 1, 1, SDL_GPU_TEXTUREUSAGE_DEPTH_STENCIL_TARGET, depthFormat, "DepthTexture");
+      SDL_assert_always(depthTexture);
+
+      depthWidth = swapchainWidth;
+      depthHeight = swapchainHeight;
     }
 
     SDL_GPUColorTargetInfo colorTargetInfo;
@@ -604,11 +671,18 @@ int main(int argc, char** argv)
     colorTargetInfo.clear_color.b = 0.85f;
     colorTargetInfo.clear_color.a = 1.0f;
 
+    SDL_GPUDepthStencilTargetInfo depthStencilTargetInfo;
+    SDL_zero(depthStencilTargetInfo);
+    depthStencilTargetInfo.texture = depthTexture;
+    depthStencilTargetInfo.clear_depth = 0.f;
+    depthStencilTargetInfo.load_op = SDL_GPU_LOADOP_CLEAR;
+    depthStencilTargetInfo.store_op = SDL_GPU_STOREOP_DONT_CARE;
+
     SDL_GPURenderPass* renderPass = SDL_BeginGPURenderPass(
       commandBuffer,
       &colorTargetInfo,
       1,
-      NULL
+      &depthStencilTargetInfo
     );
 
     DrawTechniqueContext(&context, commandBuffer, renderPass);
@@ -617,6 +691,7 @@ int main(int argc, char** argv)
     SDL_SubmitGPUCommandBuffer(commandBuffer);
   }
 
+  SDL_ReleaseGPUTexture(gContext.mDevice, depthTexture);
   DestroyTechniqueContext(&context);
 
   DestroyGpuContext();

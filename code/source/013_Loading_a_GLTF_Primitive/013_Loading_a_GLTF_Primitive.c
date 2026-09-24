@@ -1,7 +1,9 @@
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_stdinc.h>
 
+#ifndef __cplusplus
 #define CGLTF_IMPLEMENTATION
+#endif
 #include "cgltf.h"
 
 // This is for testing to ensure the code works in both C and C++,
@@ -395,9 +397,9 @@ float4x4 Float4x4_Inverse(const float4x4* aValue)
   toReturn.data[2][3] = row3.z;
 
   toReturn.data[3][0] = -Float3_Dot(b, t_prime);
-  toReturn.data[3][1] =  Float3_Dot(a, t_prime);;
-  toReturn.data[3][2] = -Float3_Dot(d, s_prime);;
-  toReturn.data[3][3] =  Float3_Dot(c, s_prime);;
+  toReturn.data[3][1] =  Float3_Dot(a, t_prime);
+  toReturn.data[3][2] = -Float3_Dot(d, s_prime);
+  toReturn.data[3][3] =  Float3_Dot(c, s_prime);
 
   return toReturn;
 }
@@ -480,36 +482,6 @@ float4x4 RotationMatrix(float4 aPosition) {
   return Float4x4_Multiply(&zRotation, &xyRotation);
 }
 
-float4x4 RotationMatrixFromQuaternion(float4 aQuaternion) {
-  float x2 = aQuaternion.x * aQuaternion.x;
-  float y2 = aQuaternion.y * aQuaternion.y;
-  float z2 = aQuaternion.z * aQuaternion.z;
-
-  float xy = aQuaternion.x * aQuaternion.y;
-  float xz = aQuaternion.x * aQuaternion.z;
-  float yz = aQuaternion.y * aQuaternion.z;
-
-  float wx = aQuaternion.w * aQuaternion.x;
-  float wy = aQuaternion.w * aQuaternion.y;
-  float wz = aQuaternion.w * aQuaternion.z;
-
-  float4x4 toReturn = IdentityMatrix();
-
-  toReturn.data[0][0] = 1.0f - 2.0f * (y2 - z2);
-  toReturn.data[0][1] =        2.0f * (xy + wz);
-  toReturn.data[0][2] =        2.0f * (xz - wy);
-
-  toReturn.data[1][0] =        2.0f * (xy - wz);
-  toReturn.data[1][1] = 1.0f - 2.0f * (x2 - z2);
-  toReturn.data[1][2] =        2.0f * (yz + wx);
-
-  toReturn.data[2][0] =        2.0f * (xz + wy);
-  toReturn.data[2][1] =        2.0f * (yz - wx);
-  toReturn.data[2][2] = 1.0f - 2.0f * (x2 - y2);
-
-  return toReturn;
-}
-
 float4x4 CreateModelMatrix(float4 aPosition, float4 aScale, float4 aRotation) {
   float4x4 translation = TranslationMatrix(aPosition);
   float4x4 rotation = RotationMatrix(aRotation);
@@ -522,16 +494,6 @@ float4x4 CreateModelMatrix(float4 aPosition, float4 aScale, float4 aRotation) {
 
 float4x4 CreateModelMatrixFromTransform(const Transform* aTransform) {
   return CreateModelMatrix(aTransform->mPosition, aTransform->mScale, aTransform->mRotation);
-}
-
-float4x4 CreateModelMatrixWithQuaternion(float4 aPosition, float4 aScale, float4 aRotation) {
-  float4x4 translation = TranslationMatrix(aPosition);
-  float4x4 rotation = RotationMatrixFromQuaternion(aRotation);
-  float4x4 scale = ScaleMatrix(aScale);
-
-  float4x4 scale_rotation = Float4x4_Multiply(&rotation, &scale);
-
-  return Float4x4_Multiply(&translation, &scale_rotation);
 }
 
 Orientation GetOrientation(const Transform* aTransform) {
@@ -664,12 +626,12 @@ void CreateGpuContext(SDL_Window* aWindow) {
 
   gContext.mWindow = aWindow;
   gContext.mDevice = SDL_CreateGPUDevice(SDL_GPU_SHADERFORMAT_SPIRV | SDL_GPU_SHADERFORMAT_DXIL | SDL_GPU_SHADERFORMAT_MSL, true, NULL);
-  SDL_assert(gContext.mDevice);
+  SDL_assert_always(gContext.mDevice);
 
-  SDL_assert(SDL_ClaimWindowForGPUDevice(gContext.mDevice, gContext.mWindow));
+  SDL_assert_always(SDL_ClaimWindowForGPUDevice(gContext.mDevice, gContext.mWindow));
 
   gContext.mProperties = SDL_CreateProperties();
-  SDL_assert(gContext.mProperties);
+  SDL_assert_always(gContext.mProperties);
 
   SDL_GPUShaderFormat availableFormats = SDL_GetGPUShaderFormats(gContext.mDevice);
   gContext.mShaderEntryPoint = NULL;
@@ -715,7 +677,7 @@ SDL_GPUShader* CreateShader(
 
   size_t fileSize = 0;
   void* fileData = SDL_LoadFile(shader_path, &fileSize);
-  SDL_assert(fileData);
+  SDL_assert_always(fileData);
 
   SDL_PropertiesID properties = gContext.mProperties;
 
@@ -723,7 +685,7 @@ SDL_GPUShader* CreateShader(
     properties = aProperties;
   }
 
-  SDL_assert(SDL_SetStringProperty(properties, SDL_PROP_GPU_SHADER_CREATE_NAME_STRING, aShaderFilename));
+  SDL_assert_always(SDL_SetStringProperty(properties, SDL_PROP_GPU_SHADER_CREATE_NAME_STRING, aShaderFilename));
 
   SDL_GPUShaderCreateInfo shaderCreateInfo;
   SDL_zero(shaderCreateInfo);
@@ -742,7 +704,7 @@ SDL_GPUShader* CreateShader(
   SDL_GPUShader* shader = SDL_CreateGPUShader(gContext.mDevice, &shaderCreateInfo);
 
   SDL_free(fileData);
-  SDL_assert(shader);
+  SDL_assert_always(shader);
 
   return shader;
 }
@@ -757,7 +719,7 @@ SDL_GPUBuffer* CreateGPUBuffer(Uint32 aSize, SDL_GPUBufferUsageFlags aUsage, con
   createInfo.usage = aUsage;
 
   SDL_GPUBuffer* buffer = SDL_CreateGPUBuffer(gContext.mDevice, &createInfo);
-  SDL_assert(buffer);
+  SDL_assert_always(buffer);
 
   return buffer;
 }
@@ -773,7 +735,7 @@ SDL_GPUTransferBuffer* CreateTransferBuffer(Uint32 aSize, SDL_GPUTransferBufferU
   transferBufferCreateInfo.usage = aUsage;
 
   SDL_GPUTransferBuffer* transferBuffer = SDL_CreateGPUTransferBuffer(gContext.mDevice, &transferBufferCreateInfo);
-  SDL_assert(transferBuffer);
+  SDL_assert_always(transferBuffer);
 
   return transferBuffer;
 }
@@ -824,7 +786,7 @@ SDL_GPUTexture* CreateAndUploadTexture(SDL_GPUCopyPass* aCopyPass, const char* a
   }
 
   SDL_GPUTexture* texture = CreateTexture(surface->w, surface->h, 1, 1, SDL_GPU_TEXTUREUSAGE_SAMPLER, SDL_GPU_TEXTUREFORMAT_R8G8B8A8_UNORM, aTextureName);
-  SDL_assert(texture);
+  SDL_assert_always(texture);
 
   // Copy to GPU
   SDL_GPUTextureTransferInfo textureTransferInfo;
@@ -879,7 +841,7 @@ SDL_GPUTextureFormat GetSupportedDepthFormat()
   }
 
   // Didn't find a suitable depth format.
-  SDL_assert(false);
+  SDL_assert_always(false);
 
   return SDL_GPU_TEXTUREFORMAT_INVALID;
 }
@@ -896,7 +858,7 @@ SDL_GPUBuffer* CreateAndUploadBuffer(const void* aData, Uint32 aSize, SDL_GPUBuf
   bufferCreateInfo.props = gContext.mProperties;
 
   SDL_GPUBuffer* buffer = SDL_CreateGPUBuffer(gContext.mDevice, &bufferCreateInfo);
-  SDL_assert(buffer);
+  SDL_assert_always(buffer);
 
   {
     char tranfer_buffer_name[4096];
@@ -911,9 +873,9 @@ SDL_GPUBuffer* CreateAndUploadBuffer(const void* aData, Uint32 aSize, SDL_GPUBuf
     }
 
     SDL_GPUCommandBuffer* commandBuffer = SDL_AcquireGPUCommandBuffer(gContext.mDevice);
-    SDL_assert(commandBuffer);
+    SDL_assert_always(commandBuffer);
     SDL_GPUCopyPass* copyPass = SDL_BeginGPUCopyPass(commandBuffer);
-    SDL_assert(copyPass);
+    SDL_assert_always(copyPass);
 
     SDL_GPUTransferBufferLocation source;
     source.offset = 0;
@@ -935,451 +897,140 @@ SDL_GPUBuffer* CreateAndUploadBuffer(const void* aData, Uint32 aSize, SDL_GPUBuf
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// CGLTF Code
+// Mesh Code
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-typedef struct SceneInfo {
-  Uint32 mIndicesCount;
-  Uint32 mPositionBytes;
-  Uint32 mNormalBytes;
-  Uint32 mTangentBytes;
-  Uint32 mTexcoordBytes[16];
-  Uint32 mTotalNodes;
-  Uint32 mRootNodes;
-} SceneInfo;
-
-
-void ProcessNodeInfo(cgltf_node* aNode, SceneInfo* aSceneInfo)
-{
-  aSceneInfo->mTotalNodes += aNode->children_count;
-
-  for (size_t i = 0; i < aNode->children_count; ++i) {
-    ProcessNodeInfo(aNode->children[i], aSceneInfo);
-  }
-
-  cgltf_mesh* mesh = aNode->mesh;
-  if (mesh == NULL) {
-    return;
-  }
-
-  for (size_t j = 0; j < mesh->primitives_count; ++j) {
-    cgltf_primitive* primitive = &mesh->primitives[j];
-
-    aSceneInfo->mIndicesCount += primitive->indices->count;
-
-    SDL_assert(primitive->indices->type == cgltf_type_scalar);
-    SDL_assert(primitive->indices->component_type == cgltf_component_type_r_32u);
-
-    for (size_t k = 0; k < primitive->attributes_count; ++k) {
-      cgltf_attribute* attribute = &primitive->attributes[k];
-
-      //primitive->material->
-
-      switch (attribute->type) {
-        case cgltf_attribute_type_position: {
-          SDL_assert(attribute->data->type == cgltf_type_vec3);
-          SDL_assert(attribute->data->component_type == cgltf_component_type_r_32f);
-          aSceneInfo->mPositionBytes += attribute->data->count * sizeof(float3);
-          break;
-        }
-        case cgltf_attribute_type_normal: {
-          SDL_assert(attribute->data->type == cgltf_type_vec3);
-          SDL_assert(attribute->data->component_type == cgltf_component_type_r_32f);
-          aSceneInfo->mNormalBytes += attribute->data->count * sizeof(float3);
-          break;
-        }
-        case cgltf_attribute_type_tangent: {
-          SDL_assert(attribute->data->type == cgltf_type_vec4);
-          SDL_assert(attribute->data->component_type == cgltf_component_type_r_32f);
-          aSceneInfo->mTangentBytes += attribute->data->count * sizeof(float4);
-          break;
-        }
-        case cgltf_attribute_type_texcoord: {
-          SDL_assert(attribute->data->type == cgltf_type_vec2);
-          SDL_assert(attribute->data->component_type == cgltf_component_type_r_32f);
-
-          int texcoordIndex = SDL_atoi(attribute->name + 9);
-          aSceneInfo->mTexcoordBytes[texcoordIndex] += attribute->data->count * sizeof(float2);
-          break;
-        }
-        default: break;
-      }
-    }
-  }
-}
-
-
-SceneInfo GetSceneInfo(cgltf_data* aData)
-{
-  SceneInfo sceneInfo;
-  SDL_zero(sceneInfo);
-
-  if (!aData) {
-    return sceneInfo;
-  }
-
-  if (!aData->scene) {
-    return sceneInfo;
-  }
-
-  sceneInfo.mRootNodes = (Uint32)aData->scene->nodes_count;
-
-  for (size_t i = 0; i < aData->scene->nodes_count; ++i) {
-    sceneInfo.mTotalNodes++;
-    ProcessNodeInfo(aData->scene->nodes[i], &sceneInfo);
-  }
-
-  return sceneInfo;
-}
-
-typedef struct Mesh {
-  float4x4 mTransform;
-
-  float4x4 mCurrentTransform; 
-
-  Uint32 mIndicesCount;
-
-  Uint32 mChildrenOffset;
-  Uint32 mChildrenCount;
-
-  // Offsets into parent model position/normal/tangent/index buffers
-  Uint32 mPositionOffset;
-  Uint32 mNormalOffset;
-  Uint32 mTangentOffset;
+typedef struct MeshInfo {
+  float4x4 mWorldTransform;
+  Uint32 mVertexOffset;
   Uint32 mIndexOffset;
+  Uint32 mIndexCount;
+  Uint32 mVertexCount;
+} MeshInfo;
 
-  Uint8 mBaseColorTextureCoordinates;
-  Uint8 mMetallicRoughnessTextureCoordinates;
+typedef struct Model {
+  SDL_GPUBuffer* mPositionBuffer;
+  SDL_GPUBuffer* mNormalBuffer;
+  SDL_GPUBuffer* mIndexBuffer;
+  MeshInfo* mMeshes;
+  Uint32 mMeshCount;
+} Model;
 
-  Uint8 mDiffuseTextureCoordinates;
-  Uint8 mSpecularGlossinessTextureCoordinates;
-
-  Uint8 mNormalTextureCoordinates;
-  Uint8 mOcclusionTextureCoordinates;
-  Uint8 mEmissveTextureCoordinates;
-} Mesh;
-
-typedef struct Scene {
-  SDL_GPUBuffer* mPositions;
-  SDL_GPUBuffer* mNormals;
-  SDL_GPUBuffer* mTangents;
-  SDL_GPUBuffer* mTexcoords[16];
-  SDL_GPUBuffer* mIndices;
-
-  Mesh* mMeshes;
-  size_t mRootMeshesCount;
-  size_t mMeshesCount;
-  //SDL_GPUBuffer* mTextureCoordinates; // float2
-} Scene;
-
-void ApplyMeshTransformToChildren(Scene* aScene, Mesh* aMesh)
+void UploadToModel(
+  Model* aModel,
+  const float3* aPositions,
+  const float3* aNormals,
+  const Uint32* aIndices,
+  Uint32 aVertexCount,
+  Uint32 aIndexCount)
 {
-  Mesh* meshChildren = aScene->mMeshes + aMesh->mChildrenOffset;
-  for (size_t i = 0; i < aMesh->mChildrenCount; ++i)
-  {
-    Mesh* childMesh = meshChildren + i;
-
-    float4x4 temp = childMesh->mCurrentTransform;
-    childMesh->mCurrentTransform = Float4x4_Multiply(&aMesh->mCurrentTransform, &childMesh->mTransform);
-    //childMesh->mCurrentTransform.columns[3].x += aMesh->mCurrentTransform.columns[3].x;
-    //childMesh->mCurrentTransform.columns[3].y += aMesh->mCurrentTransform.columns[3].y;
-    //childMesh->mCurrentTransform.columns[3].z += aMesh->mCurrentTransform.columns[3].z;
-    //childMesh->mCurrentTransform = Float4x4_Multiply(&childMesh->mTransform, &aMesh->mCurrentTransform);
-    ApplyMeshTransformToChildren(aScene, childMesh);
-  }
+  aModel->mPositionBuffer = CreateAndUploadBuffer(aPositions, aVertexCount * sizeof(*aPositions), SDL_GPU_BUFFERUSAGE_VERTEX, "PositionBuffer");
+  SDL_assert_always(aModel->mPositionBuffer);
+  aModel->mNormalBuffer = CreateAndUploadBuffer(aNormals, aVertexCount * sizeof(*aNormals), SDL_GPU_BUFFERUSAGE_VERTEX, "NormalBuffer");
+  SDL_assert_always(aModel->mNormalBuffer);
+  aModel->mIndexBuffer = CreateAndUploadBuffer(aIndices, aIndexCount * sizeof(*aIndices), SDL_GPU_BUFFERUSAGE_INDEX, "IndexBuffer");
+  SDL_assert_always(aModel->mIndexBuffer);
 }
 
-void RecalculateSceneTransform(Scene* aScene)
+void DestroyModel(Model* aModel)
 {
-  for (size_t i = 0; i < aScene->mRootMeshesCount; ++i)
-  {
-    Mesh* mesh = aScene->mMeshes + i;
-    float4x4 temp = mesh->mCurrentTransform;
-    mesh->mCurrentTransform = mesh->mTransform;
-    ApplyMeshTransformToChildren(aScene, mesh);
-  }
+  SDL_ReleaseGPUBuffer(gContext.mDevice, aModel->mPositionBuffer); 
+  SDL_ReleaseGPUBuffer(gContext.mDevice, aModel->mNormalBuffer);
+  SDL_ReleaseGPUBuffer(gContext.mDevice, aModel->mIndexBuffer);
+  SDL_free(aModel->mMeshes);
+  SDL_zero(*aModel);
 }
 
-typedef struct SceneProcessing {
-  Uint32 mPositionOffset;
-  Uint32 mPositionOffsetSoFar;
-  Uint32 mNormalOffset;
-  Uint32 mNormalOffsetSoFar;
-  Uint32 mTangentOffset;
-  Uint32 mTangentOffsetSoFar;
-  Uint32 mIndexOffset;
-  Uint32 mIndexOffsetSoFar;
-  Uint32 mCurrentMeshIndex;
-  Uint32 mCurrentChildrenIndex;
-} SceneProcessing;
-
-SDL_GPUFilter GltfFilterToSDL(cgltf_filter_type aFilter)
+const cgltf_accessor* FindAttribute(
+  const cgltf_primitive* aPrimitive,
+  cgltf_attribute_type aType)
 {
-  switch (aFilter) {
-    case cgltf_filter_type_nearest: return SDL_GPU_FILTER_NEAREST;
-    case cgltf_filter_type_linear: return SDL_GPU_FILTER_LINEAR;
-    case cgltf_filter_type_nearest_mipmap_nearest: return SDL_GPU_FILTER_NEAREST;
-    case cgltf_filter_type_linear_mipmap_nearest: return SDL_GPU_FILTER_LINEAR;
-    case cgltf_filter_type_nearest_mipmap_linear: return SDL_GPU_FILTER_NEAREST;
-    case cgltf_filter_type_linear_mipmap_linear: return SDL_GPU_FILTER_LINEAR;
-
-    default:
-    case cgltf_filter_type_undefined: {
-      SDL_Log("Using unknown filter, defaulting to SDL_GPU_FILTER_NEAREST");
-      return SDL_GPU_FILTER_NEAREST;
+  for (size_t i = 0; i < aPrimitive->attributes_count; ++i) {
+    if (aPrimitive->attributes[i].type == aType && aPrimitive->attributes[i].index == 0) {
+      return aPrimitive->attributes[i].data;
     }
   }
+  return NULL;
 }
 
-SDL_GPUSamplerAddressMode GltfAddressModeToSDL(cgltf_wrap_mode aWrap)
-{
-  switch (aWrap) {
-    case cgltf_wrap_mode_clamp_to_edge: return SDL_GPU_SAMPLERADDRESSMODE_CLAMP_TO_EDGE;
-    case cgltf_wrap_mode_mirrored_repeat: return SDL_GPU_SAMPLERADDRESSMODE_MIRRORED_REPEAT;
-    case cgltf_wrap_mode_repeat: return SDL_GPU_SAMPLERADDRESSMODE_REPEAT;
+typedef struct MeshDataSize {
+  Uint32 mVertexCount;
+  Uint32 mIndexCount;
+} MeshDataSize;
 
-    default: {
-      SDL_Log("Using unknown address mode, defaulting to SDL_GPU_SAMPLERADDRESSMODE_REPEAT");
-      return SDL_GPU_SAMPLERADDRESSMODE_REPEAT;
-    }
-  }
+MeshDataSize GetPrimitiveSize(const cgltf_primitive* aPrimitive)
+{
+  MeshDataSize dataSize;
+  SDL_zero(dataSize);
+
+  SDL_assert_always(aPrimitive);
+  SDL_assert_always(aPrimitive->type == cgltf_primitive_type_triangles);
+  SDL_assert_always(aPrimitive->indices);
+
+  const cgltf_accessor* positions = FindAttribute(aPrimitive, cgltf_attribute_type_position);
+  SDL_assert_always(positions);
+
+  const cgltf_accessor* normals = FindAttribute(aPrimitive, cgltf_attribute_type_normal);
+  SDL_assert_always(normals);
+
+  // We only support positions and normals of the vec3 type, and indices of the scalar type.
+  SDL_assert_always(positions->type == cgltf_type_vec3);
+  SDL_assert_always(normals->type == cgltf_type_vec3);
+  SDL_assert_always(aPrimitive->indices->type == cgltf_type_scalar);
+
+  // All attributes need to match in count.
+  SDL_assert_always(positions->count == normals->count);
+
+  // We don't support sparse accessors
+  SDL_assert_always(!positions->is_sparse);
+  SDL_assert_always(!normals->is_sparse);
+  SDL_assert_always(!aPrimitive->indices->is_sparse);
+
+  // We need to have some verts, indices, and we can't have more than a Uint32 can hold.
+  SDL_assert_always(positions->count != 0);
+  SDL_assert_always(aPrimitive->indices->count != 0);
+  SDL_assert_always(positions->count <= SDL_MAX_UINT32);
+  SDL_assert_always(aPrimitive->indices->count <= SDL_MAX_UINT32);
+
+  dataSize.mVertexCount = (Uint32)positions->count;
+  dataSize.mIndexCount = (Uint32)aPrimitive->indices->count;
+
+  return dataSize;
 }
 
-SDL_GPUSampler* CreateSamplerFromGltf(cgltf_sampler* aSampler)
-{
-  SDL_GPUSamplerCreateInfo samplerCreateInfo;
-  SDL_zero(samplerCreateInfo);
-
-  samplerCreateInfo.mag_filter = GltfFilterToSDL(aSampler->mag_filter);
-  samplerCreateInfo.min_filter = GltfFilterToSDL(aSampler->min_filter);
-  samplerCreateInfo.address_mode_u = GltfAddressModeToSDL(aSampler->wrap_s);
-  samplerCreateInfo.address_mode_v = GltfAddressModeToSDL(aSampler->wrap_t);
-
-  return SDL_CreateGPUSampler(gContext.mDevice, &samplerCreateInfo);
+void unpack_cgltf_float3(const cgltf_accessor* aFloat3s, cgltf_float* aBuffer) {
+  SDL_assert_always(cgltf_accessor_unpack_floats(aFloat3s, aBuffer, aFloat3s->count * 3) == aFloat3s->count * 3);
 }
 
-size_t transferBufferSize = 0;
-
-void GenerateGPUMesh(cgltf_node* aNode, Scene* aScene, SceneProcessing* aSceneProcessing, Mesh* aMesh, Uint8* aTransferPtr)
-{
-  aMesh->mChildrenOffset = aSceneProcessing->mCurrentChildrenIndex;
-  aMesh->mChildrenCount = (Uint32)aNode->children_count;
-  Mesh* meshChildren = aScene->mMeshes + aMesh->mChildrenOffset;
-  aSceneProcessing->mCurrentChildrenIndex += (Uint32)aNode->children_count;
-
-  for (size_t i = 0; i < aNode->children_count; ++i) {
-    GenerateGPUMesh(aNode->children[i], aScene, aSceneProcessing, meshChildren + i, aTransferPtr);
-  }
-
-  cgltf_node_transform_local(aNode, (float*)&aMesh->mTransform.data[0]);
-  cgltf_node_transform_world(aNode, (float*)&aMesh->mCurrentTransform.data[0]);
-
-  aMesh->mPositionOffset = aSceneProcessing->mPositionOffsetSoFar - aSceneProcessing->mPositionOffset;
-  aMesh->mNormalOffset = aSceneProcessing->mNormalOffsetSoFar - aSceneProcessing->mNormalOffset;
-  aMesh->mTangentOffset = aSceneProcessing->mTangentOffsetSoFar - aSceneProcessing->mTangentOffset;
-  aMesh->mIndexOffset = aSceneProcessing->mIndexOffsetSoFar - aSceneProcessing->mIndexOffset;
-
-  cgltf_mesh* mesh_file = aNode->mesh;
-  if (mesh_file == NULL) {
-    return;
-  }
-
-  for (size_t j = 0; j < mesh_file->primitives_count; ++j) {
-    cgltf_primitive* primitive = &mesh_file->primitives[j];
-
-    aMesh->mIndicesCount = (Uint32)primitive->indices->count;
-    cgltf_accessor_unpack_indices(primitive->indices, (void*)(aTransferPtr + aSceneProcessing->mIndexOffsetSoFar), sizeof(Uint32), primitive->indices->count);
-    aSceneProcessing->mIndexOffsetSoFar += (Uint32)primitive->indices->count * sizeof(Uint32);
-
-    SDL_assert(aSceneProcessing->mIndexOffsetSoFar <= transferBufferSize);
-
-    for (size_t k = 0; k < primitive->attributes_count; ++k) {
-      Uint32* attributeCount = NULL;
-      cgltf_attribute* attribute = &primitive->attributes[k];
-      switch (attribute->type) {
-        case cgltf_attribute_type_position: attributeCount = &aSceneProcessing->mPositionOffsetSoFar; break;
-        case cgltf_attribute_type_normal: attributeCount = &aSceneProcessing->mNormalOffsetSoFar; break;
-        case cgltf_attribute_type_tangent: attributeCount = &aSceneProcessing->mTangentOffsetSoFar; break;
-        default: continue;
-      }
-
-      if (!attributeCount) {
-        continue;
-      }
-
-      *attributeCount += cgltf_accessor_unpack_floats(
-        attribute->data,
-        (cgltf_float*)(aTransferPtr + *attributeCount),
-        attribute->data->count * cgltf_num_components(attribute->data->type)
-      ) * sizeof(float);
-
-      SDL_assert(*attributeCount < transferBufferSize);
-    }
-  }
+void unpack_cgltf_uint32(const cgltf_accessor* aIndices, Uint32* aBuffer) {
+  SDL_assert_always(cgltf_accessor_unpack_indices(aIndices, aBuffer, sizeof(Uint32), aIndices->count) == aIndices->count);
 }
 
-Scene GenerateGPUScene(cgltf_data* aData, SceneInfo aSceneInfo)
+cgltf_data* LoadGltfFile(const char* aFilename)
 {
-  Scene scene;
-  SDL_zero(scene);
-
-  Uint32 indexBytes = aSceneInfo.mIndicesCount * sizeof(Uint32);
-  scene.mPositions = CreateGPUBuffer(aSceneInfo.mPositionBytes, SDL_GPU_BUFFERUSAGE_VERTEX, "Positions");
-  scene.mNormals = CreateGPUBuffer(aSceneInfo.mNormalBytes, SDL_GPU_BUFFERUSAGE_VERTEX, "Normals");
-  scene.mTangents = CreateGPUBuffer(aSceneInfo.mTangentBytes, SDL_GPU_BUFFERUSAGE_VERTEX, "Tangents");
-
-  for (size_t i = 0; i < 16; ++i) {
-    if (aSceneInfo.mTexcoordBytes[i] == 0) {
-      continue;
-    }
-
-    scene.mTexcoords[i] = CreateGPUBuffer(aSceneInfo.mTexcoordBytes[i], SDL_GPU_BUFFERUSAGE_VERTEX, "Tangents");
-  }
-
-  scene.mIndices = CreateGPUBuffer(indexBytes, SDL_GPU_BUFFERUSAGE_INDEX, "Indices");
-
-  SDL_GPUTransferBuffer* transferBuffer = NULL;
-
-  {
-    SDL_GPUTransferBufferCreateInfo transferCreateInfo;
-    SDL_zero(transferCreateInfo);
-    SDL_SetStringProperty(gContext.mProperties, SDL_PROP_GPU_TEXTURE_CREATE_NAME_STRING, "ModelTransferBuffer");
-    transferCreateInfo.usage = SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD;
-    transferCreateInfo.size = aSceneInfo.mPositionBytes + aSceneInfo.mNormalBytes + aSceneInfo.mTangentBytes + indexBytes;
-    transferCreateInfo.props = gContext.mProperties;
-
-    transferBufferSize = transferCreateInfo.size;
-
-    transferBuffer = SDL_CreateGPUTransferBuffer(gContext.mDevice, &transferCreateInfo);
-  }
-  SceneProcessing processing;
-  {
-    SDL_zero(processing);
-    processing.mPositionOffsetSoFar = processing.mPositionOffset = 0;
-    processing.mNormalOffsetSoFar = processing.mNormalOffset = aSceneInfo.mPositionBytes;
-    processing.mTangentOffsetSoFar = processing.mTangentOffset = processing.mNormalOffset + aSceneInfo.mNormalBytes;
-    processing.mIndexOffsetSoFar = processing.mIndexOffset = processing.mTangentOffset + aSceneInfo.mTangentBytes;
-  }
-
-  // Copy all of the scene data into the transfer buffer, generate Mesh hierarchy.
-  {
-    Uint8* transferPtr = SDL_MapGPUTransferBuffer(gContext.mDevice, transferBuffer, false);
-
-    scene.mMeshesCount = aSceneInfo.mTotalNodes;
-    scene.mMeshes = SDL_calloc(scene.mMeshesCount, sizeof(Mesh));
-
-    scene.mRootMeshesCount = aSceneInfo.mRootNodes;
-
-    processing.mCurrentChildrenIndex += scene.mRootMeshesCount;
-
-    for (size_t i = 0; i < aData->scene->nodes_count; ++i) {
-      GenerateGPUMesh(aData->scene->nodes[i], &scene, &processing, scene.mMeshes + i, transferPtr);
-    }
-
-    SDL_UnmapGPUTransferBuffer(gContext.mDevice, transferBuffer);
-  }
-
-  // Upload to the appropriate buffers
-  {
-    SDL_GPUCommandBuffer* commandBuffer = SDL_AcquireGPUCommandBuffer(gContext.mDevice);
-    SDL_assert(commandBuffer);
-    SDL_GPUCopyPass* copyPass = SDL_BeginGPUCopyPass(commandBuffer);
-    SDL_assert(copyPass);
-
-    SDL_GPUTransferBufferLocation source;
-    source.offset = 0;
-    source.transfer_buffer = transferBuffer;
-
-    SDL_GPUBufferRegion destination;
-    destination.offset = 0;
-
-    // Positions
-    {
-      source.offset = processing.mPositionOffset;
-      destination.buffer = scene.mPositions;
-      destination.size = aSceneInfo.mPositionBytes;
-
-      SDL_UploadToGPUBuffer(copyPass, &source, &destination, false);
-    }
-
-    // Normals
-    {
-      source.offset = processing.mNormalOffset;
-
-      destination.buffer = scene.mNormals;
-      destination.size = aSceneInfo.mNormalBytes;
-
-      SDL_UploadToGPUBuffer(copyPass, &source, &destination, false);
-    }
-
-    // Tangents
-    {
-      source.offset = processing.mTangentOffset;
-
-      destination.buffer = scene.mTangents;
-      destination.size = aSceneInfo.mTangentBytes;
-
-      SDL_UploadToGPUBuffer(copyPass, &source, &destination, false);
-    }
-
-    // Indices
-    {
-      source.offset = processing.mIndexOffset;
-
-      destination.buffer = scene.mIndices;
-      destination.size = indexBytes;
-
-      SDL_UploadToGPUBuffer(copyPass, &source, &destination, false);
-    }
-
-    SDL_EndGPUCopyPass(copyPass);
-    SDL_SubmitGPUCommandBuffer(commandBuffer);
-
-    SDL_ReleaseGPUTransferBuffer(gContext.mDevice, transferBuffer);
-  }
-
-  RecalculateSceneTransform(&scene);
-
-  return scene;
-}
-
-Scene LoadGltfModel(const char* aModelName) {
   char model_path[4096];
-  SDL_snprintf(model_path, SDL_arraysize(model_path), "Assets/Models/%s", aModelName);
+  SDL_snprintf(model_path, SDL_arraysize(model_path), "Assets/Models/%s", aFilename);
 
   cgltf_options options;
   SDL_zero(options);
 
   cgltf_data* data = NULL;
-  cgltf_result result = cgltf_parse_file(&options, model_path, &data);
-  SDL_assert(result == cgltf_result_success);
-
-  result = cgltf_load_buffers(&options, data, model_path);
-  SDL_assert(result == cgltf_result_success);
-
-  SDL_Log("Model: %s", model_path);
-
-  SceneInfo sceneInfo = GetSceneInfo(data);
-  return GenerateGPUScene(data, sceneInfo);
+  SDL_assert_always(cgltf_parse_file(&options, model_path, &data) == cgltf_result_success);
+  SDL_assert_always(cgltf_load_buffers(&options, data, model_path) == cgltf_result_success);
+  SDL_assert_always(cgltf_validate(data) == cgltf_result_success);
+  return data;
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Technique Code
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-typedef struct ModelUbo {
-  float4 mPosition;
-  float4 mScale;
-  float4 mRotation;
-} ModelUbo;
-
 typedef struct TechniqueContext {
   SDL_GPUGraphicsPipeline* mPipeline;
-  SDL_GPUTexture* mTexture;
-  SDL_GPUSampler* mSampler;
-  ModelUbo mUniform[2];
-  Scene mModel;
+  Model mModel;
+  Transform mUniform[2];
 } TechniqueContext;
 
-TechniqueContext CreateTechniqueContext(SDL_GPUTextureFormat aDepthFormat) {
+TechniqueContext CreateTechniqueContext(SDL_GPUTextureFormat aDepthFormat)
+{
   SDL_GPUColorTargetDescription colorTargetDescription;
   SDL_zero(colorTargetDescription);
   colorTargetDescription.format = SDL_GetGPUSwapchainTextureFormat(gContext.mDevice, gContext.mWindow);
@@ -1392,12 +1043,13 @@ TechniqueContext CreateTechniqueContext(SDL_GPUTextureFormat aDepthFormat) {
   graphicsPipelineCreateInfo.target_info.depth_stencil_format = aDepthFormat;
   graphicsPipelineCreateInfo.target_info.has_depth_stencil_target = true;
   graphicsPipelineCreateInfo.primitive_type = SDL_GPU_PRIMITIVETYPE_TRIANGLELIST;
-  graphicsPipelineCreateInfo.rasterizer_state.front_face = SDL_GPU_FRONTFACE_COUNTER_CLOCKWISE;
-  //graphicsPipelineCreateInfo.rasterizer_state.cull_mode = SDL_GPU_CULLMODE_BACK;
-  graphicsPipelineCreateInfo.rasterizer_state.cull_mode = SDL_GPU_CULLMODE_NONE;
+  graphicsPipelineCreateInfo.rasterizer_state.front_face = SDL_GPU_FRONTFACE_CLOCKWISE;
+  graphicsPipelineCreateInfo.rasterizer_state.cull_mode = SDL_GPU_CULLMODE_BACK;
 
+  graphicsPipelineCreateInfo.vertex_input_state.num_vertex_buffers = 2;
+  graphicsPipelineCreateInfo.vertex_input_state.num_vertex_attributes = 2;
 
-  SDL_GPUVertexAttribute attributes[3];
+  SDL_GPUVertexAttribute attributes[2];
 
   // Position
   attributes[0].location = 0;
@@ -1411,31 +1063,19 @@ TechniqueContext CreateTechniqueContext(SDL_GPUTextureFormat aDepthFormat) {
   attributes[1].format = SDL_GPU_VERTEXELEMENTFORMAT_FLOAT3;
   attributes[1].offset = 0;
 
-  // Tangent
-  attributes[2].location = 2;
-  attributes[2].buffer_slot = 2;
-  attributes[2].format = SDL_GPU_VERTEXELEMENTFORMAT_FLOAT4;
-  attributes[2].offset = 0;
-
   graphicsPipelineCreateInfo.vertex_input_state.vertex_attributes = attributes;
-  graphicsPipelineCreateInfo.vertex_input_state.num_vertex_attributes = SDL_arraysize(attributes);
 
-  SDL_GPUVertexBufferDescription bufferDescription[3];
-  bufferDescription[0].slot = 0;
-  bufferDescription[0].pitch = sizeof(float3);
-  bufferDescription[0].input_rate = SDL_GPU_VERTEXINPUTRATE_VERTEX;
-  bufferDescription[1].instance_step_rate = 0;
-  bufferDescription[1].slot = 1;
-  bufferDescription[1].pitch = sizeof(float3);
-  bufferDescription[1].input_rate = SDL_GPU_VERTEXINPUTRATE_VERTEX;
-  bufferDescription[0].instance_step_rate = 0;
-  bufferDescription[2].slot = 2;
-  bufferDescription[2].pitch = sizeof(float4);
-  bufferDescription[2].input_rate = SDL_GPU_VERTEXINPUTRATE_VERTEX;
-  bufferDescription[2].instance_step_rate = 0;
+  SDL_GPUVertexBufferDescription bufferDescriptions[2];
+  bufferDescriptions[0].slot = 0;
+  bufferDescriptions[0].pitch = sizeof(float3);
+  bufferDescriptions[0].input_rate = SDL_GPU_VERTEXINPUTRATE_VERTEX;
+  bufferDescriptions[0].instance_step_rate = 0;
+  bufferDescriptions[1].slot = 1;
+  bufferDescriptions[1].pitch = sizeof(float3);
+  bufferDescriptions[1].input_rate = SDL_GPU_VERTEXINPUTRATE_VERTEX;
+  bufferDescriptions[1].instance_step_rate = 0;
 
-  graphicsPipelineCreateInfo.vertex_input_state.vertex_buffer_descriptions = bufferDescription;
-  graphicsPipelineCreateInfo.vertex_input_state.num_vertex_buffers = SDL_arraysize(bufferDescription);
+  graphicsPipelineCreateInfo.vertex_input_state.vertex_buffer_descriptions = bufferDescriptions;
 
   // Remember to come back to this later in the tutorial, don't show it off immediately.
   graphicsPipelineCreateInfo.depth_stencil_state.compare_op = SDL_GPU_COMPAREOP_GREATER_OR_EQUAL;
@@ -1452,59 +1092,67 @@ TechniqueContext CreateTechniqueContext(SDL_GPUTextureFormat aDepthFormat) {
     0,
     SDL_PROPERTY_TYPE_INVALID
   );
-  SDL_assert(graphicsPipelineCreateInfo.vertex_shader);
+  SDL_assert_always(graphicsPipelineCreateInfo.vertex_shader);
 
   graphicsPipelineCreateInfo.fragment_shader = CreateShader(
     "VertexAndIndexBuffer.frag",
     SDL_GPU_SHADERSTAGE_FRAGMENT,
-    1,
+    0,
     0,
     0,
     0,
     SDL_PROPERTY_TYPE_INVALID
   );
-  SDL_assert(graphicsPipelineCreateInfo.fragment_shader);
+  SDL_assert_always(graphicsPipelineCreateInfo.fragment_shader);
 
-  SDL_assert(SDL_SetStringProperty(gContext.mProperties, SDL_PROP_GPU_GRAPHICSPIPELINE_CREATE_NAME_STRING, "TechniqueContext"));
+  SDL_assert_always(SDL_SetStringProperty(gContext.mProperties, SDL_PROP_GPU_GRAPHICSPIPELINE_CREATE_NAME_STRING, "TechniqueContext"));
 
   TechniqueContext context;
-
-  // Broke the name so that we don't waste time zipping it while the example isn't done.
-  context.mModel = LoadGltfModel("buster_drone.glb");
-
+  SDL_zero(context);
   context.mPipeline = SDL_CreateGPUGraphicsPipeline(gContext.mDevice, &graphicsPipelineCreateInfo);
-  context.mTexture = CreateAndUploadTexture(NULL, "sample.bmp");
+  SDL_assert_always(context.mPipeline);
 
-  SDL_GPUSamplerCreateInfo samplerCreateInfo;
-  SDL_zero(samplerCreateInfo);
-  context.mSampler = SDL_CreateGPUSampler(gContext.mDevice, &samplerCreateInfo);
-  SDL_assert(context.mPipeline);
+  {
+    cgltf_data* data = LoadGltfFile("utah_teapot.glb");
 
-  context.mUniform[0].mPosition.x = 0.f;
+    // Ensure we have data from the gltf, at least a single mesh, and that the first mesh has at least 1 triangle.
+    SDL_assert_always(data && data->meshes_count && data->meshes[0].primitives_count);
+
+    const cgltf_primitive* primitive = &data->meshes[0].primitives[0];
+    
+    MeshDataSize meshSize = GetPrimitiveSize(primitive);
+
+    MeshInfo* meshInfo =  SDL_calloc(1, sizeof(MeshInfo));
+    meshInfo->mWorldTransform = IdentityMatrix();
+    meshInfo->mVertexCount = meshSize.mVertexCount;
+    meshInfo->mIndexCount = meshSize.mIndexCount;
+
+    context.mModel.mMeshes = meshInfo;
+
+    float3* positionsBuffer = (float3*)SDL_calloc(meshSize.mVertexCount, sizeof(float3));
+    float3* normalsBuffer = (float3*)SDL_calloc(meshSize.mVertexCount, sizeof(float3));
+    Uint32* indicesBuffer = (Uint32*)SDL_calloc(meshSize.mIndexCount, sizeof(Uint32));
+
+    const cgltf_accessor* positions = FindAttribute(primitive, cgltf_attribute_type_position);
+    const cgltf_accessor* normals = FindAttribute(primitive, cgltf_attribute_type_normal);
+
+    unpack_cgltf_float3(positions, (cgltf_float*)positionsBuffer);
+    unpack_cgltf_float3(normals, (cgltf_float*)normalsBuffer);
+    unpack_cgltf_uint32(primitive->indices, indicesBuffer);
+
+    UploadToModel(&context.mModel, positionsBuffer, normalsBuffer, indicesBuffer, meshSize.mVertexCount, meshSize.mIndexCount);
+
+    SDL_free(positionsBuffer);
+    SDL_free(normalsBuffer);
+    SDL_free(indicesBuffer);
+
+    cgltf_free(data);
+  }
+
+  context.mUniform[0] = GetDefaultTransform();
   context.mUniform[0].mPosition.y = -1.f;
   context.mUniform[0].mPosition.z = 5.f;
-  context.mUniform[0].mPosition.w = 1.f;
-  context.mUniform[0].mScale.x = 1.0f;
-  context.mUniform[0].mScale.y = 1.0f;
-  context.mUniform[0].mScale.z = 1.0f;
-  context.mUniform[0].mScale.w = 1.0f;
-  context.mUniform[0].mRotation.x = 0.f;
-  context.mUniform[0].mRotation.y = 0.f;
-  context.mUniform[0].mRotation.z = 0.f;
-  context.mUniform[0].mRotation.w = 0.f;
-
-  context.mUniform[1].mPosition.x = 0.f;
-  context.mUniform[1].mPosition.y = -1.f;
-  context.mUniform[1].mPosition.z = 10.f;
-  context.mUniform[1].mPosition.w = 0.f;
-  context.mUniform[1].mScale.x = 2.f;
-  context.mUniform[1].mScale.y = 2.f;
-  context.mUniform[1].mScale.z = 2.f;
-  context.mUniform[1].mScale.w = 2.f;
-  context.mUniform[1].mRotation.x = 0.f;
-  context.mUniform[1].mRotation.y = 0.f;
-  context.mUniform[1].mRotation.z = 0.f;
-  context.mUniform[1].mRotation.w = 0.f;
+  context.mUniform[1] = GetDefaultTransform();
 
   SDL_ReleaseGPUShader(gContext.mDevice, graphicsPipelineCreateInfo.vertex_shader);
   SDL_ReleaseGPUShader(gContext.mDevice, graphicsPipelineCreateInfo.fragment_shader);
@@ -1515,64 +1163,32 @@ TechniqueContext CreateTechniqueContext(SDL_GPUTextureFormat aDepthFormat) {
 void DrawTechniqueContext(TechniqueContext* aContext, SDL_GPUCommandBuffer* aCommandBuffer, SDL_GPURenderPass* aRenderPass)
 {
   SDL_BindGPUGraphicsPipeline(aRenderPass, aContext->mPipeline);
-
-  float4x4 model = CreateModelMatrix(aContext->mUniform[0].mPosition, aContext->mUniform[0].mScale, aContext->mUniform[0].mRotation);
   SDL_PushGPUVertexUniformData(aCommandBuffer, 2, &gContext.WorldToNDC, sizeof(gContext.WorldToNDC));
+  float4x4 modelTransform = CreateModelMatrixFromTransform(&aContext->mUniform[0]);
 
-  for (size_t i = 0; i < aContext->mModel.mMeshesCount; ++i) {
-    Mesh* mesh = aContext->mModel.mMeshes + i;
+  MeshInfo* meshInfo = &aContext->mModel.mMeshes[0];
 
-    // I should preprocess this list and iterate that instead so I don't have to do this.
-    if (mesh->mIndicesCount == 0) {
-      continue;
-    }
+  float4x4 objectToWorld = Float4x4_Multiply(&modelTransform, &meshInfo->mWorldTransform);
+  
+  SDL_GPUBufferBinding vertexBindings[2];
+  vertexBindings[0].buffer = aContext->mModel.mPositionBuffer;
+  vertexBindings[0].offset = meshInfo->mVertexOffset * sizeof(float3);
+  vertexBindings[1].buffer = aContext->mModel.mNormalBuffer;
+  vertexBindings[1].offset = meshInfo->mVertexOffset * sizeof(float3);
+  SDL_BindGPUVertexBuffers(aRenderPass, 0, vertexBindings, SDL_arraysize(vertexBindings));
 
-    {
-      SDL_GPUBufferBinding binding[3];
-      binding[0].buffer = aContext->mModel.mPositions;
-      binding[0].offset = mesh->mPositionOffset;
-      binding[1].buffer = aContext->mModel.mNormals;
-      binding[1].offset = mesh->mNormalOffset;
-      binding[2].buffer = aContext->mModel.mTangents;
-      binding[2].offset = mesh->mTangentOffset;
-      SDL_BindGPUVertexBuffers(aRenderPass, 0, binding, SDL_arraysize(binding));
-    
-    }
-    
-    {
-      SDL_GPUBufferBinding binding;
-      binding.buffer = aContext->mModel.mIndices;
-      binding.offset = mesh->mIndexOffset;
-      SDL_BindGPUIndexBuffer(aRenderPass, &binding, SDL_GPU_INDEXELEMENTSIZE_32BIT);
-    }
+  SDL_GPUBufferBinding indexBinding;
+  indexBinding.buffer = aContext->mModel.mIndexBuffer;
+  indexBinding.offset = meshInfo->mIndexOffset * sizeof(Uint32);
+  SDL_BindGPUIndexBuffer(aRenderPass, &indexBinding, SDL_GPU_INDEXELEMENTSIZE_32BIT);
 
-    {
-      SDL_GPUTextureSamplerBinding textureBinding;
-      SDL_zero(textureBinding);
-      textureBinding.texture = aContext->mTexture;
-      textureBinding.sampler = aContext->mSampler;
-      SDL_BindGPUFragmentSamplers(aRenderPass, 0, &textureBinding, 1);
-    }
-
-    //float4x4 meshMatrix = Float4x4_Multiply(&mesh->mCurrentTransform, &model);
-    float4x4 meshMatrix = Float4x4_Multiply(&model, &mesh->mCurrentTransform);
-    //float4x4 meshMatrix = model;
-
-    SDL_PushGPUVertexUniformData(aCommandBuffer, 1, &meshMatrix, sizeof(meshMatrix));
-
-    SDL_DrawGPUIndexedPrimitives(aRenderPass, mesh->mIndicesCount, 1, 0, 0, 0);
-  }
+  SDL_PushGPUVertexUniformData(aCommandBuffer, 1, &objectToWorld, sizeof(objectToWorld));
+  SDL_DrawGPUIndexedPrimitives(aRenderPass, meshInfo->mIndexCount, 1, 0, 0, 0);
 }
 
 void DestroyTechniqueContext(TechniqueContext* aContext)
 {
-  SDL_ReleaseGPUBuffer(gContext.mDevice, aContext->mModel.mPositions);
-  SDL_ReleaseGPUBuffer(gContext.mDevice, aContext->mModel.mNormals);
-  SDL_ReleaseGPUBuffer(gContext.mDevice, aContext->mModel.mTangents);
-  SDL_ReleaseGPUBuffer(gContext.mDevice, aContext->mModel.mIndices);
-
-  SDL_ReleaseGPUTexture(gContext.mDevice, aContext->mTexture);
-  SDL_ReleaseGPUSampler(gContext.mDevice, aContext->mSampler);
+  DestroyModel(&aContext->mModel);
   SDL_ReleaseGPUGraphicsPipeline(gContext.mDevice, aContext->mPipeline);
   SDL_zero(*aContext);
 }
@@ -1602,7 +1218,7 @@ void FlybyCamera(Transform* aCamera, const bool* aKeyMap, float2 aFrameMouseMove
     movementDirection = Float3_Add(movementDirection, Float3_Scalar_Multiply(orientation.mRight, aFrameMouseMove.x * -.1f));
     movementDirection = Float3_Add(movementDirection, Float3_Scalar_Multiply(orientation.mUp, aFrameMouseMove.y * .1f));
   }
-  
+
   aCamera->mPosition = Float4_From3(Float3_Add(
     Float3_Scalar_Multiply(movementDirection, aSpeed * aDt),
     Float4_XYZ(aCamera->mPosition)),
@@ -1618,10 +1234,10 @@ int main(int argc, char** argv)
 {
   (void)argc;
   (void)argv;
-  SDL_assert(SDL_Init(SDL_INIT_VIDEO));
+  SDL_assert_always(SDL_Init(SDL_INIT_VIDEO));
 
   SDL_Window* window = SDL_CreateWindow(TARGET_NAME, 1280, 720, 0);
-  SDL_assert(window);
+  SDL_assert_always(window);
 
   CreateGpuContext(window);
 
@@ -1653,8 +1269,7 @@ int main(int argc, char** argv)
     float dt = (current_frame_ticks_so_far - last_frame_ticks_so_far) / 1000000000.f;
     last_frame_ticks_so_far = current_frame_ticks_so_far;
 
-    SDL_Event event;
-    while (SDL_PollEvent(&event)) {
+    for (SDL_Event event; SDL_PollEvent(&event);) {
       switch (event.common.type) {
         case SDL_EVENT_QUIT:
           running = false;
@@ -1664,6 +1279,7 @@ int main(int argc, char** argv)
           mouseMove.y = event.motion.yrel;
           break;
       }
+
     }
 
     int w = 0, h = 0;
@@ -1714,7 +1330,7 @@ int main(int argc, char** argv)
     {
       SDL_ReleaseGPUTexture(gContext.mDevice, depthTexture);
       depthTexture = CreateTexture(swapchainWidth, swapchainHeight, 1, 1, SDL_GPU_TEXTUREUSAGE_DEPTH_STENCIL_TARGET, depthFormat, "DepthTexture");
-      SDL_assert(depthTexture);
+      SDL_assert_always(depthTexture);
 
       depthWidth = swapchainWidth;
       depthHeight = swapchainHeight;

@@ -9,10 +9,34 @@ collections: ["lessons"]
 
 ## Vertex and Index arrays in more detail
 
+```hlsl
+static const float3 cVertexPositions[8] = {
+  { -1.0f,  1.0f, -1.0f },
+  {  1.0f,  1.0f, -1.0f },
+  { -1.0f, -1.0f, -1.0f },
+  {  1.0f, -1.0f, -1.0f },
+  { -1.0f,  1.0f,  1.0f },
+  {  1.0f,  1.0f,  1.0f },
+  { -1.0f, -1.0f,  1.0f },
+  {  1.0f, -1.0f,  1.0f },
+};
 
+static const uint cVertexIndices[36] = {
+  0, 1, 2, 1, 3, 2,
+  5, 4, 7, 4, 6, 7,
+  4, 5, 0, 5, 1, 0,
+  2, 3, 6, 3, 7, 6,
+  4, 0, 6, 0, 2, 6,
+  1, 5, 3, 5, 7, 3,
+};
+```
 
 ## Front and Back Face Culling
 
+```c
+graphicsPipelineCreateInfo.rasterizer_state.front_face = SDL_GPU_FRONTFACE_CLOCKWISE;
+graphicsPipelineCreateInfo.rasterizer_state.cull_mode = SDL_GPU_CULLMODE_BACK;
+```
 
 ```
            4---------------------5
@@ -63,7 +87,7 @@ Unlike with direct vector math, with matrices, most math is going to be done eit
 
 #### Multiplication
 
-Before going over the code and formula, we should make sure we understand how Matrix Multiplication works.
+Before going over the code and formula, we should make sure we understand how Matrix Multiplication works. Each element of a Matrix corresponds to the dot product between a row from one matrix, and a column from the other. We can then infer from that that the Matrices must match dimentionally somehow, so that we have enough elements .
 
 
 $$\begin{array}{cc}
@@ -88,6 +112,43 @@ C =
 (3*5)+(4*8) & (3*6)+(4*9) & (3*7)+(4*10)
 \end{pmatrix}
 \end{array}$$
+
+```c
+float4x4 Float4x4_Multiply(const float4x4* aLeft, const float4x4* aRight)
+{
+  float4x4 toReturn;
+  SDL_zero(toReturn);
+
+  for (size_t i = 0; i < 4; ++i)
+  {
+    toReturn.data[i][0] =
+      aLeft->data[0][0] * aRight->data[i][0] +
+      aLeft->data[1][0] * aRight->data[i][1] +
+      aLeft->data[2][0] * aRight->data[i][2] +
+      aLeft->data[3][0] * aRight->data[i][3];
+
+    toReturn.data[i][1] =
+      aLeft->data[0][1] * aRight->data[i][0] +
+      aLeft->data[1][1] * aRight->data[i][1] +
+      aLeft->data[2][1] * aRight->data[i][2] +
+      aLeft->data[3][1] * aRight->data[i][3];
+
+    toReturn.data[i][2] =
+      aLeft->data[0][2] * aRight->data[i][0] +
+      aLeft->data[1][2] * aRight->data[i][1] +
+      aLeft->data[2][2] * aRight->data[i][2] +
+      aLeft->data[3][2] * aRight->data[i][3];
+
+    toReturn.data[i][3] =
+      aLeft->data[0][3] * aRight->data[i][0] +
+      aLeft->data[1][3] * aRight->data[i][1] +
+      aLeft->data[2][3] * aRight->data[i][2] +
+      aLeft->data[3][3] * aRight->data[i][3];
+  }
+
+  return toReturn;
+}
+```
 
 ##### Matrix * Vector Multiplication
 
@@ -235,5 +296,83 @@ It's time to build out some matrix math functionality. If you're already comfort
 
 > Note: The implementations here are naive and intended for learning, rather than high performance work. I intend to teach you how to do things effectively and ideally in a fairly performant manner in this series, but I'm not counting CPU cycles or planning to drop down into SIMD.
 
+```c
+float4x4 CreateModelMatrix(float4 aPosition, float4 aScale, float4 aRotation) {
+  float4x4 translation = TranslationMatrix(aPosition);
+  float4x4 rotation = RotationMatrix(aRotation);
+  float4x4 scale = ScaleMatrix(aScale);
+
+  float4x4 scale_rotation = Float4x4_Multiply(&rotation, &scale);
+  return Float4x4_Multiply(&translation, &scale_rotation);
+}
+
+float4x4 CreateModelMatrixFromTransform(const Transform* aTransform) {
+  return CreateModelMatrix(aTransform->mPosition, aTransform->mScale, aTransform->mRotation);
+}
+```
 
 ## Perspective Projection Matrix
+
+```c
+float4x4 PerspectiveProjectionLHZO(
+  float aFovY,
+  float aAspectRatio,
+  float aNear,
+  float aFar)
+{
+  float4x4 toReturn;
+  SDL_zero(toReturn);
+
+  const float focalLength = 1.0f / SDL_tan(aFovY * .5f);
+  const float k = aFar / (aFar - aNear);
+
+  toReturn.data[0][0] = focalLength / aAspectRatio;
+  toReturn.data[1][1] = focalLength;
+  toReturn.data[2][2] = k;
+  toReturn.data[2][3] = 1.0f;
+  toReturn.data[3][2] = -aNear * k;
+
+  return toReturn;
+}
+```
+
+## Transforming the Cube in the Vertex Shader
+
+```hlsl
+cbuffer UBO : register(b0, space1)
+{
+  float4x4 ObjectToWorld;
+};
+
+cbuffer UB1 : register(b1, space1)
+{
+  float4x4 WorldToNDC;
+};
+
+Output main(uint id : SV_VertexID)
+{
+  uint vertexIndex = cVertexIndices[id % 36];
+  uint uvIndex = cVertexIndices[id % 6];
+
+  Output output;
+  float3 vertex = cVertexPositions[vertexIndex];
+  float2 uv = cVertexPositions[uvIndex].xy;
+
+  output.Position = mul(WorldToNDC, mul(ObjectToWorld, float4(vertex, 1.0f)));
+  output.UV = (uv + 1.0f) * 0.5f;
+  return output;
+}
+```
+
+## Drawing the Cube
+
+```c
+float4x4 model = CreateModelMatrixFromTransform(&aContext->mUniform);
+SDL_PushGPUVertexUniformData(aCommandBuffer, 0, &model, sizeof(model));
+SDL_DrawGPUPrimitives(
+  aRenderPass,
+  6 /* 6 per face */ * 6 /* 6 sides of our cube */,
+  1,
+  0,
+  0);
+```

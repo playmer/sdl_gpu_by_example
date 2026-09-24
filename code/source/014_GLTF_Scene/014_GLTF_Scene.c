@@ -1,6 +1,11 @@
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_stdinc.h>
 
+#ifndef __cplusplus
+#define CGLTF_IMPLEMENTATION
+#endif
+#include "cgltf.h"
+
 // This is for testing to ensure the code works in both C and C++,
 // this entire preprocessor block should just be the #include
 // in your own code.
@@ -37,6 +42,40 @@ typedef struct Transform {
   float4 mScale;
   float4 mRotation;
 } Transform;
+
+typedef struct Orientation {
+  float3 mForward;
+  float3 mRight;
+  float3 mUp;
+} Orientation;
+
+Transform GetDefaultTransform()
+{
+  Transform toReturn;
+
+  toReturn.mPosition.x = 0.f;
+  toReturn.mPosition.y = 0.f;
+  toReturn.mPosition.z = 0.f;
+  toReturn.mPosition.w = 0.f;
+  toReturn.mScale.x = 1.f;
+  toReturn.mScale.y = 1.f;
+  toReturn.mScale.z = 1.f;
+  toReturn.mScale.w = 1.f;
+  toReturn.mRotation.x = 0.f;
+  toReturn.mRotation.y = 0.f;
+  toReturn.mRotation.z = 0.f;
+  toReturn.mRotation.w = 0.f;
+
+  return toReturn;
+}
+
+float4 Float4_From3(float3 aFloat3, float aW) {
+  float4 toReturn = {
+    aFloat3.x, aFloat3.y, aFloat3.z, aW,
+  };
+
+  return toReturn;
+}
 
 //////////////////////////////////////////////////////
 // Downcasts
@@ -89,24 +128,6 @@ float3 Float3_Add(float3 aLeft, float3 aRight) {
 
 float4 Float4_Add(float4 aLeft, float4 aRight) {
   float4 toReturn = { aLeft.x + aRight.x, aLeft.y + aRight.y, aLeft.z + aRight.z, aLeft.w + aRight.w };
-  return toReturn;
-}
-
-//////////////////////////////////////////////////////
-// Multiplication
-
-float2 Float2_Multiply(float2 aLeft, float2 aRight) {
-  float2 toReturn = { aLeft.x * aRight.x, aLeft.y * aRight.y };
-  return toReturn;
-}
-
-float3 Float3_Multiply(float3 aLeft, float3 aRight) {
-  float3 toReturn = { aLeft.x * aRight.x, aLeft.y * aRight.y, aLeft.z * aRight.z };
-  return toReturn;
-}
-
-float4 Float4_Multiply(float4 aLeft, float4 aRight) {
-  float4 toReturn = { aLeft.x * aRight.x, aLeft.y * aRight.y, aLeft.z * aRight.z, aLeft.w * aRight.w };
   return toReturn;
 }
 
@@ -330,6 +351,58 @@ float4x4 Float4x4_Multiply(const float4x4* aLeft, const float4x4* aRight)
   return toReturn;
 }
 
+float4x4 Float4x4_Inverse(const float4x4* aValue)
+{
+  const float3 a = Float4_XYZ(aValue->columns[0]);
+  const float3 b = Float4_XYZ(aValue->columns[1]);
+  const float3 c = Float4_XYZ(aValue->columns[2]);
+  const float3 d = Float4_XYZ(aValue->columns[3]);
+
+  const float x = aValue->data[0][3];
+  const float y = aValue->data[1][3];
+  const float z = aValue->data[2][3];
+  const float w = aValue->data[3][3];
+
+  const float3 s = Float3_Cross(a, b);
+  const float3 t = Float3_Cross(c, d);
+  const float3 u = Float3_Add(Float3_Scalar_Multiply(a, y), Float3_Scalar_Multiply(b, x));
+  const float3 v = Float3_Subtract(Float3_Scalar_Multiply(c, w), Float3_Scalar_Multiply(d, z));
+
+  const float determinant_inverse = 1.0f / (Float3_Dot(s, v) + Float3_Dot(t, u));
+
+  const float3 s_prime = Float3_Scalar_Multiply(s, determinant_inverse);
+  const float3 t_prime = Float3_Scalar_Multiply(t, determinant_inverse);
+  const float3 u_prime = Float3_Scalar_Multiply(u, determinant_inverse);
+  const float3 v_prime = Float3_Scalar_Multiply(v, determinant_inverse);
+
+  const float3 row0 =      Float3_Add(Float3_Cross(      b, v_prime), Float3_Scalar_Multiply(t_prime, y));
+  const float3 row1 = Float3_Subtract(Float3_Cross(v_prime,       a), Float3_Scalar_Multiply(t_prime, x));
+  const float3 row2 =      Float3_Add(Float3_Cross(      d, u_prime), Float3_Scalar_Multiply(s_prime, w));
+  const float3 row3 = Float3_Subtract(Float3_Cross(u_prime,       c), Float3_Scalar_Multiply(s_prime, z));
+
+  float4x4 toReturn;
+  toReturn.data[0][0] = row0.x;
+  toReturn.data[0][1] = row1.x;
+  toReturn.data[0][2] = row2.x;
+  toReturn.data[0][3] = row3.x;
+
+  toReturn.data[1][0] = row0.y;
+  toReturn.data[1][1] = row1.y;
+  toReturn.data[1][2] = row2.y;
+  toReturn.data[1][3] = row3.y;
+
+  toReturn.data[2][0] = row0.z;
+  toReturn.data[2][1] = row1.z;
+  toReturn.data[2][2] = row2.z;
+  toReturn.data[2][3] = row3.z;
+
+  toReturn.data[3][0] = -Float3_Dot(b, t_prime);
+  toReturn.data[3][1] =  Float3_Dot(a, t_prime);
+  toReturn.data[3][2] = -Float3_Dot(d, s_prime);
+  toReturn.data[3][3] =  Float3_Dot(c, s_prime);
+
+  return toReturn;
+}
 
 ////////////////////////////////////////////////////////////
 /// Core Matrices
@@ -352,7 +425,7 @@ float4x4 TranslationMatrix(float4 aPosition) {
   toReturn.data[3][0] = aPosition.x;
   toReturn.data[3][1] = aPosition.y;
   toReturn.data[3][2] = aPosition.z;
-  
+
   return toReturn;
 }
 
@@ -369,10 +442,10 @@ float4x4 ScaleMatrix(float4 aScale) {
 float4x4 RotationMatrixX(float aAngle) {
   float4x4 toReturn = IdentityMatrix();
 
-  toReturn.data[1][1] =  SDL_cosf(aAngle);
-  toReturn.data[1][2] =  SDL_sinf(aAngle);
+  toReturn.data[1][1] = SDL_cosf(aAngle);
+  toReturn.data[1][2] = SDL_sinf(aAngle);
   toReturn.data[2][1] = -SDL_sinf(aAngle);
-  toReturn.data[2][2] =  SDL_cosf(aAngle);
+  toReturn.data[2][2] = SDL_cosf(aAngle);
 
   return toReturn;
 }
@@ -380,10 +453,10 @@ float4x4 RotationMatrixX(float aAngle) {
 float4x4 RotationMatrixY(float aAngle) {
   float4x4 toReturn = IdentityMatrix();
 
-  toReturn.data[0][0] =  SDL_cosf(aAngle);
+  toReturn.data[0][0] = SDL_cosf(aAngle);
   toReturn.data[0][2] = -SDL_sinf(aAngle);
-  toReturn.data[2][0] =  SDL_sinf(aAngle);
-  toReturn.data[2][2] =  SDL_cosf(aAngle);
+  toReturn.data[2][0] = SDL_sinf(aAngle);
+  toReturn.data[2][2] = SDL_cosf(aAngle);
 
   return toReturn;
 }
@@ -391,10 +464,10 @@ float4x4 RotationMatrixY(float aAngle) {
 float4x4 RotationMatrixZ(float aAngle) {
   float4x4 toReturn = IdentityMatrix();
 
-  toReturn.data[0][0] =  SDL_cosf(aAngle);
-  toReturn.data[0][1] =  SDL_sinf(aAngle);
+  toReturn.data[0][0] = SDL_cosf(aAngle);
+  toReturn.data[0][1] = SDL_sinf(aAngle);
   toReturn.data[1][0] = -SDL_sinf(aAngle);
-  toReturn.data[1][1] =  SDL_cosf(aAngle);
+  toReturn.data[1][1] = SDL_cosf(aAngle);
 
   return toReturn;
 }
@@ -403,9 +476,9 @@ float4x4 RotationMatrix(float4 aPosition) {
   float4x4 xRotation = RotationMatrixX(aPosition.x);
   float4x4 yRotation = RotationMatrixY(aPosition.y);
   float4x4 zRotation = RotationMatrixZ(aPosition.z);
-  
+
   float4x4 xyRotation = Float4x4_Multiply(&yRotation, &xRotation);
-  
+
   return Float4x4_Multiply(&zRotation, &xyRotation);
 }
 
@@ -421,6 +494,48 @@ float4x4 CreateModelMatrix(float4 aPosition, float4 aScale, float4 aRotation) {
 
 float4x4 CreateModelMatrixFromTransform(const Transform* aTransform) {
   return CreateModelMatrix(aTransform->mPosition, aTransform->mScale, aTransform->mRotation);
+}
+
+Orientation GetOrientation(const Transform* aTransform) {
+  float4 forward = {
+    0.f, 0.f, 1.0f, 1.0f
+  };
+
+  float4 right = {
+    1.f, 0.f, 0.0f, 1.0f
+  };
+
+  float4 up = {
+    0.f, 1.f, 0.0f, 1.0f
+  };
+
+  float4x4 rotation = RotationMatrix(aTransform->mRotation);
+
+  Orientation toReturn = {
+    Float4_XYZ(Float4x4_Float4_Multiply(&rotation, forward)),
+    Float4_XYZ(Float4x4_Float4_Multiply(&rotation, right)),
+    Float4_XYZ(Float4x4_Float4_Multiply(&rotation, up))
+  };
+
+  return toReturn;
+}
+
+////////////////////////////////////////////////////////////
+/// Views
+
+float4x4 LookAtLH(float3 aEye, float3 aCenter, float3 aUp) {
+  float4x4 toReturn;
+  SDL_zero(toReturn);
+
+  float3 forward = Float3_Normalize(Float3_Subtract(aEye, aCenter));
+
+  //toReturn.data[0][0] = 1.0f / (aAspectRatio * tanHalfFovy);
+  //toReturn.data[1][1] = 1.0f / (tanHalfFovy);
+  //toReturn.data[2][2] = aFar / (aFar - aNear);
+  //toReturn.data[2][3] = 1.0f;
+  //toReturn.data[3][2] = -(aFar * aNear) / (aFar - aNear);
+
+  return toReturn;
 }
 
 float4x4 OrthographicProjectionLHZO(float aLeft, float aRight, float aBottom, float aTop, float aNear, float aFar) {
@@ -452,6 +567,41 @@ float4x4 PerspectiveProjectionLHZO(float aFovY, float aAspectRatio, float aNear,
   toReturn.data[2][2] = k;
   toReturn.data[2][3] = 1.0f;
   toReturn.data[3][2] = -aNear * k;
+
+  return toReturn;
+}
+
+float4x4 PerspectiveProjectionLHOZ(float aFovY, float aAspectRatio, float aNear, float aFar) {
+  float4x4 toReturn;
+  SDL_zero(toReturn);
+
+  const float focalLength = 1.0f / SDL_tan(aFovY * .5f);
+  const float k = aNear / (aNear - aFar);
+
+  toReturn.data[0][0] = focalLength / aAspectRatio;
+  toReturn.data[1][1] = focalLength;
+  toReturn.data[2][2] = k;
+  toReturn.data[2][3] = 1.0f;
+  toReturn.data[3][2] = -aFar * k;
+
+  return toReturn;
+}
+
+float4x4 InfinitePerspectiveProjectionLHOZ(float aFovY, float aAspectRatio, float aNear) {
+  float4x4 toReturn;
+  SDL_zero(toReturn);
+
+  const float focalLength = 1.0f / SDL_tan(aFovY * .5f);
+
+  // For ease of use we're hardcoding the epsilon to what's recommended in Foundations of Game Engine
+  // Development: Rendering, which is 2^(-20).
+  const float epsilon = SDL_powf(2, -20);
+
+  toReturn.data[0][0] = focalLength / aAspectRatio;
+  toReturn.data[1][1] = focalLength;
+  toReturn.data[2][2] = epsilon;
+  toReturn.data[2][3] = 1.0f;
+  toReturn.data[3][2] = aNear / (1.0f - epsilon);
 
   return toReturn;
 }
@@ -681,8 +831,7 @@ SDL_GPUTextureFormat GetSupportedDepthFormat()
   };
 
   for (size_t i = 0; i < SDL_arraysize(possibleFormats); ++i) {
-    if (SDL_GPUTextureSupportsFormat(
-      gContext.mDevice,
+    if (SDL_GPUTextureSupportsFormat(gContext.mDevice,
       possibleFormats[i],
       SDL_GPU_TEXTURETYPE_2D,
       SDL_GPU_TEXTUREUSAGE_DEPTH_STENCIL_TARGET))
@@ -697,17 +846,318 @@ SDL_GPUTextureFormat GetSupportedDepthFormat()
   return SDL_GPU_TEXTUREFORMAT_INVALID;
 }
 
+SDL_GPUBuffer* CreateAndUploadBuffer(const void* aData, Uint32 aSize, SDL_GPUBufferUsageFlags aUsage, const char* aName)
+{
+  SDL_SetStringProperty(gContext.mProperties, SDL_PROP_GPU_BUFFER_CREATE_NAME_STRING, aName);
+
+  SDL_GPUBufferCreateInfo bufferCreateInfo;
+  SDL_zero(bufferCreateInfo);
+
+  bufferCreateInfo.usage = aUsage;
+  bufferCreateInfo.size = aSize;
+  bufferCreateInfo.props = gContext.mProperties;
+
+  SDL_GPUBuffer* buffer = SDL_CreateGPUBuffer(gContext.mDevice, &bufferCreateInfo);
+  SDL_assert_always(buffer);
+
+  {
+    char tranfer_buffer_name[4096];
+    SDL_snprintf(tranfer_buffer_name, SDL_arraysize(tranfer_buffer_name), "CreateAndUploadBuffer Transfer Buffer for %s", aName);
+
+    SDL_GPUTransferBuffer* transferBuffer = CreateTransferBuffer(aSize, SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD, tranfer_buffer_name);
+
+    {
+      void* mappedBuffer = SDL_MapGPUTransferBuffer(gContext.mDevice, transferBuffer, false);
+      SDL_memcpy(mappedBuffer, aData, aSize);
+      SDL_UnmapGPUTransferBuffer(gContext.mDevice, transferBuffer);
+    }
+
+    SDL_GPUCommandBuffer* commandBuffer = SDL_AcquireGPUCommandBuffer(gContext.mDevice);
+    SDL_assert_always(commandBuffer);
+    SDL_GPUCopyPass* copyPass = SDL_BeginGPUCopyPass(commandBuffer);
+    SDL_assert_always(copyPass);
+
+    SDL_GPUTransferBufferLocation source;
+    source.offset = 0;
+    source.transfer_buffer = transferBuffer;
+
+    SDL_GPUBufferRegion destination;
+    destination.buffer = buffer;
+    destination.offset = 0;
+    destination.size = aSize;
+
+    SDL_UploadToGPUBuffer(copyPass, &source, &destination, false);
+
+    SDL_EndGPUCopyPass(copyPass);
+    SDL_SubmitGPUCommandBuffer(commandBuffer);
+    SDL_ReleaseGPUTransferBuffer(gContext.mDevice, transferBuffer);
+  }
+
+  return buffer;
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Mesh Code
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+typedef struct MeshInfo {
+  float4x4 mWorldTransform;
+  Uint32 mVertexOffset;
+  Uint32 mIndexOffset;
+  Uint32 mIndexCount;
+  Uint32 mVertexCount;
+} MeshInfo;
+
+typedef struct Model {
+  SDL_GPUBuffer* mPositionBuffer;
+  SDL_GPUBuffer* mNormalBuffer;
+  SDL_GPUBuffer* mIndexBuffer;
+  MeshInfo* mMeshes;
+  Uint32 mMeshCount;
+} Model;
+
+void UploadToModel(
+  Model* aModel,
+  const float3* aPositions,
+  const float3* aNormals,
+  const Uint32* aIndices,
+  Uint32 aVertexCount,
+  Uint32 aIndexCount)
+{
+  aModel->mPositionBuffer = CreateAndUploadBuffer(aPositions, aVertexCount * sizeof(*aPositions), SDL_GPU_BUFFERUSAGE_VERTEX, "PositionBuffer");
+  SDL_assert_always(aModel->mPositionBuffer);
+  aModel->mNormalBuffer = CreateAndUploadBuffer(aNormals, aVertexCount * sizeof(*aNormals), SDL_GPU_BUFFERUSAGE_VERTEX, "NormalBuffer");
+  SDL_assert_always(aModel->mNormalBuffer);
+  aModel->mIndexBuffer = CreateAndUploadBuffer(aIndices, aIndexCount * sizeof(*aIndices), SDL_GPU_BUFFERUSAGE_INDEX, "IndexBuffer");
+  SDL_assert_always(aModel->mIndexBuffer);
+}
+
+void DestroyModel(Model* aModel)
+{
+  SDL_ReleaseGPUBuffer(gContext.mDevice, aModel->mPositionBuffer); 
+  SDL_ReleaseGPUBuffer(gContext.mDevice, aModel->mNormalBuffer);
+  SDL_ReleaseGPUBuffer(gContext.mDevice, aModel->mIndexBuffer);
+  SDL_free(aModel->mMeshes);
+  SDL_zero(*aModel);
+}
+
+const cgltf_accessor* FindAttribute(
+  const cgltf_primitive* aPrimitive,
+  cgltf_attribute_type aType)
+{
+  for (size_t i = 0; i < aPrimitive->attributes_count; ++i) {
+    if (aPrimitive->attributes[i].type == aType && aPrimitive->attributes[i].index == 0) {
+      return aPrimitive->attributes[i].data;
+    }
+  }
+  return NULL;
+}
+
+typedef struct MeshDataSize {
+  Uint32 mVertexCount;
+  Uint32 mIndexCount;
+} MeshDataSize;
+
+MeshDataSize GetPrimitiveSize(const cgltf_primitive* aPrimitive)
+{
+  MeshDataSize dataSize;
+  SDL_zero(dataSize);
+
+  SDL_assert_always(aPrimitive);
+  SDL_assert_always(aPrimitive->type == cgltf_primitive_type_triangles);
+  SDL_assert_always(aPrimitive->indices);
+
+  const cgltf_accessor* positions = FindAttribute(aPrimitive, cgltf_attribute_type_position);
+  SDL_assert_always(positions);
+
+  const cgltf_accessor* normals = FindAttribute(aPrimitive, cgltf_attribute_type_normal);
+  SDL_assert_always(normals);
+
+  // We only support positions and normals of the vec3 type, and indices of the scalar type.
+  SDL_assert_always(positions->type == cgltf_type_vec3);
+  SDL_assert_always(normals->type == cgltf_type_vec3);
+  SDL_assert_always(aPrimitive->indices->type == cgltf_type_scalar);
+
+  // All attributes need to match in count.
+  SDL_assert_always(positions->count == normals->count);
+
+  // We don't support sparse accessors
+  SDL_assert_always(!positions->is_sparse);
+  SDL_assert_always(!normals->is_sparse);
+  SDL_assert_always(!aPrimitive->indices->is_sparse);
+
+  // We need to have some verts, indices, and we can't have more than a Uint32 can hold.
+  SDL_assert_always(positions->count != 0);
+  SDL_assert_always(aPrimitive->indices->count != 0);
+  SDL_assert_always(positions->count <= SDL_MAX_UINT32);
+  SDL_assert_always(aPrimitive->indices->count <= SDL_MAX_UINT32);
+
+  dataSize.mVertexCount = (Uint32)positions->count;
+  dataSize.mIndexCount = (Uint32)aPrimitive->indices->count;
+
+  return dataSize;
+}
+
+void unpack_cgltf_float3(const cgltf_accessor* aFloat3s, cgltf_float* aBuffer) {
+  SDL_assert_always(cgltf_accessor_unpack_floats(aFloat3s, aBuffer, aFloat3s->count * 3) == aFloat3s->count * 3);
+}
+
+void unpack_cgltf_uint32(const cgltf_accessor* aIndices, Uint32* aBuffer) {
+  SDL_assert_always(cgltf_accessor_unpack_indices(aIndices, aBuffer, sizeof(Uint32), aIndices->count) == aIndices->count);
+}
+
+cgltf_data* LoadGltfFile(const char* aFilename)
+{
+  char model_path[4096];
+  SDL_snprintf(model_path, SDL_arraysize(model_path), "Assets/Models/%s", aFilename);
+
+  cgltf_options options;
+  SDL_zero(options);
+
+  cgltf_data* data = NULL;
+  SDL_assert_always(cgltf_parse_file(&options, model_path, &data) == cgltf_result_success);
+  SDL_assert_always(cgltf_load_buffers(&options, data, model_path) == cgltf_result_success);
+  SDL_assert_always(cgltf_validate(data) == cgltf_result_success);
+  return data;
+}
+
+void ProcessNodeSizes(const cgltf_node* aNode, MeshInfo* aMeshes, Uint32* aCurrentNode, MeshDataSize* aTotal)
+{
+  for (size_t i = 0; i < aNode->children_count; ++i) {
+    ProcessNodeSizes(aNode->children[i], aMeshes, aCurrentNode, aTotal);
+  }
+
+  if (!aNode->mesh) {
+    return;
+  }
+
+  float4x4 worldTransform;
+  cgltf_node_transform_world(aNode, &worldTransform.data[0][0]);
+
+  MeshInfo* currentInfo = &aMeshes[*aCurrentNode];
+  *aCurrentNode += 1;
+
+  currentInfo->mWorldTransform = worldTransform;
+  currentInfo->mVertexOffset = aTotal->mVertexCount;
+  currentInfo->mIndexOffset = aTotal->mIndexCount;
+
+  for (size_t i = 0; i < aNode->mesh->primitives_count; ++i) {
+    MeshDataSize dataSize = GetPrimitiveSize(&aNode->mesh->primitives[i]);
+
+    currentInfo->mVertexCount += dataSize.mVertexCount;
+    currentInfo->mIndexCount += dataSize.mIndexCount;
+
+    SDL_assert_always((aTotal->mVertexCount + (Uint64)dataSize.mVertexCount) <= SDL_MAX_UINT32);
+    SDL_assert_always((aTotal->mIndexCount + (Uint64)dataSize.mIndexCount) <= SDL_MAX_UINT32);
+
+    aTotal->mVertexCount += dataSize.mVertexCount;
+    aTotal->mIndexCount += dataSize.mIndexCount;
+  }
+}
+
+void ProcessNode(
+  Model* aModel, 
+  const cgltf_node* aNode,
+  Uint32* aCurrentNode,
+  float3* aPositions,
+  float3* aNormals,
+  Uint32* aIndices)
+{
+  for (size_t i = 0; i < aNode->children_count; ++i) {
+    ProcessNode(aModel, aNode->children[i], aCurrentNode, aPositions, aNormals, aIndices);
+  }
+
+  if (!aNode->mesh) {
+    return;
+  }
+
+  MeshInfo* currentMesh = &aModel->mMeshes[*aCurrentNode];
+  *aCurrentNode += 1;
+
+  float3* positionsBuffer = aPositions + currentMesh->mVertexOffset;
+  float3* normalsBuffer = aNormals + currentMesh->mVertexOffset;
+  Uint32* indicesBuffer = aIndices + currentMesh->mIndexOffset;
+  Uint32 primitiveVertexOffset = 0;
+
+  for (size_t i = 0; i < aNode->mesh->primitives_count; ++i) {
+    const cgltf_primitive* primitive = &aNode->mesh->primitives[i];
+    const cgltf_accessor* positions = FindAttribute(primitive, cgltf_attribute_type_position);
+    const cgltf_accessor* normals = FindAttribute(primitive, cgltf_attribute_type_normal);
+
+    unpack_cgltf_float3(positions, (cgltf_float*)positionsBuffer);
+    unpack_cgltf_float3(normals, (cgltf_float*)normalsBuffer);
+    unpack_cgltf_uint32(primitive->indices, indicesBuffer);
+
+    // Primitive indices are relative to their own vertex data.
+    for (size_t j = 0; j < primitive->indices->count; ++j) {
+      indicesBuffer[j] += primitiveVertexOffset;
+    }
+
+    primitiveVertexOffset += (Uint32)positions->count;
+    positionsBuffer += positions->count;
+    normalsBuffer += normals->count;
+    indicesBuffer += primitive->indices->count;
+  }
+}
+
+Model LoadModel(const char* aFilename)
+{
+  Model model;
+  SDL_zero(model);
+  cgltf_data* data = LoadGltfFile(aFilename);
+
+  cgltf_scene* scene = data->scene;
+
+  // The default scene may not be specified, let's just display the first one we see.
+  if (!scene && data->scenes_count > 0) {
+    scene = &data->scenes[0];
+  }
+
+  SDL_assert_always(scene);
+
+  // We might overshoot our allocation here, but that's okay, mMeshCount will be the actual
+  // number of meshes we use.
+  model.mMeshes = (MeshInfo*)SDL_calloc(data->nodes_count, sizeof(MeshInfo));
+  Uint32 currentMesh = 0;
+  MeshDataSize totalSize;
+  SDL_zero(totalSize);
+
+  for (size_t i = 0; i < scene->nodes_count; ++i) {
+    ProcessNodeSizes(scene->nodes[i], model.mMeshes, &currentMesh, &totalSize);
+  }
+
+  float3* positions = (float3*)SDL_calloc(totalSize.mVertexCount, sizeof(float3));
+  float3* normals = (float3*)SDL_calloc(totalSize.mVertexCount, sizeof(float3));
+  Uint32* indices = (Uint32*)SDL_calloc(totalSize.mIndexCount, sizeof(Uint32));
+
+  model.mMeshCount = currentMesh;
+  currentMesh = 0;
+
+  for (size_t i = 0; i < scene->nodes_count; ++i) {
+    ProcessNode(&model, scene->nodes[i], &currentMesh, positions, normals, indices);
+  }
+
+  UploadToModel(&model, positions, normals, indices, totalSize.mVertexCount, totalSize.mIndexCount);
+
+  SDL_assert_always(model.mMeshCount);
+
+  SDL_free(positions);
+  SDL_free(normals);
+  SDL_free(indices);
+  cgltf_free(data);
+  return model;
+}
+
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Technique Code
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 typedef struct TechniqueContext {
   SDL_GPUGraphicsPipeline* mPipeline;
-  SDL_GPUTexture* mTexture;
-  SDL_GPUSampler* mSampler;
-  Transform mUniform;
+  Model mModel;
+  Transform mUniform[2];
 } TechniqueContext;
 
-TechniqueContext CreateTechniqueContext(SDL_GPUTextureFormat aDepthFormat) {
+TechniqueContext CreateTechniqueContext(SDL_GPUTextureFormat aDepthFormat)
+{
   SDL_GPUColorTargetDescription colorTargetDescription;
   SDL_zero(colorTargetDescription);
   colorTargetDescription.format = SDL_GetGPUSwapchainTextureFormat(gContext.mDevice, gContext.mWindow);
@@ -722,15 +1172,49 @@ TechniqueContext CreateTechniqueContext(SDL_GPUTextureFormat aDepthFormat) {
   graphicsPipelineCreateInfo.primitive_type = SDL_GPU_PRIMITIVETYPE_TRIANGLELIST;
   graphicsPipelineCreateInfo.rasterizer_state.front_face = SDL_GPU_FRONTFACE_CLOCKWISE;
   graphicsPipelineCreateInfo.rasterizer_state.cull_mode = SDL_GPU_CULLMODE_BACK;
+
+  graphicsPipelineCreateInfo.vertex_input_state.num_vertex_buffers = 2;
+  graphicsPipelineCreateInfo.vertex_input_state.num_vertex_attributes = 2;
+
+  SDL_GPUVertexAttribute attributes[2];
+
+  // Position
+  attributes[0].location = 0;
+  attributes[0].buffer_slot = 0;
+  attributes[0].format = SDL_GPU_VERTEXELEMENTFORMAT_FLOAT3;
+  attributes[0].offset = 0;
+
+  // Normal
+  attributes[1].location = 1;
+  attributes[1].buffer_slot = 1;
+  attributes[1].format = SDL_GPU_VERTEXELEMENTFORMAT_FLOAT3;
+  attributes[1].offset = 0;
+
+  graphicsPipelineCreateInfo.vertex_input_state.vertex_attributes = attributes;
+
+  SDL_GPUVertexBufferDescription bufferDescriptions[2];
+  bufferDescriptions[0].slot = 0;
+  bufferDescriptions[0].pitch = sizeof(float3);
+  bufferDescriptions[0].input_rate = SDL_GPU_VERTEXINPUTRATE_VERTEX;
+  bufferDescriptions[0].instance_step_rate = 0;
+  bufferDescriptions[1].slot = 1;
+  bufferDescriptions[1].pitch = sizeof(float3);
+  bufferDescriptions[1].input_rate = SDL_GPU_VERTEXINPUTRATE_VERTEX;
+  bufferDescriptions[1].instance_step_rate = 0;
+
+  graphicsPipelineCreateInfo.vertex_input_state.vertex_buffer_descriptions = bufferDescriptions;
+
+  // Remember to come back to this later in the tutorial, don't show it off immediately.
   graphicsPipelineCreateInfo.depth_stencil_state.compare_op = SDL_GPU_COMPAREOP_GREATER_OR_EQUAL;
+
   graphicsPipelineCreateInfo.depth_stencil_state.enable_depth_test = true;
   graphicsPipelineCreateInfo.depth_stencil_state.enable_depth_write = true;
 
   graphicsPipelineCreateInfo.vertex_shader = CreateShader(
-    "Cube.vert",
+    "VertexAndIndexBuffer.vert",
     SDL_GPU_SHADERSTAGE_VERTEX,
     0,
-    2,
+    3,
     0,
     0,
     SDL_PROPERTY_TYPE_INVALID
@@ -738,9 +1222,9 @@ TechniqueContext CreateTechniqueContext(SDL_GPUTextureFormat aDepthFormat) {
   SDL_assert_always(graphicsPipelineCreateInfo.vertex_shader);
 
   graphicsPipelineCreateInfo.fragment_shader = CreateShader(
-    "Cube.frag",
+    "VertexAndIndexBuffer.frag",
     SDL_GPU_SHADERSTAGE_FRAGMENT,
-    1,
+    0,
     0,
     0,
     0,
@@ -752,28 +1236,16 @@ TechniqueContext CreateTechniqueContext(SDL_GPUTextureFormat aDepthFormat) {
 
   TechniqueContext context;
   SDL_zero(context);
+
   context.mPipeline = SDL_CreateGPUGraphicsPipeline(gContext.mDevice, &graphicsPipelineCreateInfo);
   SDL_assert_always(context.mPipeline);
 
-  context.mUniform.mPosition.x =  0.f;
-  context.mUniform.mPosition.y = -1.f;
-  context.mUniform.mPosition.z =  5.f;
-  context.mUniform.mPosition.w =  0.f;
-  context.mUniform.mScale.x = 0.5f;
-  context.mUniform.mScale.y = 0.5f;
-  context.mUniform.mScale.z = 0.5f;
-  context.mUniform.mScale.w = 0.5f;
-  context.mUniform.mRotation.x = 0.f;
-  context.mUniform.mRotation.y = 0.f;
-  context.mUniform.mRotation.z = 0.f;
-  context.mUniform.mRotation.w = 0.f;
+  context.mModel = LoadModel("buster_drone.glb");
 
-  SDL_GPUSamplerCreateInfo samplerCreateInfo;
-  SDL_zero(samplerCreateInfo);
-  context.mSampler = SDL_CreateGPUSampler(gContext.mDevice, &samplerCreateInfo);
-  SDL_assert_always(context.mSampler);
-
-  context.mTexture = CreateAndUploadTexture(NULL, "sample.bmp");
+  context.mUniform[0] = GetDefaultTransform();
+  context.mUniform[0].mPosition.y = -1.f;
+  context.mUniform[0].mPosition.z = 5.f;
+  context.mUniform[1] = GetDefaultTransform();
 
   SDL_ReleaseGPUShader(gContext.mDevice, graphicsPipelineCreateInfo.vertex_shader);
   SDL_ReleaseGPUShader(gContext.mDevice, graphicsPipelineCreateInfo.fragment_shader);
@@ -784,29 +1256,75 @@ TechniqueContext CreateTechniqueContext(SDL_GPUTextureFormat aDepthFormat) {
 void DrawTechniqueContext(TechniqueContext* aContext, SDL_GPUCommandBuffer* aCommandBuffer, SDL_GPURenderPass* aRenderPass)
 {
   SDL_BindGPUGraphicsPipeline(aRenderPass, aContext->mPipeline);
-  SDL_PushGPUVertexUniformData(aCommandBuffer, 1, &gContext.WorldToNDC, sizeof(gContext.WorldToNDC));
+  SDL_PushGPUVertexUniformData(aCommandBuffer, 2, &gContext.WorldToNDC, sizeof(gContext.WorldToNDC));
+  float4x4 modelTransform = CreateModelMatrixFromTransform(&aContext->mUniform[0]);
 
-  {
-    SDL_GPUTextureSamplerBinding textureBinding;
-    SDL_zero(textureBinding);
-    textureBinding.texture = aContext->mTexture;
-    textureBinding.sampler = aContext->mSampler;
-    SDL_BindGPUFragmentSamplers(aRenderPass, 0, &textureBinding, 1);
+  for (Uint32 i = 0; i < aContext->mModel.mMeshCount; ++i) {
+    MeshInfo* meshInfo = &aContext->mModel.mMeshes[i];
+
+    if (meshInfo->mIndexCount == 0) {
+      continue;
+    }
+
+    float4x4 objectToWorld = Float4x4_Multiply(&modelTransform, &meshInfo->mWorldTransform);
+    
+    SDL_GPUBufferBinding vertexBindings[2];
+    vertexBindings[0].buffer = aContext->mModel.mPositionBuffer;
+    vertexBindings[0].offset = meshInfo->mVertexOffset * sizeof(float3);
+    vertexBindings[1].buffer = aContext->mModel.mNormalBuffer;
+    vertexBindings[1].offset = meshInfo->mVertexOffset * sizeof(float3);
+    SDL_BindGPUVertexBuffers(aRenderPass, 0, vertexBindings, SDL_arraysize(vertexBindings));
+
+    SDL_GPUBufferBinding indexBinding;
+    indexBinding.buffer = aContext->mModel.mIndexBuffer;
+    indexBinding.offset = meshInfo->mIndexOffset * sizeof(Uint32);
+    SDL_BindGPUIndexBuffer(aRenderPass, &indexBinding, SDL_GPU_INDEXELEMENTSIZE_32BIT);
+
+    SDL_PushGPUVertexUniformData(aCommandBuffer, 1, &objectToWorld, sizeof(objectToWorld));
+    SDL_DrawGPUIndexedPrimitives(aRenderPass, meshInfo->mIndexCount, 1, 0, 0, 0);
   }
-
-
-  float4x4 model = CreateModelMatrixFromTransform(&aContext->mUniform);
-  SDL_PushGPUVertexUniformData(aCommandBuffer, 0, &model, sizeof(model));
-  SDL_DrawGPUPrimitives(aRenderPass, 6 /* 6 per face */ * 6 /* 6 sides of our cube */, 1, 0, 0);
 }
 
 void DestroyTechniqueContext(TechniqueContext* aContext)
 {
-  SDL_ReleaseGPUSampler(gContext.mDevice, aContext->mSampler);
-  SDL_ReleaseGPUTexture(gContext.mDevice, aContext->mTexture);
+  DestroyModel(&aContext->mModel);
   SDL_ReleaseGPUGraphicsPipeline(gContext.mDevice, aContext->mPipeline);
   SDL_zero(*aContext);
 }
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Camera Movements
+void FlybyCamera(Transform* aCamera, const bool* aKeyMap, float2 aFrameMouseMove, float aSpeed, float aDt)
+{
+  Orientation orientation = GetOrientation(aCamera);
+  float3 movementDirection = { 0.f, 0.f, 0.f };
+  SDL_MouseButtonFlags mouseFlags = SDL_GetMouseState(NULL, NULL);
+
+  if (SDL_BUTTON_LMASK & mouseFlags) {
+    aCamera->mRotation.x += aFrameMouseMove.y * aSpeed * aDt * .05f;
+    aCamera->mRotation.y += aFrameMouseMove.x * aSpeed * aDt * .05f;
+  }
+
+  if (aKeyMap[SDL_SCANCODE_D]) movementDirection = Float3_Add(movementDirection, orientation.mRight);
+  if (aKeyMap[SDL_SCANCODE_A]) movementDirection = Float3_Subtract(movementDirection, orientation.mRight);
+  if (aKeyMap[SDL_SCANCODE_W]) movementDirection = Float3_Add(movementDirection, orientation.mForward);
+  if (aKeyMap[SDL_SCANCODE_S]) movementDirection = Float3_Subtract(movementDirection, orientation.mForward);
+  if (aKeyMap[SDL_SCANCODE_SPACE]) movementDirection = Float3_Add(movementDirection, orientation.mUp);
+  if (aKeyMap[SDL_SCANCODE_LSHIFT]) movementDirection = Float3_Subtract(movementDirection, orientation.mUp);
+
+  if (SDL_BUTTON_MMASK & mouseFlags) {
+
+    movementDirection = Float3_Add(movementDirection, Float3_Scalar_Multiply(orientation.mRight, aFrameMouseMove.x * -.1f));
+    movementDirection = Float3_Add(movementDirection, Float3_Scalar_Multiply(orientation.mUp, aFrameMouseMove.y * .1f));
+  }
+
+  aCamera->mPosition = Float4_From3(Float3_Add(
+    Float3_Scalar_Multiply(movementDirection, aSpeed * aDt),
+    Float4_XYZ(aCamera->mPosition)),
+    0.0f
+  );
+}
+
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Main
@@ -828,6 +1346,11 @@ int main(int argc, char** argv)
   SDL_GPUTextureFormat depthFormat = GetSupportedDepthFormat();
 
   TechniqueContext context = CreateTechniqueContext(depthFormat);
+  Transform cameraTransform = GetDefaultTransform();
+  cameraTransform.mPosition.z = -1.0f;
+  //cameraTransform.mScale.x = 1.0f;
+  //cameraTransform.mScale.y = 1.0f;
+  //cameraTransform.mScale.z = 1.0f;
 
   const float speed = 5.f;
   Uint64 last_frame_ticks_so_far = SDL_GetTicksNS();
@@ -835,7 +1358,12 @@ int main(int argc, char** argv)
   const bool* key_map = SDL_GetKeyboardState(&keys);
   bool running = true;
 
+  float2 mouseMove;
+
   while (running) {
+    mouseMove.x = 0.f;
+    mouseMove.y = 0.f;
+
     Uint64 current_frame_ticks_so_far = SDL_GetTicksNS();
     float dt = (current_frame_ticks_so_far - last_frame_ticks_so_far) / 1000000000.f;
     last_frame_ticks_so_far = current_frame_ticks_so_far;
@@ -845,34 +1373,41 @@ int main(int argc, char** argv)
         case SDL_EVENT_QUIT:
           running = false;
           break;
+        case SDL_EVENT_MOUSE_MOTION:
+          mouseMove.x = event.motion.xrel;
+          mouseMove.y = event.motion.yrel;
+          break;
       }
+
     }
 
     int w = 0, h = 0;
     SDL_GetWindowSizeInPixels(gContext.mWindow, &w, &h);
 
-    gContext.WorldToNDC = PerspectiveProjectionLHZO(
+    gContext.WorldToNDC = InfinitePerspectiveProjectionLHOZ(
       45.0f * SDL_PI_F / 180.0f,
       (float)w / (float)h,
-      20.0f, 60.0f
+      0.1f
     );
 
-    if (key_map[SDL_SCANCODE_D])        context.mUniform.mPosition.x += speed * dt * 1.0f;
-    if (key_map[SDL_SCANCODE_A])        context.mUniform.mPosition.x -= speed * dt * 1.0f;
-    if (key_map[SDL_SCANCODE_W])        context.mUniform.mPosition.y += speed * dt * 1.0f;
-    if (key_map[SDL_SCANCODE_S])        context.mUniform.mPosition.y -= speed * dt * 1.0f;
-    if (key_map[SDL_SCANCODE_E])        context.mUniform.mPosition.z += speed * dt * 1.0f;
-    if (key_map[SDL_SCANCODE_Q])        context.mUniform.mPosition.z -= speed * dt * 1.0f;
-    if (key_map[SDL_SCANCODE_R])        context.mUniform.mScale.x += speed * dt * 1.0f;
-    if (key_map[SDL_SCANCODE_F])        context.mUniform.mScale.x -= speed * dt * 1.0f;
-    if (key_map[SDL_SCANCODE_T])        context.mUniform.mScale.y += speed * dt * 1.0f;
-    if (key_map[SDL_SCANCODE_G])        context.mUniform.mScale.y -= speed * dt * 1.0f;
-    if (key_map[SDL_SCANCODE_INSERT])   context.mUniform.mRotation.x += speed * dt * 1.0f;
-    if (key_map[SDL_SCANCODE_DELETE])   context.mUniform.mRotation.x -= speed * dt * 1.0f;
-    if (key_map[SDL_SCANCODE_HOME])     context.mUniform.mRotation.y += speed * dt * 1.0f;
-    if (key_map[SDL_SCANCODE_END])      context.mUniform.mRotation.y -= speed * dt * 1.0f;
-    if (key_map[SDL_SCANCODE_PAGEUP])   context.mUniform.mRotation.y += speed * dt * 1.0f;
-    if (key_map[SDL_SCANCODE_PAGEDOWN]) context.mUniform.mRotation.y -= speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_RIGHT])    context.mUniform[0].mPosition.x += speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_LEFT])     context.mUniform[0].mPosition.x -= speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_UP])       context.mUniform[0].mPosition.y += speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_DOWN])     context.mUniform[0].mPosition.y -= speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_E])        context.mUniform[0].mPosition.z += speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_Q])        context.mUniform[0].mPosition.z -= speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_R])        context.mUniform[0].mScale.x += speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_F])        context.mUniform[0].mScale.x -= speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_T])        context.mUniform[0].mScale.y += speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_G])        context.mUniform[0].mScale.y -= speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_INSERT])   context.mUniform[0].mRotation.x += speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_DELETE])   context.mUniform[0].mRotation.x -= speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_HOME])     context.mUniform[0].mRotation.y += speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_END])      context.mUniform[0].mRotation.y -= speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_PAGEUP])   context.mUniform[0].mRotation.z += speed * dt * 1.0f;
+    if (key_map[SDL_SCANCODE_PAGEDOWN]) context.mUniform[0].mRotation.z -= speed * dt * 1.0f;
+
+    FlybyCamera(&cameraTransform, key_map, mouseMove, speed, dt);
 
     SDL_GPUCommandBuffer* commandBuffer = SDL_AcquireGPUCommandBuffer(gContext.mDevice);
     if (!commandBuffer)
@@ -911,6 +1446,7 @@ int main(int argc, char** argv)
     colorTargetInfo.clear_color.b = 0.85f;
     colorTargetInfo.clear_color.a = 1.0f;
 
+    // Remember to come back to this later in the tutorial, don't show it off immediately.
     SDL_GPUDepthStencilTargetInfo depthStencilTargetInfo;
     SDL_zero(depthStencilTargetInfo);
 
@@ -929,6 +1465,11 @@ int main(int argc, char** argv)
       1,
       &depthStencilTargetInfo
     );
+
+    float4x4 modelMatrix = CreateModelMatrixFromTransform(&cameraTransform);
+    float4x4 viewMatrix = Float4x4_Inverse(&modelMatrix);
+
+    SDL_PushGPUVertexUniformData(commandBuffer, 0, &viewMatrix, sizeof(viewMatrix));
 
     DrawTechniqueContext(&context, commandBuffer, renderPass);
 

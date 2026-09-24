@@ -8,3 +8,13 @@ Thanks to all the folks here for providing these assets.
  - Author: LaVADraGoN
  - License: CC BY 4.0
  - Sourced from: https://sketchfab.com/3d-models/buster-drone-294e79652f494130ad2ab00a13fdbafd
+
+
+### Models/utah_teapot.glb
+
+I selected the Cem Yuksel model at resolution 5 and converted it to GLB using `gltfpack -noq`.
+
+ - Author: Cem Yuksel, Russ Fish, Hank Driskill, Frank Crow, Jim Blinn, Martin Newell
+ - License:
+ > Terms of Use and Attribution: The Utah Teapot model files are freely available for any use, including commercial use. To preserve the historical identity and provenance of the model, users are requested to identify the model, and any substantially derived version of it, as a Utah Teapot (or Modified Utah Teapot) and to acknowledge its origin as the historic Utah Teapot developed at the University of Utah. This request is intended solely to preserve the historical identity of the Utah Teapot and is not intended to restrict use of the model. The model files are provided “as is,” without warranty of any kind. The provider of these files shall not be liable for any claims, damages, or other liability arising from their use.
+ - Sourced from: https://graphics.cs.utah.edu/teapot/

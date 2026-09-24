@@ -8,3 +8,5 @@ examples.zip
 media/
 __pycache__
 .vscode/
+build*
+bin/

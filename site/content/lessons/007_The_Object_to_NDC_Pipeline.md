@@ -3,7 +3,7 @@ title: The Object To NDC Pipeline
 description: We've been skirting around it, but it's time to talk in more detail about coordinate spaces and how we transform between them. We'll also be demonstraiting the Orthographic Projection so we can display objects in a more sensible space than a [-1, -1] to [1, 1] box.
 template: lesson_template.html
 example_status: Finished
-chapter_status: Not Finished
+chapter_status: Outlined
 collections: ["lessons"]
 ---
 
@@ -77,7 +77,112 @@ Pull up your code from the last chapter, there might've been a lot to learn in t
 
 ### Matrix Representations, Column Major or Row Major (It's Column)
 
+```c
+typedef struct float4x4 {
+  union
+  {
+    float data[4][4];
+    float4 rows[4];
+  };
+} float4x4;
+```
+
 ### The Orthographic Projection Matrix
+
+```c
+float4x4 OrthographicProjectionLHZO(
+  float aLeft,
+  float aRight,
+  float aBottom,
+  float aTop,
+  float aNear,
+  float aFar)
+{
+  float4x4 toReturn;
+  SDL_zero(toReturn);
+
+  toReturn.data[0][0] = 2.0f / (aRight - aLeft);
+  toReturn.data[1][1] = 2.0f / (aTop - aBottom);
+  toReturn.data[2][2] = 1.0f / (aFar - aNear);
+  toReturn.data[3][0] = -(aRight + aLeft) / (aRight - aLeft);
+  toReturn.data[3][1] = -(aTop + aBottom) / (aTop - aBottom);
+  toReturn.data[3][2] = -aNear / (aFar - aNear);
+  toReturn.data[3][3] = 1.0f;
+
+  return toReturn;
+}
+```
 
 ### Object To World, in-shader
 
+```hlsl
+float x = cModelUniform.mPosition.x;
+float y = cModelUniform.mPosition.y;
+float w = cModelUniform.mScale.x;
+float h = cModelUniform.mScale.y;
+
+float4x4 ObjectToWorld = {
+  { w / 2.f,     0.f, 0.f,   x },
+  {     0.f, h / 2.f, 0.f,   y },
+  {     0.f,     0.f, 1.f, cModelUniform.mDepth },
+  {     0.f,     0.f, 0.f, 1.f },
+};
+```
+
+### Camera To NDC, in-shader
+
+```hlsl
+cbuffer UB1 : register(b1, space1)
+{
+  float4x4 WorldToNDC;
+};
+
+float4 transformedPosition =
+  mul(mul(WorldToNDC, ObjectToWorld), float4(position, 0.0f, 1.0f));
+```
+
+### Pixel-space Object Transforms
+
+```c
+context.mUniform[0].mPosition.x = 384.f;
+context.mUniform[0].mPosition.y = 360.f;
+context.mUniform[0].mScale.x = 256.f;
+context.mUniform[0].mScale.y = 256.f;
+context.mUniform[0].mDepth = 0.75f;
+
+context.mUniform[1].mPosition.x = 640.f;
+context.mUniform[1].mPosition.y = 360.f;
+context.mUniform[1].mScale.x = 256.f;
+context.mUniform[1].mScale.y = 256.f;
+context.mUniform[1].mDepth = 0.25f;
+```
+
+### Updating the Projection for the Window
+
+```c
+gContext.WorldToNDC = OrthographicProjectionLHZO(
+  0.f,
+  (float)w,
+  0.f,
+  (float)h,
+  0.f,
+  1.f
+);
+```
+
+### Uploading Object and Projection Matrices
+
+```c
+SDL_PushGPUVertexUniformData(
+  aCommandBuffer,
+  1,
+  &gContext.WorldToNDC,
+  sizeof(gContext.WorldToNDC));
+
+SDL_PushGPUVertexUniformData(
+  aCommandBuffer,
+  0,
+  &aContext->mUniform[0],
+  sizeof(aContext->mUniform[0]));
+SDL_DrawGPUPrimitives(aRenderPass, 6, 1, 0, 0);
+```

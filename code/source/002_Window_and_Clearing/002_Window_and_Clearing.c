@@ -28,12 +28,12 @@ void CreateGpuContext(SDL_Window* aWindow) {
 
   gContext.mWindow = aWindow;
   gContext.mDevice = SDL_CreateGPUDevice(SDL_GPU_SHADERFORMAT_SPIRV | SDL_GPU_SHADERFORMAT_DXIL | SDL_GPU_SHADERFORMAT_MSL, true, NULL);
-  SDL_assert(gContext.mDevice);
+  SDL_assert_always(gContext.mDevice);
 
-  SDL_assert(SDL_ClaimWindowForGPUDevice(gContext.mDevice, gContext.mWindow));
+  SDL_assert_always(SDL_ClaimWindowForGPUDevice(gContext.mDevice, gContext.mWindow));
 
   gContext.mProperties = SDL_CreateProperties();
-  SDL_assert(gContext.mProperties);
+  SDL_assert_always(gContext.mProperties);
 
   SDL_GPUShaderFormat availableFormats = SDL_GetGPUShaderFormats(gContext.mDevice);
   gContext.mShaderEntryPoint = NULL;
@@ -72,18 +72,17 @@ int main(int argc, char** argv)
 {
   (void)argc;
   (void)argv;
-  SDL_assert(SDL_Init(SDL_INIT_VIDEO));
+  SDL_assert_always(SDL_Init(SDL_INIT_VIDEO));
 
   SDL_Window* window = SDL_CreateWindow(TARGET_NAME, 1280, 720, 0);
-  SDL_assert(window);
+  SDL_assert_always(window);
 
   CreateGpuContext(window);
 
   bool running = true;
 
   while (running) {
-    SDL_Event event;
-    while (SDL_PollEvent(&event)) {
+    for (SDL_Event event; SDL_PollEvent(&event);) {
       switch (event.common.type) {
         case SDL_EVENT_QUIT:
           running = false;

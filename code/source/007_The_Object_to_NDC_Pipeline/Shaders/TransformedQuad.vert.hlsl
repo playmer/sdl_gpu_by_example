@@ -21,6 +21,7 @@ struct ModelUniform
 {
   float2 mPosition;
   float2 mScale;
+  float mDepth;
 };
 
 cbuffer UBO : register(b0, space1)
@@ -49,7 +50,7 @@ Output main(uint id : SV_VertexID)
   float4x4 ObjectToWorld = {
     { w / 2.f,     0.f, 0.f,   x },
     {     0.f, h / 2.f, 0.f,   y },
-    {     0.f,     0.f, 1.f, 0.f },
+    {     0.f,     0.f, 1.f, cModelUniform.mDepth },
     {     0.f,     0.f, 0.f, 1.f },
   };
 

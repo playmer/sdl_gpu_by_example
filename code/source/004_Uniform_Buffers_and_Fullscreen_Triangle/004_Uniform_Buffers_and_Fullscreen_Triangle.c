@@ -170,12 +170,12 @@ void CreateGpuContext(SDL_Window* aWindow) {
 
   gContext.mWindow = aWindow;
   gContext.mDevice = SDL_CreateGPUDevice(SDL_GPU_SHADERFORMAT_SPIRV | SDL_GPU_SHADERFORMAT_DXIL | SDL_GPU_SHADERFORMAT_MSL, true, NULL);
-  SDL_assert(gContext.mDevice);
+  SDL_assert_always(gContext.mDevice);
 
-  SDL_assert(SDL_ClaimWindowForGPUDevice(gContext.mDevice, gContext.mWindow));
+  SDL_assert_always(SDL_ClaimWindowForGPUDevice(gContext.mDevice, gContext.mWindow));
 
   gContext.mProperties = SDL_CreateProperties();
-  SDL_assert(gContext.mProperties);
+  SDL_assert_always(gContext.mProperties);
 
   SDL_GPUShaderFormat availableFormats = SDL_GetGPUShaderFormats(gContext.mDevice);
   gContext.mShaderEntryPoint = NULL;
@@ -221,7 +221,7 @@ SDL_GPUShader* CreateShader(
 
   size_t fileSize = 0;
   void* fileData = SDL_LoadFile(shader_path, &fileSize);
-  SDL_assert(fileData);
+  SDL_assert_always(fileData);
 
   SDL_PropertiesID properties = gContext.mProperties;
 
@@ -229,7 +229,7 @@ SDL_GPUShader* CreateShader(
     properties = aProperties;
   }
 
-  SDL_assert(SDL_SetStringProperty(properties, SDL_PROP_GPU_SHADER_CREATE_NAME_STRING, aShaderFilename));
+  SDL_assert_always(SDL_SetStringProperty(properties, SDL_PROP_GPU_SHADER_CREATE_NAME_STRING, aShaderFilename));
 
   SDL_GPUShaderCreateInfo shaderCreateInfo;
   SDL_zero(shaderCreateInfo);
@@ -248,7 +248,7 @@ SDL_GPUShader* CreateShader(
   SDL_GPUShader* shader = SDL_CreateGPUShader(gContext.mDevice, &shaderCreateInfo);
 
   SDL_free(fileData);
-  SDL_assert(shader);
+  SDL_assert_always(shader);
 
   return shader;
 }
@@ -283,7 +283,7 @@ TechniqueContext CreateTechniqueContext() {
     0,
     SDL_PROPERTY_TYPE_INVALID
   );
-  SDL_assert(graphicsPipelineCreateInfo.vertex_shader);
+  SDL_assert_always(graphicsPipelineCreateInfo.vertex_shader);
 
   graphicsPipelineCreateInfo.fragment_shader = CreateShader(
     "FullscreenTriangle.frag",
@@ -294,14 +294,14 @@ TechniqueContext CreateTechniqueContext() {
     0,
     SDL_PROPERTY_TYPE_INVALID
   );
-  SDL_assert(graphicsPipelineCreateInfo.fragment_shader);
+  SDL_assert_always(graphicsPipelineCreateInfo.fragment_shader);
 
-  SDL_assert(SDL_SetStringProperty(gContext.mProperties, SDL_PROP_GPU_GRAPHICSPIPELINE_CREATE_NAME_STRING, "TechniqueContext"));
+  SDL_assert_always(SDL_SetStringProperty(gContext.mProperties, SDL_PROP_GPU_GRAPHICSPIPELINE_CREATE_NAME_STRING, "TechniqueContext"));
 
   TechniqueContext context;
   SDL_zero(context);
   context.mPipeline = SDL_CreateGPUGraphicsPipeline(gContext.mDevice, &graphicsPipelineCreateInfo);
-  SDL_assert(context.mPipeline);
+  SDL_assert_always(context.mPipeline);
 
   context.mPositon.x = 0.5f;
   context.mPositon.y = 0.5f;
@@ -339,10 +339,10 @@ int main(int argc, char** argv)
 {
   (void)argc;
   (void)argv;
-  SDL_assert(SDL_Init(SDL_INIT_VIDEO));
+  SDL_assert_always(SDL_Init(SDL_INIT_VIDEO));
 
   SDL_Window* window = SDL_CreateWindow(TARGET_NAME, 1280, 720, 0);
-  SDL_assert(window);
+  SDL_assert_always(window);
 
   CreateGpuContext(window);
 
@@ -359,20 +359,19 @@ int main(int argc, char** argv)
     float dt = (current_frame_ticks_so_far - last_frame_ticks_so_far) / 1000000000.f;
     last_frame_ticks_so_far = current_frame_ticks_so_far;
 
-    SDL_Event event;
-    while (SDL_PollEvent(&event)) {
+    for (SDL_Event event; SDL_PollEvent(&event);) {
       switch (event.common.type) {
-      case SDL_EVENT_QUIT:
-        running = false;
-        break;
-      case SDL_EVENT_KEY_DOWN:
-        switch (event.key.scancode) {
-        case SDL_SCANCODE_1: context.mColorIndex = 0; break;
-        case SDL_SCANCODE_2: context.mColorIndex = 1; break;
-        case SDL_SCANCODE_3: context.mColorIndex = 2; break;
-        default: break;
-        }
-        break;
+        case SDL_EVENT_QUIT:
+          running = false;
+          break;
+        case SDL_EVENT_KEY_DOWN:
+          switch (event.key.scancode) {
+            case SDL_SCANCODE_1: context.mColorIndex = 0; break;
+            case SDL_SCANCODE_2: context.mColorIndex = 1; break;
+            case SDL_SCANCODE_3: context.mColorIndex = 2; break;
+            default: break;
+          }
+          break;
       }
     }
 
