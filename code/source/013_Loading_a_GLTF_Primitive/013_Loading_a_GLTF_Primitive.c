@@ -1122,7 +1122,7 @@ TechniqueContext CreateTechniqueContext(SDL_GPUTextureFormat aDepthFormat)
     
     MeshDataSize meshSize = GetPrimitiveSize(primitive);
 
-    MeshInfo* meshInfo =  SDL_calloc(1, sizeof(MeshInfo));
+    MeshInfo* meshInfo = (MeshInfo*)SDL_calloc(1, sizeof(MeshInfo));
     meshInfo->mWorldTransform = IdentityMatrix();
     meshInfo->mVertexCount = meshSize.mVertexCount;
     meshInfo->mIndexCount = meshSize.mIndexCount;

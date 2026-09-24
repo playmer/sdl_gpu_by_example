@@ -1062,7 +1062,7 @@ TechniqueContext CreateTechniqueContext(SDL_GPUTextureFormat aDepthFormat) {
       SDL_arraysize(cVertices),
       SDL_arraysize(cIndices));
 
-    context.mModel.mMeshes = SDL_calloc(1, sizeof(MeshInfo));
+    context.mModel.mMeshes = (MeshInfo*)SDL_calloc(1, sizeof(MeshInfo));
     context.mModel.mMeshCount = 1;
 
     context.mModel.mMeshes->mWorldTransform = IdentityMatrix();
