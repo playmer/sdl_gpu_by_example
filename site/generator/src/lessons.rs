@@ -132,10 +132,20 @@ fn get_agnostic_lesson_code(config: &BuildConfig) -> anyhow::Result<Vec<PathBuf>
     ));
     let cmake_final_dir = Path::new(cmake_dir);
 
-    Ok(fs_utils::get_files(&config.code_cmake_dir)?
+    let mut files = fs_utils::get_files(&config.code_cmake_dir)?
         .into_iter()
         .map(|i| cmake_final_dir.join(i))
-        .collect())
+        .collect::<Vec<_>>();
+
+    let asset_dir = config.code_asset_dir.file_name().with_context(|| {
+        format!(
+            "{} should have a leaf file name to retrieve.",
+            config.code_asset_dir.display()
+        )
+    })?;
+    files.push(Path::new(asset_dir).join("Attributions.md"));
+
+    Ok(files)
 }
 
 fn lesson_writing_worker(
